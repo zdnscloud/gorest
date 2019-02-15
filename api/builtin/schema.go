@@ -1,8 +1,6 @@
 package builtin
 
 import (
-	"net/http"
-
 	"github.com/zdnscloud/gorest/store/schema"
 	"github.com/zdnscloud/gorest/types"
 )
@@ -31,8 +29,7 @@ var (
 			"resourceMethods":   {Type: "array[string]"},
 			"version":           {Type: "map[json]"},
 		},
-		Formatter: SchemaFormatter,
-		Store:     schema.NewSchemaStore(),
+		Store: schema.NewSchemaStore(),
 	}
 
 	Error = types.Schema{
@@ -81,50 +78,6 @@ var (
 		AddSchema(Collection).
 		AddSchema(APIRoot)
 )
-
-func apiVersionFromMap(schemas *types.Schemas, apiVersion map[string]interface{}) types.APIVersion {
-	path, _ := apiVersion["path"].(string)
-	version, _ := apiVersion["version"].(string)
-	group, _ := apiVersion["group"].(string)
-
-	apiVersionObj := types.APIVersion{
-		Path:    path,
-		Version: version,
-		Group:   group,
-	}
-
-	for _, testVersion := range schemas.Versions() {
-		if testVersion.Equals(&apiVersionObj) {
-			return testVersion
-		}
-	}
-
-	return apiVersionObj
-}
-
-func SchemaFormatter(apiContext *types.APIContext, resource *types.RawResource) {
-	data, _ := resource.Values["version"].(map[string]interface{})
-	apiVersion := apiVersionFromMap(apiContext.Schemas, data)
-
-	schema := apiContext.Schemas.Schema(&apiVersion, resource.ID)
-	if schema == nil {
-		return
-	}
-
-	collectionLink := getSchemaCollectionLink(apiContext, schema, &apiVersion)
-	if collectionLink != "" {
-		resource.Links["collection"] = collectionLink
-	}
-
-	resource.Links["self"] = apiContext.URLBuilder.SchemaLink(schema)
-}
-
-func getSchemaCollectionLink(apiContext *types.APIContext, schema *types.Schema, apiVersion *types.APIVersion) string {
-	if schema != nil && contains(schema.CollectionMethods, http.MethodGet) {
-		return apiContext.URLBuilder.Collection(schema, apiVersion)
-	}
-	return ""
-}
 
 func contains(list []string, needle string) bool {
 	for _, v := range list {

@@ -49,30 +49,6 @@ func (u *urlBuilder) SetSubContext(subContext string) {
 	u.subContext = subContext
 }
 
-func (u *urlBuilder) SchemaLink(schema *types.Schema) string {
-	return u.constructBasicURL(schema.Version, "schemas", schema.ID)
-}
-
-func (u *urlBuilder) Link(linkName string, resource *types.RawResource) string {
-	if resource.ID == "" || linkName == "" {
-		return ""
-	}
-
-	if self, ok := resource.Links["self"]; ok {
-		return self + "/" + strings.ToLower(linkName)
-	}
-
-	return u.constructBasicURL(resource.Schema.Version, resource.Schema.PluralName, resource.ID, strings.ToLower(linkName))
-}
-
-func (u *urlBuilder) ResourceLink(resource *types.RawResource) string {
-	if resource.ID == "" {
-		return ""
-	}
-
-	return u.constructBasicURL(resource.Schema.Version, resource.Schema.PluralName, resource.ID)
-}
-
 func (u *urlBuilder) Marker(marker string) string {
 	newValues := url.Values{}
 	for k, v := range u.query {
@@ -131,15 +107,6 @@ func (u *urlBuilder) SubContextCollection(subContext *types.Schema, contextName 
 
 func (u *urlBuilder) Version(version types.APIVersion) string {
 	return u.constructBasicURL(version)
-}
-
-func (u *urlBuilder) FilterLink(schema *types.Schema, fieldName string, value string) string {
-	return u.constructBasicURL(schema.Version, schema.PluralName) + "?" +
-		url.QueryEscape(fieldName) + "=" + url.QueryEscape(value)
-}
-
-func (u *urlBuilder) ResourceLinkByID(schema *types.Schema, id string) string {
-	return u.constructBasicURL(schema.Version, schema.PluralName, id)
 }
 
 func (u *urlBuilder) constructBasicURL(version types.APIVersion, parts ...string) string {
@@ -266,8 +233,4 @@ func (u *urlBuilder) Action(action string, resource *types.RawResource) string {
 func (u *urlBuilder) CollectionAction(schema *types.Schema, versionOverride *types.APIVersion, action string) string {
 	collectionURL := u.Collection(schema, versionOverride)
 	return collectionURL + "?action=" + url.QueryEscape(action)
-}
-
-func (u *urlBuilder) ActionLinkByID(schema *types.Schema, id string, action string) string {
-	return u.constructBasicURL(schema.Version, schema.PluralName, id) + "?action=" + url.QueryEscape(action)
 }

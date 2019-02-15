@@ -38,7 +38,6 @@ type Server struct {
 type Defaults struct {
 	ActionHandler types.ActionHandler
 	ListHandler   types.RequestHandler
-	LinkHandler   types.RequestHandler
 	CreateHandler types.RequestHandler
 	DeleteHandler types.RequestHandler
 	UpdateHandler types.RequestHandler
@@ -73,10 +72,7 @@ func NewAPIServer() *Server {
 			DeleteHandler: handler.DeleteHandler,
 			UpdateHandler: handler.UpdateHandler,
 			ListHandler:   handler.ListHandler,
-			LinkHandler: func(*types.APIContext, types.RequestHandler) error {
-				return httperror.NewAPIError(httperror.NotFound, "Link not found")
-			},
-			ErrorHandler: ehandler.ErrorHandler,
+			ErrorHandler:  ehandler.ErrorHandler,
 		},
 		StoreWrapper: wrapper.Wrap,
 		URLParser:    parse.DefaultURLParser,
@@ -142,10 +138,6 @@ func (s *Server) setupDefaults(schema *types.Schema) {
 		schema.ListHandler = s.Defaults.ListHandler
 	}
 
-	if schema.LinkHandler == nil {
-		schema.LinkHandler = s.Defaults.LinkHandler
-	}
-
 	if schema.CreateHandler == nil {
 		schema.CreateHandler = s.Defaults.CreateHandler
 	}
@@ -195,42 +187,37 @@ func (s *Server) handle(rw http.ResponseWriter, req *http.Request) (*types.APICo
 	if action == nil && apiRequest.Type != "" {
 		var handler types.RequestHandler
 		var nextHandler types.RequestHandler
-		if apiRequest.Link == "" {
-			switch apiRequest.Method {
-			case http.MethodGet:
-				if apiRequest.ID == "" {
-					if err := apiRequest.AccessControl.CanList(apiRequest, apiRequest.Schema); err != nil {
-						return apiRequest, err
-					}
-				} else {
-					if err := apiRequest.AccessControl.CanGet(apiRequest, apiRequest.Schema); err != nil {
-						return apiRequest, err
-					}
-				}
-				handler = apiRequest.Schema.ListHandler
-				nextHandler = s.Defaults.ListHandler
-			case http.MethodPost:
-				if err := apiRequest.AccessControl.CanCreate(apiRequest, apiRequest.Schema); err != nil {
+		switch apiRequest.Method {
+		case http.MethodGet:
+			if apiRequest.ID == "" {
+				if err := apiRequest.AccessControl.CanList(apiRequest, apiRequest.Schema); err != nil {
 					return apiRequest, err
 				}
-				handler = apiRequest.Schema.CreateHandler
-				nextHandler = s.Defaults.CreateHandler
-			case http.MethodPut:
-				if err := apiRequest.AccessControl.CanUpdate(apiRequest, nil, apiRequest.Schema); err != nil {
+			} else {
+				if err := apiRequest.AccessControl.CanGet(apiRequest, apiRequest.Schema); err != nil {
 					return apiRequest, err
 				}
-				handler = apiRequest.Schema.UpdateHandler
-				nextHandler = s.Defaults.UpdateHandler
-			case http.MethodDelete:
-				if err := apiRequest.AccessControl.CanDelete(apiRequest, nil, apiRequest.Schema); err != nil {
-					return apiRequest, err
-				}
-				handler = apiRequest.Schema.DeleteHandler
-				nextHandler = s.Defaults.DeleteHandler
 			}
-		} else {
 			handler = apiRequest.Schema.ListHandler
 			nextHandler = s.Defaults.ListHandler
+		case http.MethodPost:
+			if err := apiRequest.AccessControl.CanCreate(apiRequest, apiRequest.Schema); err != nil {
+				return apiRequest, err
+			}
+			handler = apiRequest.Schema.CreateHandler
+			nextHandler = s.Defaults.CreateHandler
+		case http.MethodPut:
+			if err := apiRequest.AccessControl.CanUpdate(apiRequest, nil, apiRequest.Schema); err != nil {
+				return apiRequest, err
+			}
+			handler = apiRequest.Schema.UpdateHandler
+			nextHandler = s.Defaults.UpdateHandler
+		case http.MethodDelete:
+			if err := apiRequest.AccessControl.CanDelete(apiRequest, nil, apiRequest.Schema); err != nil {
+				return apiRequest, err
+			}
+			handler = apiRequest.Schema.DeleteHandler
+			nextHandler = s.Defaults.DeleteHandler
 		}
 
 		if handler == nil {

@@ -18,7 +18,6 @@ var (
 <!DOCTYPE html>
 <!-- If you are reading this, there is a good chance you would prefer sending an
 "Accept: application/json" header and receiving actual JSON responses. -->
-<link rel="stylesheet" type="text/css" href="%CSSURL%" />
 <script src="%JSURL%"></script>
 <script>
 var user = "admin";

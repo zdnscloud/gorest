@@ -15,10 +15,8 @@ type RawResource struct {
 	ID           string                 `json:"id,omitempty" yaml:"id,omitempty"`
 	Type         string                 `json:"type,omitempty" yaml:"type,omitempty"`
 	Schema       *Schema                `json:"-" yaml:"-"`
-	Links        map[string]string      `json:"links,omitempty" yaml:"links,omitempty"`
 	Actions      map[string]string      `json:"actions,omitempty" yaml:"actions,omitempty"`
 	Values       map[string]interface{} `json:",inline" yaml:",inline"`
-	ActionLinks  bool                   `json:"-" yaml:"-"`
 	DropReadOnly bool                   `json:"-" yaml:"-"`
 }
 
@@ -47,16 +45,8 @@ func (r *RawResource) ToMap() map[string]interface{} {
 		data["baseType"] = r.Schema.BaseType
 	}
 
-	if len(r.Links) > 0 && !r.DropReadOnly {
-		data["links"] = r.Links
-	}
-
 	if len(r.Actions) > 0 && !r.DropReadOnly {
-		if r.ActionLinks {
-			data["actionLinks"] = r.Actions
-		} else {
-			data["actions"] = r.Actions
-		}
+		data["actions"] = r.Actions
 	}
 	return data
 }
@@ -104,7 +94,6 @@ type APIContext struct {
 	Action                      string
 	ID                          string
 	Type                        string
-	Link                        string
 	Method                      string
 	Schema                      *Schema
 	Schemas                     *Schemas
@@ -196,19 +185,13 @@ type URLBuilder interface {
 	Collection(schema *Schema, versionOverride *APIVersion) string
 	CollectionAction(schema *Schema, versionOverride *APIVersion, action string) string
 	SubContextCollection(subContext *Schema, contextName string, schema *Schema) string
-	SchemaLink(schema *Schema) string
-	ResourceLink(resource *RawResource) string
-	Link(linkName string, resource *RawResource) string
 	RelativeToRoot(path string) string
 	Version(version APIVersion) string
 	Marker(marker string) string
 	ReverseSort(order SortOrder) string
 	Sort(field string) string
 	SetSubContext(subContext string)
-	FilterLink(schema *Schema, fieldName string, value string) string
 	Action(action string, resource *RawResource) string
-	ResourceLinkByID(schema *Schema, id string) string
-	ActionLinkByID(schema *Schema, id string, action string) string
 }
 
 type StorageContext string

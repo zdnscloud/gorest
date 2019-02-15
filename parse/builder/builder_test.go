@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/zdnscloud/gorest/types"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestEmptyStringWithDefault(t *testing.T) {
@@ -28,8 +27,13 @@ func TestEmptyStringWithDefault(t *testing.T) {
 		t.Fatal(err)
 	}
 	value, ok := result["foo"]
-	assert.True(t, ok)
-	assert.Equal(t, "foo", value)
+	if ok == false {
+		t.Fatal("result should has foo")
+	}
+
+	if value != "foo" {
+		t.Fatal("value shoule be foo")
+	}
 
 	// Test if field is "" we set to "foo"
 	result, err = builder.Construct(schema, map[string]interface{}{
@@ -39,6 +43,11 @@ func TestEmptyStringWithDefault(t *testing.T) {
 		t.Fatal(err)
 	}
 	value, ok = result["foo"]
-	assert.True(t, ok)
-	assert.Equal(t, "foo", value)
+	if ok == false {
+		t.Fatal("result should has foo")
+	}
+
+	if value != "foo" {
+		t.Fatal("value shoule be foo")
+	}
 }

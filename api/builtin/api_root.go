@@ -12,26 +12,6 @@ func APIRootFormatter(apiContext *types.APIContext, resource *types.RawResource)
 	}
 
 	delete(resource.Values, "path")
-
-	resource.Links["root"] = apiContext.URLBuilder.RelativeToRoot(path)
-
-	data, _ := resource.Values["apiVersion"].(map[string]interface{})
-	apiVersion := apiVersionFromMap(apiContext.Schemas, data)
-
-	resource.Links["self"] = apiContext.URLBuilder.Version(apiVersion)
-
-	for _, schema := range apiContext.Schemas.SchemasForVersion(apiVersion) {
-		addCollectionLink(apiContext, schema, resource.Links)
-	}
-
-	return
-}
-
-func addCollectionLink(apiContext *types.APIContext, schema *types.Schema, links map[string]string) {
-	collectionLink := getSchemaCollectionLink(apiContext, schema, nil)
-	if collectionLink != "" {
-		links[schema.PluralName] = collectionLink
-	}
 }
 
 type APIRootStore struct {

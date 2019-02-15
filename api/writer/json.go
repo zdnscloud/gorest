@@ -114,16 +114,12 @@ func (j *EncodingResponseWriter) convert(b *builder.Builder, context *types.APIC
 	}
 
 	rawResource := &types.RawResource{
-		ID:          toString(input["id"]),
-		Type:        schema.ID,
-		Schema:      schema,
-		Links:       map[string]string{},
-		Actions:     map[string]string{},
-		Values:      data,
-		ActionLinks: context.Request.Header.Get("X-API-Action-Links") != "",
+		ID:      toString(input["id"]),
+		Type:    schema.ID,
+		Schema:  schema,
+		Actions: map[string]string{},
+		Values:  data,
 	}
-
-	j.addLinks(b, schema, context, input, rawResource)
 
 	if schema.Formatter != nil {
 		schema.Formatter(context, rawResource)
@@ -132,52 +128,13 @@ func (j *EncodingResponseWriter) convert(b *builder.Builder, context *types.APIC
 	return rawResource
 }
 
-func (j *EncodingResponseWriter) addLinks(b *builder.Builder, schema *types.Schema, context *types.APIContext, input map[string]interface{}, rawResource *types.RawResource) {
-	if rawResource.ID == "" {
-		return
-	}
-
-	self := context.URLBuilder.ResourceLink(rawResource)
-	rawResource.Links["self"] = self
-	if context.AccessControl.CanUpdate(context, input, schema) == nil {
-		rawResource.Links["update"] = self
-	}
-	if context.AccessControl.CanDelete(context, input, schema) == nil {
-		rawResource.Links["remove"] = self
-	}
-
-	subContextVersion := context.Schemas.SubContextVersionForSchema(schema)
-	for _, backRef := range context.Schemas.References(schema) {
-		if backRef.Schema.CanList(context) != nil {
-			continue
-		}
-
-		if subContextVersion == nil {
-			rawResource.Links[backRef.Schema.PluralName] = context.URLBuilder.FilterLink(backRef.Schema, backRef.FieldName, rawResource.ID)
-		} else {
-			rawResource.Links[backRef.Schema.PluralName] = context.URLBuilder.SubContextCollection(schema, rawResource.ID, backRef.Schema)
-		}
-	}
-
-	if subContextVersion != nil {
-		for _, subSchema := range context.Schemas.SchemasForVersion(*subContextVersion) {
-			if subSchema.CanList(context) == nil {
-				rawResource.Links[subSchema.PluralName] = context.URLBuilder.SubContextCollection(schema, rawResource.ID, subSchema)
-			}
-		}
-	}
-}
-
 func newCollection(apiContext *types.APIContext) *types.GenericCollection {
 	result := &types.GenericCollection{
 		Collection: types.Collection{
 			Type:         "collection",
 			ResourceType: apiContext.Type,
 			CreateTypes:  map[string]string{},
-			Links: map[string]string{
-				"self": apiContext.URLBuilder.Current(),
-			},
-			Actions: map[string]string{},
+			Actions:      map[string]string{},
 		},
 		Data: []interface{}{},
 	}
@@ -191,7 +148,6 @@ func newCollection(apiContext *types.APIContext) *types.GenericCollection {
 	opts := parse.QueryOptions(apiContext, apiContext.Schema)
 	result.Sort = &opts.Sort
 	result.Sort.Reverse = apiContext.URLBuilder.ReverseSort(result.Sort.Order)
-	result.Sort.Links = map[string]string{}
 	result.Pagination = opts.Pagination
 	result.Filters = map[string][]types.Condition{}
 
@@ -203,13 +159,6 @@ func newCollection(apiContext *types.APIContext) *types.GenericCollection {
 	for name := range apiContext.Schema.CollectionFilters {
 		if _, ok := result.Filters[name]; !ok {
 			result.Filters[name] = nil
-		}
-	}
-
-	for queryField := range apiContext.Schema.CollectionFilters {
-		field, ok := apiContext.Schema.ResourceFields[queryField]
-		if ok && (field.Type == "string" || field.Type == "enum") {
-			result.Sort.Links[queryField] = apiContext.URLBuilder.Sort(queryField)
 		}
 	}
 

@@ -6,7 +6,6 @@ const (
 
 type Collection struct {
 	Type         string                 `json:"type,omitempty"`
-	Links        map[string]string      `json:"links"`
 	CreateTypes  map[string]string      `json:"createTypes,omitempty"`
 	Actions      map[string]string      `json:"actions"`
 	Pagination   *Pagination            `json:"pagination,omitempty"`
@@ -28,10 +27,9 @@ type ResourceCollection struct {
 type SortOrder string
 
 type Sort struct {
-	Name    string            `json:"name,omitempty"`
-	Order   SortOrder         `json:"order,omitempty"`
-	Reverse string            `json:"reverse,omitempty"`
-	Links   map[string]string `json:"links,omitempty"`
+	Name    string    `json:"name,omitempty"`
+	Order   SortOrder `json:"order,omitempty"`
+	Reverse string    `json:"reverse,omitempty"`
 }
 
 var (
@@ -64,7 +62,6 @@ type Pagination struct {
 type Resource struct {
 	ID      string            `json:"id,omitempty"`
 	Type    string            `json:"type,omitempty"`
-	Links   map[string]string `json:"links"`
 	Actions map[string]string `json:"actions"`
 }
 
@@ -102,7 +99,6 @@ type Schema struct {
 	PkgName           string            `json:"-"`
 	Type              string            `json:"type,omitempty"`
 	BaseType          string            `json:"baseType,omitempty"`
-	Links             map[string]string `json:"links"`
 	Version           APIVersion        `json:"version"`
 	PluralName        string            `json:"pluralName,omitempty"`
 	ResourceMethods   []string          `json:"resourceMethods,omitempty"`
@@ -117,7 +113,6 @@ type Schema struct {
 	InternalSchema      *Schema             `json:"-"`
 	Mapper              Mapper              `json:"-"`
 	ActionHandler       ActionHandler       `json:"-"`
-	LinkHandler         RequestHandler      `json:"-"`
 	ListHandler         RequestHandler      `json:"-"`
 	CreateHandler       RequestHandler      `json:"-"`
 	DeleteHandler       RequestHandler      `json:"-"`

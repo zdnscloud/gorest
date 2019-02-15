@@ -32,7 +32,6 @@ type ParsedURL struct {
 	SchemasVersion   *types.APIVersion
 	Type             string
 	ID               string
-	Link             string
 	Method           string
 	Action           string
 	SubContext       map[string]string
@@ -64,7 +63,6 @@ func DefaultURLParser(schemas *types.Schemas, url *url.URL) (ParsedURL, error) {
 
 	result.Type = safeIndex(parts, 0)
 	result.ID = safeIndex(parts, 1)
-	result.Link = safeIndex(parts, 2)
 
 	return result, nil
 }
@@ -84,7 +82,6 @@ func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas, ur
 	result.SubContext = parsedURL.SubContext
 	result.Type = parsedURL.Type
 	result.ID = parsedURL.ID
-	result.Link = parsedURL.Link
 	result.Action = parsedURL.Action
 	result.Query = parsedURL.Query
 	if parsedURL.Method != "" {
