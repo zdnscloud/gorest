@@ -140,7 +140,6 @@ func (s *Schemas) MustCustomizeType(version *APIVersion, obj interface{}, f func
 
 func (s *Schemas) importType(version *APIVersion, t reflect.Type, overrides ...reflect.Type) (*Schema, error) {
 	typeName := s.getTypeName(t)
-
 	existing := s.Schema(version, typeName)
 	if existing != nil {
 		return existing, nil

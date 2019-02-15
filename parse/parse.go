@@ -4,9 +4,8 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"strings"
-
 	"sort"
+	"strings"
 
 	"github.com/zdnscloud/gorest/api/builtin"
 	"github.com/zdnscloud/gorest/httperror"

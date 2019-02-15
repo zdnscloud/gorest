@@ -17,6 +17,7 @@ import (
 	"net/http"
 
 	"github.com/zdnscloud/gorest/api"
+	"github.com/zdnscloud/gorest/store/empty"
 	"github.com/zdnscloud/gorest/types"
 )
 
@@ -42,7 +43,9 @@ var (
 )
 
 func main() {
-	Schemas.MustImport(&version, Foo{})
+	Schemas.MustImportAndCustomize(&version, Foo{}, func(schema *types.Schema) {
+		schema.Store = &empty.Store{}
+	})
 
 	server := api.NewAPIServer()
     if err := server.AddSchemas(Schemas); err != nil {
