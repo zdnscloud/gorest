@@ -7,7 +7,7 @@ import (
 )
 
 func ParseAndValidateBody(apiContext *types.APIContext, create bool) (map[string]interface{}, error) {
-	data, err := parse.Body(apiContext.Request)
+	data, err := parse.ReadBody(apiContext.Request)
 	if err != nil {
 		return nil, err
 	}
