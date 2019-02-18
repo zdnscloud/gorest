@@ -19,11 +19,6 @@ type GenericCollection struct {
 	Data []interface{} `json:"data"`
 }
 
-type ResourceCollection struct {
-	Collection
-	Data []Resource `json:"data,omitempty"`
-}
-
 type SortOrder string
 
 type Sort struct {
@@ -63,17 +58,6 @@ type Resource struct {
 	ID      string            `json:"id,omitempty"`
 	Type    string            `json:"type,omitempty"`
 	Actions map[string]string `json:"actions"`
-}
-
-type NamedResource struct {
-	Resource
-	Name        string `json:"name"`
-	Description string `json:"description"`
-}
-
-type NamedResourceCollection struct {
-	Collection
-	Data []NamedResource `json:"data,omitempty"`
 }
 
 type APIVersion struct {
