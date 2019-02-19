@@ -3,10 +3,9 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/zdnscloud/gorest/api"
-	"github.com/zdnscloud/gorest/httperror"
+	"github.com/zdnscloud/gorest/parse"
 	"github.com/zdnscloud/gorest/types"
 )
 
@@ -18,6 +17,8 @@ var (
 	}
 
 	Schemas = types.NewSchemas()
+
+	store = newStore()
 )
 
 type Foo struct {
@@ -35,6 +36,15 @@ type Metadata struct {
 
 func fooFromMap(data map[string]interface{}) *Foo {
 	foo := &Foo{Metadata: &Metadata{}}
+
+	if kind, ok := data["kind"]; ok {
+		foo.Kind = kind.(string)
+	}
+
+	if version, ok := data["apiVersion"]; ok {
+		foo.ApiVersion = version.(string)
+	}
+
 	if metaif, ok := data["metadata"]; ok {
 		if meta, ok := metaif.(map[string]interface{}); ok {
 			if name, ok := meta["name"]; ok {
@@ -69,83 +79,113 @@ type Store struct {
 	resource map[string]*Foo
 }
 
-func NewStore(schema *types.Schema) *Store {
-	return &Store{
-		resource: make(map[string]*Foo),
-	}
+func newStore() *Store {
+	return &Store{resource: make(map[string]*Foo)}
 }
 
-func (s *Store) Context() types.StorageContext {
-	return types.DefaultStorageContext
-}
-
-func (s *Store) ByID(apiContext *types.APIContext, schema *types.Schema, id string) (map[string]interface{}, error) {
-	namespaceAndName := strings.SplitN(id, ":", 2)
-	if len(namespaceAndName) == 2 {
-		if foo, ok := s.resource[namespaceAndName[0]+":"+schema.ID+":"+namespaceAndName[1]]; ok {
-			return foo.fooToMap(), nil
-		}
-	}
-
-	return nil, nil
-}
-
-func (s *Store) List(apiContext *types.APIContext, schema *types.Schema, opt *types.QueryOptions) ([]map[string]interface{}, error) {
-	var resources []map[string]interface{}
-	for _, foo := range s.resource {
-		resources = append(resources, foo.fooToMap())
-	}
-	return resources, nil
-}
-
-func (s *Store) Create(apiContext *types.APIContext, schema *types.Schema, data map[string]interface{}) (map[string]interface{}, error) {
-	return s.create(schema, data)
-}
-
-func (s *Store) create(schema *types.Schema, data map[string]interface{}) (map[string]interface{}, error) {
+func addFooToMem(data map[string]interface{}) error {
 	foo := fooFromMap(data)
-	foo.Kind = schema.ID
-	foo.ApiVersion = schema.Version.Version
-	id := foo.Metadata.Namespace + ":" + foo.Kind + ":" + foo.Metadata.Name
-	if _, ok := s.resource[id]; ok {
-		return nil, httperror.NewAPIError(httperror.Conflict, "duplicate resource: "+id)
+	id := foo.Metadata.Namespace + ":" + foo.Metadata.Name
+	if _, ok := store.resource[id]; ok {
+		return fmt.Errorf("duplicate foo: %s\n", id)
 	} else {
-		s.resource[id] = foo
+		store.resource[id] = foo
 	}
-	return data, nil
+	return nil
 }
 
-func (s *Store) Update(apiContext *types.APIContext, schema *types.Schema, data map[string]interface{}, id string) (map[string]interface{}, error) {
-	namespaceAndName := strings.SplitN(id, ":", 2)
-	if len(namespaceAndName) == 2 {
-		id := namespaceAndName[0] + ":" + schema.ID + ":" + namespaceAndName[1]
-		if _, ok := s.resource[id]; ok {
-			delete(s.resource, id)
-			return s.create(schema, data)
-		} else {
-			return nil, httperror.NewAPIError(httperror.NotFound, "non-exist resource: "+id)
-		}
-	}
-
-	return nil, nil
+func deleteFooFromMem(id string) error {
+	delete(store.resource, id)
+	return nil
 }
 
-func (s *Store) Delete(apiContext *types.APIContext, schema *types.Schema, id string) (map[string]interface{}, error) {
-	namespaceAndName := strings.SplitN(id, ":", 2)
-	if len(namespaceAndName) == 2 {
-		delete(s.resource, namespaceAndName[0]+":"+schema.ID+":"+namespaceAndName[1])
+func updateFooToMem(id string, data map[string]interface{}) error {
+	if _, ok := store.resource[id]; ok {
+		delete(store.resource, id)
+		return addFooToMem(data)
+	} else {
+		return fmt.Errorf("no such foo: %s\n", id)
 	}
-
-	return nil, nil
 }
 
-func (s *Store) Watch(apiContext *types.APIContext, schema *types.Schema, opt *types.QueryOptions) (chan map[string]interface{}, error) {
-	return nil, nil
+func getAllFoosFromMem() []map[string]interface{} {
+	var result []map[string]interface{}
+	for _, foo := range store.resource {
+		result = append(result, foo.fooToMap())
+	}
+
+	return result
+}
+
+func getFooFromMem(id string) map[string]interface{} {
+	if foo, ok := store.resource[id]; ok {
+		return foo.fooToMap()
+	}
+
+	return nil
+}
+
+func CreateHandler(apiContext *types.APIContext, next types.RequestHandler) error {
+	data, err := parse.ReadBody(apiContext.Request)
+	if err != nil {
+		return err
+	}
+
+	data["kind"] = apiContext.Schema.ID
+	data["apiVersion"] = apiContext.Schema.Version.Version
+
+	if err := addFooToMem(data); err != nil {
+		return err
+	}
+
+	apiContext.WriteResponse(http.StatusCreated, data)
+	return nil
+}
+
+func DeleteHandler(apiContext *types.APIContext, next types.RequestHandler) error {
+	if err := deleteFooFromMem(apiContext.ID); err != nil {
+		return err
+	}
+
+	apiContext.WriteResponse(http.StatusCreated, nil)
+	return nil
+}
+
+func UpdateHandler(apiContext *types.APIContext, next types.RequestHandler) error {
+	data, err := parse.ReadBody(apiContext.Request)
+	if err != nil {
+		return err
+	}
+
+	data["kind"] = apiContext.Schema.ID
+	data["apiVersion"] = apiContext.Schema.Version.Version
+
+	if err := updateFooToMem(apiContext.ID, data); err != nil {
+		return err
+	}
+
+	apiContext.WriteResponse(http.StatusCreated, data)
+	return nil
+}
+
+func ListHandler(apiContext *types.APIContext, next types.RequestHandler) error {
+	var result interface{}
+	if apiContext.ID == "" {
+		result = getAllFoosFromMem()
+	} else {
+		result = getFooFromMem(apiContext.ID)
+	}
+
+	apiContext.WriteResponse(http.StatusCreated, result)
+	return nil
 }
 
 func main() {
 	Schemas.MustImportAndCustomize(&version, Foo{}, func(schema *types.Schema) {
-		schema.Store = NewStore(schema)
+		schema.CreateHandler = CreateHandler
+		schema.DeleteHandler = DeleteHandler
+		schema.UpdateHandler = UpdateHandler
+		schema.ListHandler = ListHandler
 	})
 
 	server := api.NewAPIServer()
