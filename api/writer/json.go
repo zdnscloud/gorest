@@ -8,7 +8,7 @@ import (
 	"github.com/zdnscloud/gorest/parse"
 	"github.com/zdnscloud/gorest/parse/builder"
 	"github.com/zdnscloud/gorest/types"
-	"github.com/zdnscloud/gorest/types/definition"
+	//"github.com/zdnscloud/gorest/types/definition"
 )
 
 type EncodingResponseWriter struct {
@@ -100,7 +100,8 @@ func toString(val interface{}) string {
 }
 
 func (j *EncodingResponseWriter) convert(b *builder.Builder, context *types.APIContext, input map[string]interface{}) *types.RawResource {
-	schema := context.Schemas.Schema(context.Version, definition.GetFullType(input))
+	//schema := context.Schemas.Schema(context.Version, definition.GetFullType(input))
+	schema := context.Schema
 	if schema == nil {
 		return nil
 	}

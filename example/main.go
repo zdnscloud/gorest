@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/zdnscloud/gorest/api"
+	"github.com/zdnscloud/gorest/httperror"
 	"github.com/zdnscloud/gorest/types"
 )
 
@@ -20,29 +22,57 @@ var (
 
 type Foo struct {
 	types.Resource
-	Name string `json:"name"`
-	Foo  string `json:"foo"`
+	ApiVersion string    `json:"apiVersion"`
+	Kind       string    `json:"kind"`
+	Metadata   *Metadata `json:"metadata"`
 }
 
-func fooFromData(data map[string]interface{}) *Foo {
-	foo := &Foo{}
-	if name, ok := data["name"]; ok {
-		foo.Name = name.(string)
-	}
+type Metadata struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	Label     string `json:"label"`
+}
 
-	if fo, ok := data["foo"]; ok {
-		foo.Foo = fo.(string)
-	}
+func fooFromMap(data map[string]interface{}) *Foo {
+	foo := &Foo{Metadata: &Metadata{}}
+	if metaif, ok := data["metadata"]; ok {
+		if meta, ok := metaif.(map[string]interface{}); ok {
+			if name, ok := meta["name"]; ok {
+				foo.Metadata.Name = name.(string)
+			}
 
+			if namespace, ok := meta["namespace"]; ok {
+				foo.Metadata.Namespace = namespace.(string)
+			}
+
+			if label, ok := meta["label"]; ok {
+				foo.Metadata.Label = label.(string)
+			}
+		}
+	}
 	return foo
 }
 
-type Store struct {
-	resource map[string][]*Foo
+func (foo *Foo) fooToMap() map[string]interface{} {
+	return map[string]interface{}{
+		"apiVersion": foo.ApiVersion,
+		"kind":       foo.Kind,
+		"metadata": map[string]interface{}{
+			"name":      foo.Metadata.Name,
+			"namespace": foo.Metadata.Namespace,
+			"label":     foo.Metadata.Label,
+		},
+	}
 }
 
-func NewStore() *Store {
-	return &Store{resource: make(map[string][]*Foo)}
+type Store struct {
+	resource map[string]*Foo
+}
+
+func NewStore(schema *types.Schema) *Store {
+	return &Store{
+		resource: make(map[string]*Foo),
+	}
 }
 
 func (s *Store) Context() types.StorageContext {
@@ -50,81 +80,63 @@ func (s *Store) Context() types.StorageContext {
 }
 
 func (s *Store) ByID(apiContext *types.APIContext, schema *types.Schema, id string) (map[string]interface{}, error) {
-	result := make(map[string]interface{})
-	for _, foo := range s.resource[schema.ID] {
-		if foo.Name == id {
-			result["name"] = foo.Name
-			result["foo"] = foo.Foo
-			break
+	namespaceAndName := strings.SplitN(id, ":", 2)
+	if len(namespaceAndName) == 2 {
+		if foo, ok := s.resource[namespaceAndName[0]+":"+schema.ID+":"+namespaceAndName[1]]; ok {
+			return foo.fooToMap(), nil
 		}
 	}
 
-	if schema.Mapper != nil {
-		schema.Mapper.FromInternal(result)
-	}
-	return result, nil
+	return nil, nil
 }
 
 func (s *Store) List(apiContext *types.APIContext, schema *types.Schema, opt *types.QueryOptions) ([]map[string]interface{}, error) {
-	var results []map[string]interface{}
-	for _, foos := range s.resource {
-		for _, foo := range foos {
-			result := map[string]interface{}{"name": foo.Name, "foo": foo.Foo}
-			if schema.Mapper != nil {
-				schema.Mapper.FromInternal(result)
-			}
-			results = append(results, result)
-		}
+	var resources []map[string]interface{}
+	for _, foo := range s.resource {
+		resources = append(resources, foo.fooToMap())
 	}
-
-	return results, nil
+	return resources, nil
 }
 
 func (s *Store) Create(apiContext *types.APIContext, schema *types.Schema, data map[string]interface{}) (map[string]interface{}, error) {
-	if schema.Mapper != nil {
-		schema.Mapper.ToInternal(data)
+	return s.create(schema, data)
+}
+
+func (s *Store) create(schema *types.Schema, data map[string]interface{}) (map[string]interface{}, error) {
+	foo := fooFromMap(data)
+	foo.Kind = schema.ID
+	foo.ApiVersion = schema.Version.Version
+	id := foo.Metadata.Namespace + ":" + foo.Kind + ":" + foo.Metadata.Name
+	if _, ok := s.resource[id]; ok {
+		return nil, httperror.NewAPIError(httperror.Conflict, "duplicate resource: "+id)
+	} else {
+		s.resource[id] = foo
 	}
-
-	s.resource[schema.ID] = append(s.resource[schema.ID], fooFromData(data))
-
-	if schema.Mapper != nil {
-		schema.Mapper.FromInternal(data)
-	}
-
 	return data, nil
 }
 
 func (s *Store) Update(apiContext *types.APIContext, schema *types.Schema, data map[string]interface{}, id string) (map[string]interface{}, error) {
-	if schema.Mapper != nil {
-		schema.Mapper.ToInternal(data)
-	}
-
-	for i, foo := range s.resource[schema.ID] {
-		if foo.Name == id {
-			s.resource[schema.ID][i] = fooFromData(data)
-			break
+	namespaceAndName := strings.SplitN(id, ":", 2)
+	if len(namespaceAndName) == 2 {
+		id := namespaceAndName[0] + ":" + schema.ID + ":" + namespaceAndName[1]
+		if _, ok := s.resource[id]; ok {
+			delete(s.resource, id)
+			return s.create(schema, data)
+		} else {
+			return nil, httperror.NewAPIError(httperror.NotFound, "non-exist resource: "+id)
 		}
 	}
 
-	if schema.Mapper != nil {
-		schema.Mapper.FromInternal(data)
-	}
-	return data, nil
+	return nil, nil
 }
 
 func (s *Store) Delete(apiContext *types.APIContext, schema *types.Schema, id string) (map[string]interface{}, error) {
-	result := make(map[string]interface{})
-	for i, foo := range s.resource[schema.ID] {
-		if foo.Name == id {
-			s.resource[schema.ID] = append(s.resource[schema.ID][:i], s.resource[schema.ID][i+1:]...)
-			break
-		}
+	namespaceAndName := strings.SplitN(id, ":", 2)
+	if len(namespaceAndName) == 2 {
+		delete(s.resource, namespaceAndName[0]+":"+schema.ID+":"+namespaceAndName[1])
 	}
 
-	if schema.Mapper != nil {
-		schema.Mapper.FromInternal(result)
-	}
-	return result, nil
+	return nil, nil
 }
 
 func (s *Store) Watch(apiContext *types.APIContext, schema *types.Schema, opt *types.QueryOptions) (chan map[string]interface{}, error) {
@@ -133,7 +145,7 @@ func (s *Store) Watch(apiContext *types.APIContext, schema *types.Schema, opt *t
 
 func main() {
 	Schemas.MustImportAndCustomize(&version, Foo{}, func(schema *types.Schema) {
-		schema.Store = NewStore()
+		schema.Store = NewStore(schema)
 	})
 
 	server := api.NewAPIServer()
