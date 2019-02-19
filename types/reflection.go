@@ -79,6 +79,7 @@ func (s *Schemas) newSchemaFromType(version *APIVersion, t reflect.Type, typeNam
 		ResourceFields:    map[string]Field{},
 		ResourceActions:   map[string]Action{},
 		CollectionActions: map[string]Action{},
+		StructVal:         reflect.New(t),
 	}
 
 	if err := s.readFields(schema, t); err != nil {

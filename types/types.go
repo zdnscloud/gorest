@@ -1,5 +1,9 @@
 package types
 
+import (
+	"reflect"
+)
+
 const (
 	ResourceFieldID = "id"
 )
@@ -107,6 +111,7 @@ type Schema struct {
 	ErrorHandler        ErrorHandler        `json:"-"`
 	Validator           Validator           `json:"-"`
 	Store               Store               `json:"-"`
+	StructVal           reflect.Value       `json:"-"`
 }
 
 type Field struct {
@@ -144,4 +149,31 @@ type ListOpts struct {
 
 func (c *Collection) AddAction(apiContext *APIContext, name string) {
 	c.Actions[name] = apiContext.URLBuilder.CollectionAction(apiContext.Schema, nil, name)
+}
+
+type TypeMeta struct {
+	Kind       string `json:"kind,omitempty"`
+	APIVersion string `json:"apiVersion,omitempty"`
+}
+
+type ObjectMeta struct {
+	Name      string            `json:"name,omitempty"`
+	Namespace string            `json:"namespace,omitempty"`
+	Labels    map[string]string `json:"labels,omitempty"`
+}
+
+type SpecMeta struct {
+	Replicas int `json:"replicas,omitempty"`
+}
+
+type Object interface {
+	TypeMetaData() *TypeMeta
+	ObjectMetaData() *ObjectMeta
+
+	Create() error
+	Delete(string, string) error
+	Update(string, string) error
+	List() error
+	Get(string, string) error
+	Action(string) error
 }

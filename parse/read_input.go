@@ -24,7 +24,7 @@ func ReadBody(req *http.Request) (map[string]interface{}, error) {
 		return nil, nil
 	}
 
-	decode := getDecoder(req, io.LimitReader(req.Body, maxFormSize))
+	decode := GetDecoder(req, io.LimitReader(req.Body, MaxFormSize))
 
 	data := map[string]interface{}{}
 	if err := decode(&data); err != nil {
@@ -35,7 +35,7 @@ func ReadBody(req *http.Request) (map[string]interface{}, error) {
 	return data, nil
 }
 
-func getDecoder(req *http.Request, reader io.Reader) Decode {
+func GetDecoder(req *http.Request, reader io.Reader) Decode {
 	if req.Header.Get("Content-type") == "application/yaml" {
 		return yaml.NewYAMLToJSONDecoder(reader).Decode
 	}

@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/zdnscloud/gorest/api"
-	"github.com/zdnscloud/gorest/parse"
+	"github.com/zdnscloud/gorest/api/crd"
 	"github.com/zdnscloud/gorest/types"
 )
 
@@ -17,175 +17,63 @@ var (
 	}
 
 	Schemas = types.NewSchemas()
-
-	store = newStore()
 )
 
 type Foo struct {
 	types.Resource
-	ApiVersion string    `json:"apiVersion"`
-	Kind       string    `json:"kind"`
-	Metadata   *Metadata `json:"metadata"`
+	types.TypeMeta   `json:",inline"`
+	types.ObjectMeta `json:"metadata,omitempty"`
+	types.SpecMeta   `json:"spec,omitempty"`
 }
 
-type Metadata struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace"`
-	Label     string `json:"label"`
-}
-
-func fooFromMap(data map[string]interface{}) *Foo {
-	foo := &Foo{Metadata: &Metadata{}}
-
-	if kind, ok := data["kind"]; ok {
-		foo.Kind = kind.(string)
-	}
-
-	if version, ok := data["apiVersion"]; ok {
-		foo.ApiVersion = version.(string)
-	}
-
-	if metaif, ok := data["metadata"]; ok {
-		if meta, ok := metaif.(map[string]interface{}); ok {
-			if name, ok := meta["name"]; ok {
-				foo.Metadata.Name = name.(string)
-			}
-
-			if namespace, ok := meta["namespace"]; ok {
-				foo.Metadata.Namespace = namespace.(string)
-			}
-
-			if label, ok := meta["label"]; ok {
-				foo.Metadata.Label = label.(string)
-			}
-		}
-	}
-	return foo
-}
-
-func (foo *Foo) fooToMap() map[string]interface{} {
-	return map[string]interface{}{
-		"apiVersion": foo.ApiVersion,
-		"kind":       foo.Kind,
-		"metadata": map[string]interface{}{
-			"name":      foo.Metadata.Name,
-			"namespace": foo.Metadata.Namespace,
-			"label":     foo.Metadata.Label,
-		},
+func (foo *Foo) TypeMetaData() *types.TypeMeta {
+	return &types.TypeMeta{
+		Kind:       foo.Kind,
+		APIVersion: foo.APIVersion,
 	}
 }
 
-type Store struct {
-	resource map[string]*Foo
-}
-
-func newStore() *Store {
-	return &Store{resource: make(map[string]*Foo)}
-}
-
-func addFooToMem(data map[string]interface{}) error {
-	foo := fooFromMap(data)
-	id := foo.Metadata.Namespace + ":" + foo.Metadata.Name
-	if _, ok := store.resource[id]; ok {
-		return fmt.Errorf("duplicate foo: %s\n", id)
-	} else {
-		store.resource[id] = foo
+func (foo *Foo) ObjectMetaData() *types.ObjectMeta {
+	return &types.ObjectMeta{
+		Name:      foo.Name,
+		Namespace: foo.Namespace,
+		Labels:    foo.Labels,
 	}
+}
+
+func (foo *Foo) Create() error {
+	fmt.Printf("create foo %s in namespace %s\n", foo.Name, foo.Namespace)
 	return nil
 }
 
-func deleteFooFromMem(id string) error {
-	delete(store.resource, id)
+func (foo *Foo) Delete(name string, namespace string) error {
+	fmt.Printf("delete foo %s in namespace %s\n", name, namespace)
 	return nil
 }
 
-func updateFooToMem(id string, data map[string]interface{}) error {
-	if _, ok := store.resource[id]; ok {
-		delete(store.resource, id)
-		return addFooToMem(data)
-	} else {
-		return fmt.Errorf("no such foo: %s\n", id)
-	}
-}
-
-func getAllFoosFromMem() []map[string]interface{} {
-	var result []map[string]interface{}
-	for _, foo := range store.resource {
-		result = append(result, foo.fooToMap())
-	}
-
-	return result
-}
-
-func getFooFromMem(id string) map[string]interface{} {
-	if foo, ok := store.resource[id]; ok {
-		return foo.fooToMap()
-	}
-
+func (foo *Foo) Update(name string, namespace string) error {
+	fmt.Printf("update foo %s in namespace %s\n", name, namespace)
 	return nil
 }
 
-func CreateHandler(apiContext *types.APIContext, next types.RequestHandler) error {
-	data, err := parse.ReadBody(apiContext.Request)
-	if err != nil {
-		return err
-	}
-
-	data["kind"] = apiContext.Schema.ID
-	data["apiVersion"] = apiContext.Schema.Version.Version
-
-	if err := addFooToMem(data); err != nil {
-		return err
-	}
-
-	apiContext.WriteResponse(http.StatusCreated, data)
+func (foo *Foo) List() []map[string]interface{} {
+	fmt.Printf("get all foos\n")
 	return nil
 }
 
-func DeleteHandler(apiContext *types.APIContext, next types.RequestHandler) error {
-	if err := deleteFooFromMem(apiContext.ID); err != nil {
-		return err
-	}
-
-	apiContext.WriteResponse(http.StatusCreated, nil)
+func (foo *Foo) Get(name string, namespace string) map[string]interface{} {
+	fmt.Printf("get foo %s in namespace %s\n", name, namespace)
 	return nil
 }
 
-func UpdateHandler(apiContext *types.APIContext, next types.RequestHandler) error {
-	data, err := parse.ReadBody(apiContext.Request)
-	if err != nil {
-		return err
-	}
-
-	data["kind"] = apiContext.Schema.ID
-	data["apiVersion"] = apiContext.Schema.Version.Version
-
-	if err := updateFooToMem(apiContext.ID, data); err != nil {
-		return err
-	}
-
-	apiContext.WriteResponse(http.StatusCreated, data)
-	return nil
-}
-
-func ListHandler(apiContext *types.APIContext, next types.RequestHandler) error {
-	var result interface{}
-	if apiContext.ID == "" {
-		result = getAllFoosFromMem()
-	} else {
-		result = getFooFromMem(apiContext.ID)
-	}
-
-	apiContext.WriteResponse(http.StatusCreated, result)
+func (foo *Foo) Action(action string) error {
+	fmt.Printf("do action: %s\n", action)
 	return nil
 }
 
 func main() {
 	Schemas.MustImportAndCustomize(&version, Foo{}, func(schema *types.Schema) {
-		schema.CreateHandler = CreateHandler
-		schema.DeleteHandler = DeleteHandler
-		schema.UpdateHandler = UpdateHandler
-		schema.ListHandler = ListHandler
+		crd.AssignHandler(schema)
 	})
 
 	server := api.NewAPIServer()

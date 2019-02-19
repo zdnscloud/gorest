@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	maxFormSize = 2 * 1 << 20
+	MaxFormSize = 2 * 1 << 20
 )
 
 var (
@@ -285,7 +285,7 @@ func parseAction(url *url.URL) (string, string) {
 }
 
 func Body(req *http.Request) (map[string]interface{}, error) {
-	req.ParseMultipartForm(maxFormSize)
+	req.ParseMultipartForm(MaxFormSize)
 	if req.MultipartForm != nil {
 		return valuesToBody(req.MultipartForm.Value), nil
 	}
