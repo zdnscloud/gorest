@@ -283,24 +283,3 @@ func parseAction(url *url.URL) (string, string) {
 
 	return action, ""
 }
-
-func Body(req *http.Request) (map[string]interface{}, error) {
-	req.ParseMultipartForm(MaxFormSize)
-	if req.MultipartForm != nil {
-		return valuesToBody(req.MultipartForm.Value), nil
-	}
-
-	if req.PostForm != nil && len(req.PostForm) > 0 {
-		return valuesToBody(map[string][]string(req.Form)), nil
-	}
-
-	return ReadBody(req)
-}
-
-func valuesToBody(input map[string][]string) map[string]interface{} {
-	result := map[string]interface{}{}
-	for k, v := range input {
-		result[k] = v
-	}
-	return result
-}

@@ -50,16 +50,7 @@ func NewBuilder(apiRequest *types.APIContext) *Builder {
 }
 
 func (b *Builder) Construct(schema *types.Schema, input map[string]interface{}, op Operation) (map[string]interface{}, error) {
-	result, err := b.copyFields(schema, input, op)
-	if err != nil {
-		return nil, err
-	}
-	if (op == Create || op == Update) && schema.Validator != nil {
-		if err := schema.Validator(b.apiContext, schema, result); err != nil {
-			return nil, err
-		}
-	}
-	return result, nil
+	return b.copyFields(schema, input, op)
 }
 
 func (b *Builder) copyInputs(schema *types.Schema, input map[string]interface{}, op Operation, result map[string]interface{}) error {

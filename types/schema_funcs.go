@@ -7,21 +7,6 @@ import (
 	"github.com/zdnscloud/gorest/types/slice"
 )
 
-func (s *Schema) MustCustomizeField(name string, f func(f Field) Field) *Schema {
-	field, ok := s.ResourceFields[name]
-	if !ok {
-		panic("Failed to find field " + name + " on schema " + s.ID)
-	}
-	s.ResourceFields[name] = f(field)
-	return s
-}
-
-func (v *APIVersion) Equals(other *APIVersion) bool {
-	return v.Version == other.Version &&
-		v.Group == other.Group &&
-		v.Path == other.Path
-}
-
 func (s *Schema) CanList(context *APIContext) error {
 	if context == nil {
 		if slice.ContainsString(s.CollectionMethods, http.MethodGet) {
@@ -59,7 +44,7 @@ func (s *Schema) CanUpdate(context *APIContext) error {
 		}
 		return httperror.NewAPIError(httperror.PermissionDenied, "can not update "+s.ID)
 	}
-	return context.AccessControl.CanUpdate(context, nil, s)
+	return context.AccessControl.CanUpdate(context, s)
 }
 
 func (s *Schema) CanDelete(context *APIContext) error {
@@ -69,5 +54,5 @@ func (s *Schema) CanDelete(context *APIContext) error {
 		}
 		return httperror.NewAPIError(httperror.PermissionDenied, "can not delete "+s.ID)
 	}
-	return context.AccessControl.CanDelete(context, nil, s)
+	return context.AccessControl.CanDelete(context, s)
 }

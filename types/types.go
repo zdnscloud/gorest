@@ -110,8 +110,8 @@ type Schema struct {
 	CollectionFormatter CollectionFormatter `json:"-"`
 	ErrorHandler        ErrorHandler        `json:"-"`
 	Validator           Validator           `json:"-"`
-	Store               Store               `json:"-"`
 	StructVal           reflect.Value       `json:"-"`
+	Handler             Handler             `json:"-"`
 }
 
 type Field struct {
@@ -162,18 +162,17 @@ type ObjectMeta struct {
 	Labels    map[string]string `json:"labels,omitempty"`
 }
 
-type SpecMeta struct {
-	Replicas int `json:"replicas,omitempty"`
+type Object interface {
+	TypeMetaData() TypeMeta
+	ObjectMetaData() ObjectMeta
+	SetTypeMeta(TypeMeta)
 }
 
-type Object interface {
-	TypeMetaData() *TypeMeta
-	ObjectMetaData() *ObjectMeta
-
-	Create() error
-	Delete(string, string) error
-	Update(string, string) error
-	List() error
-	Get(string, string) error
-	Action(string) error
+type Handler interface {
+	Create(Object) error
+	Delete(TypeMeta, ObjectMeta) error
+	Update(TypeMeta, ObjectMeta, Object) error
+	List() interface{}
+	Get(TypeMeta, ObjectMeta) interface{}
+	Action(string, map[string]interface{}, Object) error
 }

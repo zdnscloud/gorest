@@ -79,7 +79,7 @@ func (s *Schemas) newSchemaFromType(version *APIVersion, t reflect.Type, typeNam
 		ResourceFields:    map[string]Field{},
 		ResourceActions:   map[string]Action{},
 		CollectionActions: map[string]Action{},
-		StructVal:         reflect.New(t),
+		StructVal:         reflect.New(t).Elem(),
 	}
 
 	if err := s.readFields(schema, t); err != nil {
@@ -196,24 +196,11 @@ func jsonName(f reflect.StructField) string {
 	return strings.SplitN(f.Tag.Get("json"), ",", 2)[0]
 }
 
-func k8sType(field reflect.StructField) bool {
-	return field.Type.Name() == "TypeMeta" &&
-		strings.HasSuffix(field.Type.PkgPath(), "k8s.io/apimachinery/pkg/apis/meta/v1")
-}
-
-func k8sObject(field reflect.StructField) bool {
-	return field.Type.Name() == "ObjectMeta" &&
-		strings.HasSuffix(field.Type.PkgPath(), "k8s.io/apimachinery/pkg/apis/meta/v1")
-}
-
 func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 	if t == resourceType {
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "PUT", "DELETE"}
 	}
-
-	hasType := false
-	hasMeta := false
 
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
@@ -226,14 +213,6 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 		jsonName := jsonName(field)
 		if jsonName == "-" {
 			continue
-		}
-
-		if field.Anonymous && jsonName == "" && k8sType(field) {
-			hasType = true
-		}
-
-		if field.Anonymous && jsonName == "metadata" && k8sObject(field) {
-			hasMeta = true
 		}
 
 		if field.Anonymous && jsonName == "" {
@@ -311,11 +290,6 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 		}
 
 		schema.ResourceFields[fieldName] = schemaField
-	}
-
-	if hasType && hasMeta {
-		schema.CollectionMethods = []string{"GET", "POST"}
-		schema.ResourceMethods = []string{"GET", "PUT", "DELETE"}
 	}
 
 	return nil

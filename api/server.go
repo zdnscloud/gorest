@@ -2,37 +2,26 @@ package api
 
 import (
 	"net/http"
-	"sync"
 
-	"github.com/zdnscloud/gorest/api/access"
-	"github.com/zdnscloud/gorest/api/builtin"
 	"github.com/zdnscloud/gorest/api/handler"
 	"github.com/zdnscloud/gorest/api/writer"
 	"github.com/zdnscloud/gorest/authorization"
 	"github.com/zdnscloud/gorest/httperror"
 	ehandler "github.com/zdnscloud/gorest/httperror/handler"
 	"github.com/zdnscloud/gorest/parse"
-	"github.com/zdnscloud/gorest/store/wrapper"
 	"github.com/zdnscloud/gorest/types"
 )
-
-type StoreWrapper func(types.Store) types.Store
 
 type Parser func(rw http.ResponseWriter, req *http.Request) (*types.APIContext, error)
 
 type Server struct {
-	initBuiltin                 sync.Once
-	IgnoreBuiltin               bool
-	Parser                      Parser
-	Resolver                    parse.ResolverFunc
-	SubContextAttributeProvider types.SubContextAttributeProvider
-	ResponseWriters             map[string]ResponseWriter
-	Schemas                     *types.Schemas
-	QueryFilter                 types.QueryFilter
-	StoreWrapper                StoreWrapper
-	URLParser                   parse.URLParser
-	Defaults                    Defaults
-	AccessControl               types.AccessControl
+	Parser          Parser
+	Resolver        parse.ResolverFunc
+	ResponseWriters map[string]ResponseWriter
+	Schemas         *types.Schemas
+	URLParser       parse.URLParser
+	Defaults        Defaults
+	AccessControl   types.AccessControl
 }
 
 type Defaults struct {
@@ -41,7 +30,6 @@ type Defaults struct {
 	CreateHandler types.RequestHandler
 	DeleteHandler types.RequestHandler
 	UpdateHandler types.RequestHandler
-	Store         types.Store
 	ErrorHandler  types.ErrorHandler
 }
 
@@ -64,9 +52,8 @@ func NewAPIServer() *Server {
 				Encoder:     types.YAMLEncoder,
 			},
 		},
-		SubContextAttributeProvider: &parse.DefaultSubContextAttributeProvider{},
-		Resolver:                    parse.DefaultResolver,
-		AccessControl:               &authorization.AllAccess{},
+		Resolver:      parse.DefaultResolver,
+		AccessControl: &authorization.AllAccess{},
 		Defaults: Defaults{
 			CreateHandler: handler.CreateHandler,
 			DeleteHandler: handler.DeleteHandler,
@@ -74,9 +61,7 @@ func NewAPIServer() *Server {
 			ListHandler:   handler.ListHandler,
 			ErrorHandler:  ehandler.ErrorHandler,
 		},
-		StoreWrapper: wrapper.Wrap,
-		URLParser:    parse.DefaultURLParser,
-		QueryFilter:  handler.QueryFilter,
+		URLParser: parse.DefaultURLParser,
 	}
 
 	s.Schemas.AddHook = s.setupDefaults
@@ -91,14 +76,6 @@ func (s *Server) parser(rw http.ResponseWriter, req *http.Request) (*types.APICo
 		ctx.ResponseWriter = s.ResponseWriters["json"]
 	}
 
-	if ctx.QueryFilter == nil {
-		ctx.QueryFilter = s.QueryFilter
-	}
-
-	if ctx.SubContextAttributeProvider == nil {
-		ctx.SubContextAttributeProvider = s.SubContextAttributeProvider
-	}
-
 	ctx.AccessControl = s.AccessControl
 
 	return ctx, err
@@ -108,15 +85,6 @@ func (s *Server) AddSchemas(schemas *types.Schemas) error {
 	if schemas.Err() != nil {
 		return schemas.Err()
 	}
-
-	s.initBuiltin.Do(func() {
-		if s.IgnoreBuiltin {
-			return
-		}
-		for _, schema := range builtin.Schemas.Schemas() {
-			s.Schemas.AddSchema(*schema)
-		}
-	})
 
 	for _, schema := range schemas.Schemas() {
 		s.Schemas.AddSchema(*schema)
@@ -128,10 +96,6 @@ func (s *Server) AddSchemas(schemas *types.Schemas) error {
 func (s *Server) setupDefaults(schema *types.Schema) {
 	if schema.ActionHandler == nil {
 		schema.ActionHandler = s.Defaults.ActionHandler
-	}
-
-	if schema.Store == nil {
-		schema.Store = s.Defaults.Store
 	}
 
 	if schema.ListHandler == nil {
@@ -152,10 +116,6 @@ func (s *Server) setupDefaults(schema *types.Schema) {
 
 	if schema.ErrorHandler == nil {
 		schema.ErrorHandler = s.Defaults.ErrorHandler
-	}
-
-	if schema.Store != nil && s.StoreWrapper != nil {
-		schema.Store = s.StoreWrapper(schema.Store)
 	}
 }
 
@@ -207,13 +167,13 @@ func (s *Server) handle(rw http.ResponseWriter, req *http.Request) (*types.APICo
 			handler = apiRequest.Schema.CreateHandler
 			nextHandler = s.Defaults.CreateHandler
 		case http.MethodPut:
-			if err := apiRequest.AccessControl.CanUpdate(apiRequest, nil, apiRequest.Schema); err != nil {
+			if err := apiRequest.AccessControl.CanUpdate(apiRequest, apiRequest.Schema); err != nil {
 				return apiRequest, err
 			}
 			handler = apiRequest.Schema.UpdateHandler
 			nextHandler = s.Defaults.UpdateHandler
 		case http.MethodDelete:
-			if err := apiRequest.AccessControl.CanDelete(apiRequest, nil, apiRequest.Schema); err != nil {
+			if err := apiRequest.AccessControl.CanDelete(apiRequest, apiRequest.Schema); err != nil {
 				return apiRequest, err
 			}
 			handler = apiRequest.Schema.DeleteHandler
@@ -233,11 +193,6 @@ func (s *Server) handle(rw http.ResponseWriter, req *http.Request) (*types.APICo
 }
 
 func handleAction(action *types.Action, context *types.APIContext) error {
-	if context.ID != "" {
-		if err := access.ByID(context, context.Version, context.Type, context.ID, nil); err != nil {
-			return err
-		}
-	}
 	return context.Schema.ActionHandler(context.Action, action, context)
 }
 

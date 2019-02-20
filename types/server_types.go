@@ -7,10 +7,6 @@ import (
 	"net/url"
 )
 
-type ValuesMap struct {
-	Foo map[string]interface{}
-}
-
 type RawResource struct {
 	ID           string                 `json:"id,omitempty" yaml:"id,omitempty"`
 	Type         string                 `json:"type,omitempty" yaml:"type,omitempty"`
@@ -80,14 +76,8 @@ type AccessControl interface {
 	CanCreate(apiContext *APIContext, schema *Schema) error
 	CanList(apiContext *APIContext, schema *Schema) error
 	CanGet(apiContext *APIContext, schema *Schema) error
-	CanUpdate(apiContext *APIContext, obj map[string]interface{}, schema *Schema) error
-	CanDelete(apiContext *APIContext, obj map[string]interface{}, schema *Schema) error
-	// CanDo function should not yet be used if a corresponding specific method exists. It has been added to
-	// satisfy a specific usecase for the short term until full-blown dynamic RBAC can be implemented.
-	CanDo(apiGroup, resource, verb string, apiContext *APIContext, obj map[string]interface{}, schema *Schema) error
-
-	Filter(apiContext *APIContext, schema *Schema, obj map[string]interface{}, context map[string]string) map[string]interface{}
-	FilterList(apiContext *APIContext, schema *Schema, obj []map[string]interface{}, context map[string]string) []map[string]interface{}
+	CanUpdate(apiContext *APIContext, schema *Schema) error
+	CanDelete(apiContext *APIContext, schema *Schema) error
 }
 
 type APIContext struct {

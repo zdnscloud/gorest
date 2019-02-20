@@ -5,79 +5,79 @@ import (
 	"net/http"
 
 	"github.com/zdnscloud/gorest/api"
-	"github.com/zdnscloud/gorest/api/crd"
 	"github.com/zdnscloud/gorest/types"
 )
 
 var (
 	version = types.APIVersion{
 		Version: "v1",
-		Group:   "io.cattle.core.example",
+		Group:   "zdns.cloud.example",
 		Path:    "/example/v1",
 	}
-
-	Schemas = types.NewSchemas()
 )
 
 type Foo struct {
-	types.Resource
 	types.TypeMeta   `json:",inline"`
 	types.ObjectMeta `json:"metadata,omitempty"`
-	types.SpecMeta   `json:"spec,omitempty"`
+	Spec             `json:"spec,omitempty"`
 }
 
-func (foo *Foo) TypeMetaData() *types.TypeMeta {
-	return &types.TypeMeta{
-		Kind:       foo.Kind,
-		APIVersion: foo.APIVersion,
-	}
+type Spec struct{}
+
+func (foo *Foo) TypeMetaData() types.TypeMeta {
+	return foo.TypeMeta
 }
 
-func (foo *Foo) ObjectMetaData() *types.ObjectMeta {
-	return &types.ObjectMeta{
-		Name:      foo.Name,
-		Namespace: foo.Namespace,
-		Labels:    foo.Labels,
-	}
+func (foo *Foo) ObjectMetaData() types.ObjectMeta {
+	return foo.ObjectMeta
 }
 
-func (foo *Foo) Create() error {
-	fmt.Printf("create foo %s in namespace %s\n", foo.Name, foo.Namespace)
+func (foo *Foo) SetTypeMeta(meta types.TypeMeta) {
+	foo.TypeMeta = meta
+}
+
+type Handler struct{}
+
+func (s *Handler) Create(obj types.Object) error {
+	fmt.Printf("create %s %s in namespace %s with apiVersion %s\n",
+		obj.(*Foo).Kind, obj.(*Foo).Name, obj.(*Foo).Namespace, obj.(*Foo).APIVersion)
 	return nil
 }
 
-func (foo *Foo) Delete(name string, namespace string) error {
-	fmt.Printf("delete foo %s in namespace %s\n", name, namespace)
+func (s *Handler) Delete(typeMeta types.TypeMeta, objMeta types.ObjectMeta) error {
+	fmt.Printf("delete %s %s in namespace %s \n", typeMeta.Kind, objMeta.Name, objMeta.Namespace)
 	return nil
 }
 
-func (foo *Foo) Update(name string, namespace string) error {
-	fmt.Printf("update foo %s in namespace %s\n", name, namespace)
+func (s *Handler) Update(typeMeta types.TypeMeta, objMeta types.ObjectMeta, obj types.Object) error {
+	fmt.Printf("update %s %s in namespace %s \n", typeMeta.Kind, objMeta.Name, objMeta.Namespace)
 	return nil
 }
 
-func (foo *Foo) List() []map[string]interface{} {
+func (s *Handler) List() interface{} {
 	fmt.Printf("get all foos\n")
 	return nil
 }
 
-func (foo *Foo) Get(name string, namespace string) map[string]interface{} {
-	fmt.Printf("get foo %s in namespace %s\n", name, namespace)
+func (s *Handler) Get(typeMeta types.TypeMeta, objMeta types.ObjectMeta) interface{} {
+	fmt.Printf("get %s %s in namespace %s \n", typeMeta.Kind, objMeta.Name, objMeta.Namespace)
 	return nil
 }
 
-func (foo *Foo) Action(action string) error {
+func (s *Handler) Action(action string, params map[string]interface{}, obj types.Object) error {
 	fmt.Printf("do action: %s\n", action)
 	return nil
 }
 
 func main() {
-	Schemas.MustImportAndCustomize(&version, Foo{}, func(schema *types.Schema) {
-		crd.AssignHandler(schema)
+	schemas := types.NewSchemas().MustImportAndCustomize(&version, Foo{}, func(schema *types.Schema) {
+		schema.Handler = &Handler{}
+		schema.CollectionMethods = []string{"GET", "POST"}
+		schema.ResourceMethods = []string{"GET", "PUT", "DELETE"}
 	})
 
 	server := api.NewAPIServer()
-	if err := server.AddSchemas(Schemas); err != nil {
+	if err := server.AddSchemas(schemas); err != nil {
 		panic(err.Error())
 	}
 

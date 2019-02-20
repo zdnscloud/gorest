@@ -32,31 +32,16 @@ func (*AllAccess) CanList(apiContext *types.APIContext, schema *types.Schema) er
 	return httperror.NewAPIError(httperror.PermissionDenied, "can not list "+schema.ID)
 }
 
-func (*AllAccess) CanUpdate(apiContext *types.APIContext, obj map[string]interface{}, schema *types.Schema) error {
+func (*AllAccess) CanUpdate(apiContext *types.APIContext, schema *types.Schema) error {
 	if slice.ContainsString(schema.ResourceMethods, http.MethodPut) {
 		return nil
 	}
 	return httperror.NewAPIError(httperror.PermissionDenied, "can not update "+schema.ID)
 }
 
-func (*AllAccess) CanDelete(apiContext *types.APIContext, obj map[string]interface{}, schema *types.Schema) error {
+func (*AllAccess) CanDelete(apiContext *types.APIContext, schema *types.Schema) error {
 	if slice.ContainsString(schema.ResourceMethods, http.MethodDelete) {
 		return nil
 	}
 	return httperror.NewAPIError(httperror.PermissionDenied, "can not delete "+schema.ID)
-}
-
-func (*AllAccess) CanDo(apiGroup, resource, verb string, apiContext *types.APIContext, obj map[string]interface{}, schema *types.Schema) error {
-	if slice.ContainsString(schema.ResourceMethods, verb) {
-		return nil
-	}
-	return httperror.NewAPIError(httperror.PermissionDenied, "can not perform "+verb+" "+schema.ID)
-}
-
-func (*AllAccess) Filter(apiContext *types.APIContext, schema *types.Schema, obj map[string]interface{}, context map[string]string) map[string]interface{} {
-	return obj
-}
-
-func (*AllAccess) FilterList(apiContext *types.APIContext, schema *types.Schema, obj []map[string]interface{}, context map[string]string) []map[string]interface{} {
-	return obj
 }
