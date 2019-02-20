@@ -9,53 +9,15 @@ const (
 )
 
 type Collection struct {
-	Type         string                 `json:"type,omitempty"`
-	CreateTypes  map[string]string      `json:"createTypes,omitempty"`
-	Actions      map[string]string      `json:"actions"`
-	Pagination   *Pagination            `json:"pagination,omitempty"`
-	Sort         *Sort                  `json:"sort,omitempty"`
-	Filters      map[string][]Condition `json:"filters,omitempty"`
-	ResourceType string                 `json:"resourceType"`
+	Type         string            `json:"type,omitempty"`
+	CreateTypes  map[string]string `json:"createTypes,omitempty"`
+	Actions      map[string]string `json:"actions"`
+	ResourceType string            `json:"resourceType"`
 }
 
 type GenericCollection struct {
 	Collection
 	Data []interface{} `json:"data"`
-}
-
-type SortOrder string
-
-type Sort struct {
-	Name    string    `json:"name,omitempty"`
-	Order   SortOrder `json:"order,omitempty"`
-	Reverse string    `json:"reverse,omitempty"`
-}
-
-var (
-	ModifierEQ      ModifierType = "eq"
-	ModifierNE      ModifierType = "ne"
-	ModifierNull    ModifierType = "null"
-	ModifierNotNull ModifierType = "notnull"
-	ModifierIn      ModifierType = "in"
-	ModifierNotIn   ModifierType = "notin"
-)
-
-type ModifierType string
-
-type Condition struct {
-	Modifier ModifierType `json:"modifier,omitempty"`
-	Value    interface{}  `json:"value,omitempty"`
-}
-
-type Pagination struct {
-	Marker   string `json:"marker,omitempty"`
-	First    string `json:"first,omitempty"`
-	Previous string `json:"previous,omitempty"`
-	Next     string `json:"next,omitempty"`
-	Last     string `json:"last,omitempty"`
-	Limit    *int64 `json:"limit,omitempty"`
-	Total    *int64 `json:"total,omitempty"`
-	Partial  bool   `json:"partial,omitempty"`
 }
 
 type Resource struct {
@@ -95,7 +57,6 @@ type Schema struct {
 	CollectionMethods []string          `json:"collectionMethods,omitempty"`
 	CollectionFields  map[string]Field  `json:"collectionFields,omitempty"`
 	CollectionActions map[string]Action `json:"collectionActions,omitempty"`
-	CollectionFilters map[string]Filter `json:"collectionFilters,omitempty"`
 	Scope             TypeScope         `json:"-"`
 
 	InternalSchema      *Schema             `json:"-"`
@@ -105,11 +66,8 @@ type Schema struct {
 	CreateHandler       RequestHandler      `json:"-"`
 	DeleteHandler       RequestHandler      `json:"-"`
 	UpdateHandler       RequestHandler      `json:"-"`
-	InputFormatter      InputFormatter      `json:"-"`
-	Formatter           Formatter           `json:"-"`
 	CollectionFormatter CollectionFormatter `json:"-"`
 	ErrorHandler        ErrorHandler        `json:"-"`
-	Validator           Validator           `json:"-"`
 	StructVal           reflect.Value       `json:"-"`
 	Handler             Handler             `json:"-"`
 }
@@ -137,14 +95,6 @@ type Field struct {
 type Action struct {
 	Input  string `json:"input,omitempty"`
 	Output string `json:"output,omitempty"`
-}
-
-type Filter struct {
-	Modifiers []ModifierType `json:"modifiers,omitempty"`
-}
-
-type ListOpts struct {
-	Filters map[string]interface{}
 }
 
 func (c *Collection) AddAction(apiContext *APIContext, name string) {

@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/zdnscloud/gorest/parse"
 	"github.com/zdnscloud/gorest/parse/builder"
 	"github.com/zdnscloud/gorest/types"
 )
@@ -44,7 +43,7 @@ func (j *EncodingResponseWriter) VersionBody(apiContext *types.APIContext, versi
 		output = j.writeMapSlice(builder, apiContext, v)
 	case map[string]interface{}:
 		output = j.convert(builder, apiContext, v)
-	case types.RawResource:
+	case types.RawResource, interface{}:
 		output = v
 	}
 
@@ -120,10 +119,6 @@ func (j *EncodingResponseWriter) convert(b *builder.Builder, context *types.APIC
 		Values:  data,
 	}
 
-	if schema.Formatter != nil {
-		schema.Formatter(context, rawResource)
-	}
-
 	return rawResource
 }
 
@@ -141,38 +136,6 @@ func newCollection(apiContext *types.APIContext) *types.GenericCollection {
 	if apiContext.Method == http.MethodGet {
 		if apiContext.AccessControl.CanCreate(apiContext, apiContext.Schema) == nil {
 			result.CreateTypes[apiContext.Schema.ID] = apiContext.URLBuilder.Collection(apiContext.Schema, apiContext.Version)
-		}
-	}
-
-	opts := parse.QueryOptions(apiContext, apiContext.Schema)
-	result.Sort = &opts.Sort
-	result.Sort.Reverse = apiContext.URLBuilder.ReverseSort(result.Sort.Order)
-	result.Pagination = opts.Pagination
-	result.Filters = map[string][]types.Condition{}
-
-	for _, cond := range opts.Conditions {
-		filters := result.Filters[cond.Field]
-		result.Filters[cond.Field] = append(filters, cond.ToCondition())
-	}
-
-	for name := range apiContext.Schema.CollectionFilters {
-		if _, ok := result.Filters[name]; !ok {
-			result.Filters[name] = nil
-		}
-	}
-
-	if result.Pagination != nil && result.Pagination.Partial {
-		if result.Pagination.Next != "" {
-			result.Pagination.Next = apiContext.URLBuilder.Marker(result.Pagination.Next)
-		}
-		if result.Pagination.Previous != "" {
-			result.Pagination.Previous = apiContext.URLBuilder.Marker(result.Pagination.Previous)
-		}
-		if result.Pagination.First != "" {
-			result.Pagination.First = apiContext.URLBuilder.Marker(result.Pagination.First)
-		}
-		if result.Pagination.Last != "" {
-			result.Pagination.Last = apiContext.URLBuilder.Marker(result.Pagination.Last)
 		}
 	}
 

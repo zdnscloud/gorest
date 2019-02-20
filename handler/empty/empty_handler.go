@@ -30,7 +30,3 @@ func (s *Handler) Get(types.TypeMeta, types.ObjectMeta) interface{} {
 func (s *Handler) Action(string, map[string]interface{}, types.Object) error {
 	return nil
 }
-
-func (s *Handler) Watch(string, string, string) (chan map[string]interface{}, error) {
-	return nil, nil
-}

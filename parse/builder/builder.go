@@ -28,24 +28,22 @@ func (o Operation) IsList() bool {
 }
 
 type Builder struct {
-	apiContext   *types.APIContext
-	Version      *types.APIVersion
-	Schemas      *types.Schemas
-	RefValidator types.ReferenceValidator
-	edit         bool
-	export       bool
-	yaml         bool
+	apiContext *types.APIContext
+	Version    *types.APIVersion
+	Schemas    *types.Schemas
+	edit       bool
+	export     bool
+	yaml       bool
 }
 
 func NewBuilder(apiRequest *types.APIContext) *Builder {
 	return &Builder{
-		apiContext:   apiRequest,
-		yaml:         apiRequest.ResponseFormat == "yaml",
-		edit:         apiRequest.Option("edit") == "true",
-		export:       apiRequest.Option("export") == "true",
-		Version:      apiRequest.Version,
-		Schemas:      apiRequest.Schemas,
-		RefValidator: apiRequest.ReferenceValidator,
+		apiContext: apiRequest,
+		yaml:       apiRequest.ResponseFormat == "yaml",
+		edit:       apiRequest.Option("edit") == "true",
+		export:     apiRequest.Option("export") == "true",
+		Version:    apiRequest.Version,
+		Schemas:    apiRequest.Schemas,
 	}
 }
 
@@ -412,12 +410,7 @@ func (b *Builder) convertType(fieldType string, value interface{}, op Operation)
 }
 
 func (b *Builder) convertReferenceType(fieldType string, value interface{}) (string, error) {
-	subType := definition.SubType(fieldType)
-	strVal := convert.ToString(value)
-	if b.RefValidator != nil && !b.RefValidator.Validate(subType, strVal) {
-		return "", httperror.NewAPIError(httperror.InvalidReference, fmt.Sprintf("Not found type: %s id: %s", subType, strVal))
-	}
-	return strVal, nil
+	return convert.ToString(value), nil
 }
 
 func (b *Builder) convertArray(fieldType string, value interface{}, op Operation) ([]interface{}, error) {

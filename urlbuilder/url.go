@@ -58,22 +58,6 @@ func (u *urlBuilder) Marker(marker string) string {
 	return u.requestURL + "?" + newValues.Encode()
 }
 
-func (u *urlBuilder) ReverseSort(order types.SortOrder) string {
-	newValues := url.Values{}
-	for k, v := range u.query {
-		newValues[k] = v
-	}
-	newValues.Del("order")
-	newValues.Del("marker")
-	if order == types.ASC {
-		newValues.Add("order", string(types.DESC))
-	} else {
-		newValues.Add("order", string(types.ASC))
-	}
-
-	return u.requestURL + "?" + newValues.Encode()
-}
-
 func (u *urlBuilder) Current() string {
 	return u.requestURL
 }
@@ -82,27 +66,12 @@ func (u *urlBuilder) RelativeToRoot(path string) string {
 	return u.responseURLBase + path
 }
 
-func (u *urlBuilder) Sort(field string) string {
-	newValues := url.Values{}
-	for k, v := range u.query {
-		newValues[k] = v
-	}
-	newValues.Del("order")
-	newValues.Del("marker")
-	newValues.Set("sort", field)
-	return u.requestURL + "?" + newValues.Encode()
-}
-
 func (u *urlBuilder) Collection(schema *types.Schema, versionOverride *types.APIVersion) string {
 	plural := u.getPluralName(schema)
 	if versionOverride == nil {
 		return u.constructBasicURL(schema.Version, plural)
 	}
 	return u.constructBasicURL(*versionOverride, plural)
-}
-
-func (u *urlBuilder) SubContextCollection(subContext *types.Schema, contextName string, schema *types.Schema) string {
-	return u.constructBasicURL(subContext.Version, subContext.PluralName, contextName, u.getPluralName(schema))
 }
 
 func (u *urlBuilder) Version(version types.APIVersion) string {

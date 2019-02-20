@@ -2,14 +2,11 @@ package types
 
 import (
 	"fmt"
-	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/zdnscloud/gorest/types/convert"
-	"github.com/zdnscloud/gorest/types/definition"
-	"github.com/zdnscloud/gorest/types/slice"
 )
 
 var (
@@ -89,44 +86,6 @@ func (s *Schemas) newSchemaFromType(version *APIVersion, t reflect.Type, typeNam
 	return schema, nil
 }
 
-func (s *Schemas) setupFilters(schema *Schema) {
-	if !slice.ContainsString(schema.CollectionMethods, http.MethodGet) {
-		return
-	}
-	for fieldName, field := range schema.ResourceFields {
-		var mods []ModifierType
-		switch field.Type {
-		case "enum":
-			mods = []ModifierType{ModifierEQ, ModifierNE, ModifierIn, ModifierNotIn}
-		case "date":
-			fallthrough
-		case "dnsLabel":
-			fallthrough
-		case "hostname":
-			fallthrough
-		case "string":
-			mods = []ModifierType{ModifierEQ, ModifierNE, ModifierIn, ModifierNotIn}
-		case "int":
-			mods = []ModifierType{ModifierEQ, ModifierNE, ModifierIn, ModifierNotIn}
-		case "boolean":
-			mods = []ModifierType{ModifierEQ, ModifierNE}
-		default:
-			if definition.IsReferenceType(field.Type) {
-				mods = []ModifierType{ModifierEQ, ModifierNE, ModifierIn, ModifierNotIn}
-			}
-		}
-
-		if len(mods) > 0 {
-			if schema.CollectionFilters == nil {
-				schema.CollectionFilters = map[string]Filter{}
-			}
-			schema.CollectionFilters[fieldName] = Filter{
-				Modifiers: mods,
-			}
-		}
-	}
-}
-
 func (s *Schemas) MustCustomizeType(version *APIVersion, obj interface{}, f func(*Schema)) *Schemas {
 	name := s.getTypeName(reflect.TypeOf(obj))
 	schema := s.Schema(version, name)
@@ -183,8 +142,6 @@ func (s *Schemas) importType(version *APIVersion, t reflect.Type, overrides ...r
 	if err := mapper.ModifySchema(schema, s); err != nil {
 		return nil, err
 	}
-
-	s.setupFilters(schema)
 
 	schema.Mapper = mapper
 	s.AddSchema(*schema)
