@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"reflect"
-	"strings"
 
 	"github.com/zdnscloud/gorest/httperror"
 	"github.com/zdnscloud/gorest/parse"
@@ -23,11 +22,12 @@ func CreateHandler(apiContext *types.APIContext, next types.RequestHandler) erro
 		return err
 	}
 
-	if err := handler.Create(object); err != nil {
+	result, err := handler.Create(object)
+	if err != nil {
 		return err
 	}
 
-	apiContext.WriteResponse(http.StatusCreated, nil)
+	apiContext.WriteResponse(http.StatusCreated, result)
 	return nil
 }
 
@@ -37,12 +37,23 @@ func DeleteHandler(apiContext *types.APIContext, next types.RequestHandler) erro
 		return httperror.NewAPIError(httperror.NotFound, "no handler found")
 	}
 
-	namespace, name := getNamespaceAndName(apiContext.ID)
-	if err := handler.Delete(types.TypeMeta{Kind: apiContext.Schema.ID},
-		types.ObjectMeta{Namespace: namespace, Name: name}); err != nil {
-		return err
+	var err error
+	obj, ok := getSchemaStructVal(apiContext).(types.Object)
+	if ok == false {
+		return httperror.NewAPIError(httperror.NotFound, "no found object interface")
 	}
 
+	obj.SetType(apiContext.Schema.ID)
+	if apiContext.ID != "" {
+		obj.SetID(apiContext.ID)
+		err = handler.Delete(obj)
+	} else {
+		err = handler.BatchDelete(obj)
+	}
+
+	if err != nil {
+		return err
+	}
 	apiContext.WriteResponse(http.StatusCreated, nil)
 	return nil
 }
@@ -58,13 +69,19 @@ func UpdateHandler(apiContext *types.APIContext, next types.RequestHandler) erro
 		return err
 	}
 
-	namespace, name := getNamespaceAndName(apiContext.ID)
-	if err := handler.Update(types.TypeMeta{Kind: apiContext.Schema.ID},
-		types.ObjectMeta{Namespace: namespace, Name: name}, object); err != nil {
+	oldObj, ok := getSchemaStructVal(apiContext).(types.Object)
+	if ok == false {
+		return httperror.NewAPIError(httperror.NotFound, "no found object interface")
+	}
+
+	oldObj.SetID(apiContext.ID)
+	oldObj.SetType(apiContext.Schema.ID)
+	result, err := handler.Update(oldObj, oldObj, object)
+	if err != nil {
 		return err
 	}
 
-	apiContext.WriteResponse(http.StatusCreated, nil)
+	apiContext.WriteResponse(http.StatusCreated, result)
 	return nil
 }
 
@@ -75,12 +92,17 @@ func ListHandler(apiContext *types.APIContext, next types.RequestHandler) error 
 	}
 
 	var result interface{}
+	obj, ok := getSchemaStructVal(apiContext).(types.Object)
+	if ok == false {
+		return httperror.NewAPIError(httperror.NotFound, "no found object interface")
+	}
+
+	obj.SetType(apiContext.Schema.ID)
 	if apiContext.ID == "" {
-		result = handler.List()
+		result = handler.List(obj)
 	} else {
-		namespace, name := getNamespaceAndName(apiContext.ID)
-		result = handler.Get(types.TypeMeta{Kind: apiContext.Schema.ID},
-			types.ObjectMeta{Namespace: namespace, Name: name})
+		obj.SetID(apiContext.ID)
+		result = handler.Get(obj)
 	}
 
 	apiContext.WriteResponse(http.StatusCreated, result)
@@ -93,56 +115,57 @@ func ActionHandler(actionName string, action *types.Action, apiContext *types.AP
 		return httperror.NewAPIError(httperror.NotFound, "no handler found")
 	}
 
-	object, err := parseRequestBody(apiContext)
+	params, err := parseActionBody(apiContext)
 	if err != nil {
 		return err
 	}
 
-	if err := handler.Action(apiContext.Action, nil, object); err != nil {
+	obj, ok := getSchemaStructVal(apiContext).(types.Object)
+	if ok == false {
+		return httperror.NewAPIError(httperror.NotFound, "no found object interface")
+	}
+
+	obj.SetType(apiContext.Schema.ID)
+	obj.SetID(apiContext.ID)
+	result, err := handler.Action(obj, apiContext.Action, params)
+	if err != nil {
 		return err
 	}
 
-	apiContext.WriteResponse(http.StatusCreated, nil)
+	apiContext.WriteResponse(http.StatusCreated, result)
 	return nil
 }
 
-func getNamespaceAndName(id string) (string, string) {
-	namespace := ""
-	name := id
-	namespaceAndName := strings.SplitN(id, ":", 2)
-	if len(namespaceAndName) == 2 {
-		namespace = namespaceAndName[0]
-		name = namespaceAndName[1]
-	}
-
-	return namespace, name
-}
-
-func parseRequestBody(apiContext *types.APIContext) (types.Object, error) {
+func getSchemaStructVal(apiContext *types.APIContext) interface{} {
 	val := apiContext.Schema.StructVal
 	valPtr := reflect.New(val.Type())
 	valPtr.Elem().Set(val)
+	return valPtr.Interface()
+}
+
+func parseRequestBody(apiContext *types.APIContext) (types.Object, error) {
 	decode := parse.GetDecoder(apiContext.Request, io.LimitReader(apiContext.Request.Body, parse.MaxFormSize))
-	if err := decode(valPtr.Interface()); err != nil {
+	val := getSchemaStructVal(apiContext)
+	if err := decode(val); err != nil {
 		return nil, httperror.NewAPIError(httperror.InvalidBodyContent,
 			fmt.Sprintf("Failed to parse body: %v", err))
 	}
 
-	if object, ok := valPtr.Interface().(types.Object); ok {
-		object.SetTypeMeta(types.TypeMeta{
-			Kind:       apiContext.Schema.ID,
-			APIVersion: getAPIVersion(apiContext.Schema.Version)})
-		return object, nil
+	if obj, ok := val.(types.Object); ok {
+		obj.SetType(apiContext.Schema.ID)
+		return obj, nil
+	} else {
+		return nil, httperror.NewAPIError(httperror.InvalidBodyContent, fmt.Sprintf("Failed trans to object interface"))
 	}
-
-	return nil, httperror.NewAPIError(httperror.InvalidBodyContent,
-		fmt.Sprintf("Failed trans object interface when parse request body"))
 }
 
-func getAPIVersion(version types.APIVersion) string {
-	if version.Group != "" {
-		return version.Group + "/" + version.Version
-	} else {
-		return version.Version
+func parseActionBody(apiContext *types.APIContext) (map[string]interface{}, error) {
+	var params map[string]interface{}
+	decode := parse.GetDecoder(apiContext.Request, io.LimitReader(apiContext.Request.Body, parse.MaxFormSize))
+	if err := decode(&params); err != nil {
+		return nil, httperror.NewAPIError(httperror.InvalidBodyContent,
+			fmt.Sprintf("Failed to parse action body: %v", err))
 	}
+
+	return params, nil
 }

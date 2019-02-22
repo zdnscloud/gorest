@@ -101,28 +101,27 @@ func (c *Collection) AddAction(apiContext *APIContext, name string) {
 	c.Actions[name] = apiContext.URLBuilder.CollectionAction(apiContext.Schema, nil, name)
 }
 
-type TypeMeta struct {
-	Kind       string `json:"kind,omitempty"`
-	APIVersion string `json:"apiVersion,omitempty"`
-}
-
-type ObjectMeta struct {
-	Name      string            `json:"name,omitempty"`
-	Namespace string            `json:"namespace,omitempty"`
-	Labels    map[string]string `json:"labels,omitempty"`
-}
-
 type Object interface {
-	TypeMetaData() TypeMeta
-	ObjectMetaData() ObjectMeta
-	SetTypeMeta(TypeMeta)
+	ObjectID
+	ObjectType
+}
+
+type ObjectID interface {
+	ID() string
+	SetID(string)
+}
+
+type ObjectType interface {
+	Type() string
+	SetType(string)
 }
 
 type Handler interface {
-	Create(Object) error
-	Delete(TypeMeta, ObjectMeta) error
-	Update(TypeMeta, ObjectMeta, Object) error
-	List() interface{}
-	Get(TypeMeta, ObjectMeta) interface{}
-	Action(string, map[string]interface{}, Object) error
+	Create(Object) (interface{}, error)
+	Delete(Object) error
+	BatchDelete(ObjectType) error
+	Update(ObjectType, ObjectID, Object) (interface{}, error)
+	List(ObjectType) interface{}
+	Get(Object) interface{}
+	Action(Object, string, map[string]interface{}) (interface{}, error)
 }

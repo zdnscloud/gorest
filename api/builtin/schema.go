@@ -8,7 +8,7 @@ var (
 	Version = types.APIVersion{
 		Group:   "zdns.cloud.cn",
 		Version: "v1",
-		Path:    "/meta",
+		Path:    "/api",
 	}
 
 	Schema = types.Schema{

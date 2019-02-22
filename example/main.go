@@ -17,56 +17,62 @@ var (
 )
 
 type Foo struct {
-	types.TypeMeta   `json:",inline"`
-	types.ObjectMeta `json:"metadata,omitempty"`
-	Spec             `json:"spec,omitempty"`
+	id   string `json:"id,omitempty"`
+	typ  string `json:"type,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
-type Spec struct{}
-
-func (foo *Foo) TypeMetaData() types.TypeMeta {
-	return foo.TypeMeta
+func (foo *Foo) ID() string {
+	return foo.id
 }
 
-func (foo *Foo) ObjectMetaData() types.ObjectMeta {
-	return foo.ObjectMeta
+func (foo *Foo) Type() string {
+	return foo.typ
 }
 
-func (foo *Foo) SetTypeMeta(meta types.TypeMeta) {
-	foo.TypeMeta = meta
+func (foo *Foo) SetID(id string) {
+	foo.id = id
+}
+
+func (foo *Foo) SetType(typ string) {
+	foo.typ = typ
 }
 
 type Handler struct{}
 
-func (s *Handler) Create(obj types.Object) error {
-	fmt.Printf("create %s %s in namespace %s with apiVersion %s\n",
-		obj.(*Foo).Kind, obj.(*Foo).Name, obj.(*Foo).Namespace, obj.(*Foo).APIVersion)
+func (s *Handler) Create(obj types.Object) (interface{}, error) {
+	fmt.Printf("create %s %s\n", obj.Type(), obj.(*Foo).Name)
+	return nil, nil
+}
+
+func (s *Handler) Delete(obj types.Object) error {
+	fmt.Printf("delete %s %s\n", obj.Type(), obj.ID())
 	return nil
 }
 
-func (s *Handler) Delete(typeMeta types.TypeMeta, objMeta types.ObjectMeta) error {
-	fmt.Printf("delete %s %s in namespace %s \n", typeMeta.Kind, objMeta.Name, objMeta.Namespace)
+func (s *Handler) BatchDelete(typ types.ObjectType) error {
+	fmt.Printf("delete all %s\n", typ.Type())
 	return nil
 }
 
-func (s *Handler) Update(typeMeta types.TypeMeta, objMeta types.ObjectMeta, obj types.Object) error {
-	fmt.Printf("update %s %s in namespace %s \n", typeMeta.Kind, objMeta.Name, objMeta.Namespace)
+func (s *Handler) Update(typ types.ObjectType, id types.ObjectID, obj types.Object) (interface{}, error) {
+	fmt.Printf("update %s %s\n", typ.Type(), id.ID())
+	return nil, nil
+}
+
+func (s *Handler) List(typ types.ObjectType) interface{} {
+	fmt.Printf("get all %s\n", typ.Type())
 	return nil
 }
 
-func (s *Handler) List() interface{} {
-	fmt.Printf("get all foos\n")
+func (s *Handler) Get(obj types.Object) interface{} {
+	fmt.Printf("get %s %s\n", obj.Type(), obj.ID())
 	return nil
 }
 
-func (s *Handler) Get(typeMeta types.TypeMeta, objMeta types.ObjectMeta) interface{} {
-	fmt.Printf("get %s %s in namespace %s \n", typeMeta.Kind, objMeta.Name, objMeta.Namespace)
-	return nil
-}
-
-func (s *Handler) Action(action string, params map[string]interface{}, obj types.Object) error {
-	fmt.Printf("do action: %s\n", action)
-	return nil
+func (s *Handler) Action(obj types.Object, action string, params map[string]interface{}) (interface{}, error) {
+	fmt.Printf("do action %s with params %s for %s\n", action, params, obj.Type())
+	return nil, nil
 }
 
 func main() {
