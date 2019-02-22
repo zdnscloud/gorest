@@ -60,6 +60,7 @@ func NewAPIServer() *Server {
 			UpdateHandler: handler.UpdateHandler,
 			ListHandler:   handler.ListHandler,
 			ErrorHandler:  ehandler.ErrorHandler,
+			ActionHandler: handler.ActionHandler,
 		},
 		URLParser: parse.DefaultURLParser,
 	}

@@ -79,7 +79,17 @@ func main() {
 	schemas := types.NewSchemas().MustImportAndCustomize(&version, Foo{}, func(schema *types.Schema) {
 		schema.Handler = &Handler{}
 		schema.CollectionMethods = []string{"GET", "POST"}
-		schema.ResourceMethods = []string{"GET", "PUT", "DELETE"}
+		schema.ResourceMethods = []string{"GET", "PUT", "DELETE", "POST"}
+		schema.CollectionActions = map[string]types.Action{
+			"decrypt": types.Action{
+				Input:  "cryptInput",
+				Output: "file",
+			}}
+		schema.ResourceActions = map[string]types.Action{
+			"encrypt": types.Action{
+				Input:  "cryptInput",
+				Output: "file",
+			}}
 	})
 
 	server := api.NewAPIServer()
