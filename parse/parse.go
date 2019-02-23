@@ -3,6 +3,7 @@ package parse
 import (
 	"net/http"
 	"net/url"
+	"path"
 	"regexp"
 	"sort"
 	"strings"
@@ -135,11 +136,12 @@ func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas, ur
 	return result, nil
 }
 
-func versionsForPath(schemas *types.Schemas, path string) []types.APIVersion {
+func versionsForPath(schemas *types.Schemas, escapedPath string) []types.APIVersion {
 	var matchedVersion []types.APIVersion
 	for _, version := range schemas.Versions() {
-		if strings.HasPrefix(path, version.Path) {
-			afterPath := path[len(version.Path):]
+		basePath := path.Join("/", version.Group, version.Path)
+		if strings.HasPrefix(escapedPath, basePath) {
+			afterPath := escapedPath[len(basePath):]
 			// if version.Path is /v3/cluster allow /v3/clusters but not /v3/clusterstuff
 			if len(afterPath) < 3 || strings.Contains(afterPath[:3], "/") {
 				matchedVersion = append(matchedVersion, version)
@@ -164,6 +166,7 @@ func parseVersionAndSubContext(schemas *types.Schemas, escapedPath string) (*typ
 	}
 
 	versionParts := strings.Split(version.Path, "/")
+	versionGroups := strings.Split(version.Group, "/")
 	pp := strings.Split(escapedPath, "/")
 	var pathParts []string
 	for _, p := range pp {
@@ -175,7 +178,7 @@ func parseVersionAndSubContext(schemas *types.Schemas, escapedPath string) (*typ
 		}
 	}
 
-	paths := pathParts[len(versionParts):]
+	paths := pathParts[len(versionParts)+len(versionGroups):]
 
 	if !version.SubContext || len(versions) < 2 {
 		return nil, version, "", paths, nil
@@ -193,7 +196,7 @@ func parseVersionAndSubContext(schemas *types.Schemas, escapedPath string) (*typ
 		if len(paths) > 0 {
 			newVersion.Path = newVersion.Path + "/" + paths[0]
 		}
-		return &newVersion, &versions[1], "", pathParts[len(versionParts)-1:], nil
+		return &newVersion, &versions[1], "", pathParts[len(versionGroups)+len(versionParts)-1:], nil
 	}
 
 	// Length is always >= 3

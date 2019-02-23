@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"net/http"
+	"path"
 
 	"github.com/zdnscloud/gorest/api"
 	"github.com/zdnscloud/gorest/types"
@@ -79,21 +79,25 @@ func (s *Handler) Action(obj types.Object, action string, params map[string]inte
 
 func main() {
 	router := gin.Default()
-
-	handlerFunc := gin.WrapH(getGoService())
-
-	router.POST("/example/v1/foo", handlerFunc)
-	router.POST("/example/v1/foo/:id", handlerFunc)
-	router.DELETE("/example/v1/foo/:id", handlerFunc)
-	router.DELETE("/example/v1/foo", handlerFunc)
-	router.PUT("/example/v1/foo/:id", handlerFunc)
-	router.GET("/example/v1/foo", handlerFunc)
-	router.GET("/example/v1/foo/:id", handlerFunc)
-
+	registerHandler(router, getApiServer())
 	router.Run("0.0.0.0:1234")
 }
 
-func getGoService() http.Handler {
+func registerHandler(router gin.IRoutes, server *api.Server) {
+	handlerFunc := gin.WrapH(server)
+	for _, schema := range server.Schemas.Schemas() {
+		url := path.Join("/"+schema.Version.Group, schema.Version.Path, schema.ID)
+		router.POST(url, handlerFunc)
+		router.POST(path.Join(url, ":id"), handlerFunc)
+		router.DELETE(path.Join(url, ":id"), handlerFunc)
+		router.DELETE(url, handlerFunc)
+		router.PUT(path.Join(url, ":id"), handlerFunc)
+		router.GET(url, handlerFunc)
+		router.GET(path.Join(url, ":id"), handlerFunc)
+	}
+}
+
+func getApiServer() *api.Server {
 	schemas := types.NewSchemas().MustImportAndCustomize(&version, Foo{}, func(schema *types.Schema) {
 		schema.Handler = &Handler{}
 		schema.CollectionMethods = []string{"GET", "POST", "DELETE"}
