@@ -78,7 +78,7 @@ func (s *Handler) Action(obj types.Object, action string, params map[string]inte
 func main() {
 	schemas := types.NewSchemas().MustImportAndCustomize(&version, Foo{}, func(schema *types.Schema) {
 		schema.Handler = &Handler{}
-		schema.CollectionMethods = []string{"GET", "POST"}
+		schema.CollectionMethods = []string{"GET", "POST", "DELETE"}
 		schema.ResourceMethods = []string{"GET", "PUT", "DELETE", "POST"}
 		schema.CollectionActions = map[string]types.Action{
 			"decrypt": types.Action{
