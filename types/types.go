@@ -107,12 +107,12 @@ type Object interface {
 }
 
 type ObjectID interface {
-	ID() string
+	GetID() string
 	SetID(string)
 }
 
 type ObjectType interface {
-	Type() string
+	GetType() string
 	SetType(string)
 }
 

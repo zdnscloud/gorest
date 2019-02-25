@@ -2,12 +2,11 @@ package main
 
 import (
 	"fmt"
-	"path"
-
-	"github.com/zdnscloud/gorest/api"
-	"github.com/zdnscloud/gorest/types"
 
 	"github.com/gin-gonic/gin"
+	"github.com/zdnscloud/gorest/adaptor"
+	"github.com/zdnscloud/gorest/api"
+	"github.com/zdnscloud/gorest/types"
 )
 
 var (
@@ -19,86 +18,72 @@ var (
 )
 
 type Foo struct {
-	id   string `json:"id,omitempty"`
-	typ  string `json:"type,omitempty"`
+	ID   string `json:"id,omitempty"`
+	Type string `json:"type,omitempty"`
 	Name string `json:"name,omitempty"`
 }
 
-func (foo *Foo) ID() string {
-	return foo.id
+func (foo *Foo) GetID() string {
+	return foo.ID
 }
 
-func (foo *Foo) Type() string {
-	return foo.typ
+func (foo *Foo) GetType() string {
+	return foo.Type
 }
 
 func (foo *Foo) SetID(id string) {
-	foo.id = id
+	foo.ID = id
 }
 
 func (foo *Foo) SetType(typ string) {
-	foo.typ = typ
+	foo.Type = typ
 }
 
 type Handler struct{}
 
 func (s *Handler) Create(obj types.Object) (interface{}, error) {
-	fmt.Printf("create %s %s\n", obj.Type(), obj.(*Foo).Name)
+	fmt.Printf("create %s %s\n", obj.GetType(), obj.(*Foo).Name)
 	return nil, nil
 }
 
 func (s *Handler) Delete(obj types.Object) error {
-	fmt.Printf("delete %s %s\n", obj.Type(), obj.ID())
+	fmt.Printf("delete %s %s\n", obj.GetType(), obj.GetID())
 	return nil
 }
 
 func (s *Handler) BatchDelete(typ types.ObjectType) error {
-	fmt.Printf("delete all %s\n", typ.Type())
+	fmt.Printf("delete all %s\n", typ.GetType())
 	return nil
 }
 
 func (s *Handler) Update(typ types.ObjectType, id types.ObjectID, obj types.Object) (interface{}, error) {
-	fmt.Printf("update %s %s\n", typ.Type(), id.ID())
+	fmt.Printf("update %s %s\n", typ.GetType(), id.GetID())
 	return nil, nil
 }
 
 func (s *Handler) List(typ types.ObjectType) interface{} {
-	fmt.Printf("get all %s\n", typ.Type())
+	fmt.Printf("get all %s\n", typ.GetType())
 	return nil
 }
 
 func (s *Handler) Get(obj types.Object) interface{} {
-	fmt.Printf("get %s %s\n", obj.Type(), obj.ID())
+	fmt.Printf("get %s %s\n", obj.GetType(), obj.GetID())
 	return nil
 }
 
 func (s *Handler) Action(obj types.Object, action string, params map[string]interface{}) (interface{}, error) {
-	fmt.Printf("do action %s with params %s for %s\n", action, params, obj.Type())
+	fmt.Printf("do action %s with params %s for %s\n", action, params, obj.GetType())
 	return nil, nil
 }
 
 func main() {
 	router := gin.Default()
-	registerHandler(router, getApiServer())
+	adaptor.RegisterHandler(router, getApiServer())
 	router.Run("0.0.0.0:1234")
 }
 
-func registerHandler(router gin.IRoutes, server *api.Server) {
-	handlerFunc := gin.WrapH(server)
-	for _, schema := range server.Schemas.Schemas() {
-		url := path.Join("/"+schema.Version.Group, schema.Version.Path, schema.ID)
-		router.POST(url, handlerFunc)
-		router.POST(path.Join(url, ":id"), handlerFunc)
-		router.DELETE(path.Join(url, ":id"), handlerFunc)
-		router.DELETE(url, handlerFunc)
-		router.PUT(path.Join(url, ":id"), handlerFunc)
-		router.GET(url, handlerFunc)
-		router.GET(path.Join(url, ":id"), handlerFunc)
-	}
-}
-
 func getApiServer() *api.Server {
-	schemas := types.NewSchemas().MustImportAndCustomize(&version, Foo{}, func(schema *types.Schema) {
+	server, err := adaptor.GetApiServer(&version, Foo{}, func(schema *types.Schema) {
 		schema.Handler = &Handler{}
 		schema.CollectionMethods = []string{"GET", "POST", "DELETE"}
 		schema.ResourceMethods = []string{"GET", "PUT", "DELETE", "POST"}
@@ -114,8 +99,7 @@ func getApiServer() *api.Server {
 			}}
 	})
 
-	server := api.NewAPIServer()
-	if err := server.AddSchemas(schemas); err != nil {
+	if err != nil {
 		panic(err.Error())
 	}
 
