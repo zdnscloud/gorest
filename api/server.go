@@ -187,14 +187,10 @@ func (s *Server) handle(rw http.ResponseWriter, req *http.Request) (*types.APICo
 
 		return apiRequest, handler(apiRequest, nextHandler)
 	} else if action != nil {
-		return apiRequest, handleAction(action, apiRequest)
+		return apiRequest, apiRequest.Schema.ActionHandler(apiRequest.Action, action, apiRequest)
 	}
 
 	return apiRequest, nil
-}
-
-func handleAction(action *types.Action, context *types.APIContext) error {
-	return context.Schema.ActionHandler(context.Action, action, context)
 }
 
 func (s *Server) handleError(apiRequest *types.APIContext, err error) {
@@ -203,18 +199,4 @@ func (s *Server) handleError(apiRequest *types.APIContext, err error) {
 	} else if apiRequest.Schema.ErrorHandler != nil {
 		apiRequest.Schema.ErrorHandler(apiRequest, err)
 	}
-}
-
-func (s *Server) CustomAPIUIResponseWriter(cssURL, jsURL, version writer.StringGetter) {
-	wi, ok := s.ResponseWriters["html"]
-	if !ok {
-		return
-	}
-	w, ok := wi.(*writer.HTMLResponseWriter)
-	if !ok {
-		return
-	}
-	w.CSSURL = cssURL
-	w.JSURL = jsURL
-	w.APIUIVersion = version
 }

@@ -8,7 +8,7 @@ import (
 )
 
 func ErrorHandler(request *types.APIContext, err error) {
-	var error *httperror.APIError
+	var apiError *httperror.APIError
 	if apiError, ok := err.(*httperror.APIError); ok {
 		if apiError.Cause != nil {
 			url, _ := url.PathUnescape(request.Request.URL.String())
@@ -16,16 +16,16 @@ func ErrorHandler(request *types.APIContext, err error) {
 				url = request.Request.URL.String()
 			}
 		}
-		error = apiError
+		apiError = apiError
 	} else {
-		error = &httperror.APIError{
+		apiError = &httperror.APIError{
 			Code:    httperror.ServerError,
 			Message: err.Error(),
 		}
 	}
 
-	data := toError(error)
-	request.WriteResponse(error.Code.Status, data)
+	data := toError(apiError)
+	request.WriteResponse(apiError.Code.Status, data)
 }
 
 func toError(apiError *httperror.APIError) map[string]interface{} {

@@ -50,13 +50,6 @@ type APIError struct {
 	FieldName string
 }
 
-func NewAPIErrorLong(status int, code, message string) error {
-	return NewAPIError(ErrorCode{
-		Code:   code,
-		Status: status,
-	}, message)
-}
-
 func NewAPIError(code ErrorCode, message string) error {
 	return &APIError{
 		Code:    code,
@@ -98,17 +91,4 @@ func (a *APIError) Error() string {
 		return fmt.Sprintf("%s=%s: %s", a.FieldName, a.Code, a.Message)
 	}
 	return fmt.Sprintf("%s: %s", a.Code, a.Message)
-}
-
-func IsAPIError(err error) bool {
-	_, ok := err.(*APIError)
-	return ok
-}
-
-func IsConflict(err error) bool {
-	if apiError, ok := err.(*APIError); ok {
-		return apiError.Code.Status == 409
-	}
-
-	return false
 }

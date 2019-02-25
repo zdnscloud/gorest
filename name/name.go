@@ -1,6 +1,8 @@
 package name
 
-import "strings"
+import (
+	"strings"
+)
 
 func GuessPluralName(name string) string {
 	if name == "" {
@@ -11,17 +13,13 @@ func GuessPluralName(name string) string {
 		return name
 	}
 
-	if suffix(name, "s") || suffix(name, "ch") || suffix(name, "x") {
+	if strings.HasSuffix(name, "s") || strings.HasSuffix(name, "ch") || strings.HasSuffix(name, "x") {
 		return name + "es"
 	}
 
-	if suffix(name, "y") && len(name) > 2 && !strings.ContainsAny(name[len(name)-2:len(name)-1], "[aeiou]") {
+	if strings.HasSuffix(name, "y") && len(name) > 2 && !strings.ContainsAny(name[len(name)-2:len(name)-1], "[aeiou]") {
 		return name[0:len(name)-1] + "ies"
 	}
 
 	return name + "s"
-}
-
-func suffix(str, end string) bool {
-	return strings.HasSuffix(str, end)
 }
