@@ -11,7 +11,6 @@ var (
 	MethodNotAllowed = ErrorCode{"MethodNotAllow", 405}
 	Conflict         = ErrorCode{"Conflict", 409}
 
-	InvalidDateFormat  = ErrorCode{"InvalidDateFormat", 422}
 	InvalidFormat      = ErrorCode{"InvalidFormat", 422}
 	InvalidReference   = ErrorCode{"InvalidReference", 422}
 	NotNullable        = ErrorCode{"NotNullable", 422}
@@ -27,8 +26,6 @@ var (
 	InvalidAction      = ErrorCode{"InvalidAction", 422}
 	InvalidBodyContent = ErrorCode{"InvalidBodyContent", 422}
 	InvalidType        = ErrorCode{"InvalidType", 422}
-	ActionNotAvailable = ErrorCode{"ActionNotAvailable", 404}
-	InvalidState       = ErrorCode{"InvalidState", 422}
 
 	ServerError        = ErrorCode{"ServerError", 500}
 	ClusterUnavailable = ErrorCode{"ClusterUnavailable", 503}

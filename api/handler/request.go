@@ -54,7 +54,7 @@ func DeleteHandler(apiContext *types.APIContext, next types.RequestHandler) erro
 	if err != nil {
 		return err
 	}
-	apiContext.WriteResponse(http.StatusCreated, nil)
+	apiContext.WriteResponse(http.StatusOK, nil)
 	return nil
 }
 
@@ -81,7 +81,7 @@ func UpdateHandler(apiContext *types.APIContext, next types.RequestHandler) erro
 		return err
 	}
 
-	apiContext.WriteResponse(http.StatusCreated, result)
+	apiContext.WriteResponse(http.StatusOK, result)
 	return nil
 }
 
@@ -105,7 +105,7 @@ func ListHandler(apiContext *types.APIContext, next types.RequestHandler) error 
 		result = handler.Get(obj)
 	}
 
-	apiContext.WriteResponse(http.StatusCreated, result)
+	apiContext.WriteResponse(http.StatusOK, result)
 	return nil
 }
 
@@ -132,7 +132,7 @@ func ActionHandler(actionName string, action *types.Action, apiContext *types.AP
 		return err
 	}
 
-	apiContext.WriteResponse(http.StatusCreated, result)
+	apiContext.WriteResponse(http.StatusOK, result)
 	return nil
 }
 
