@@ -9,14 +9,14 @@ import (
 
 func ErrorHandler(request *types.APIContext, err error) {
 	var apiError *httperror.APIError
-	if apiError, ok := err.(*httperror.APIError); ok {
-		if apiError.Cause != nil {
+	if apiErr, ok := err.(*httperror.APIError); ok {
+		if apiErr.Cause != nil {
 			url, _ := url.PathUnescape(request.Request.URL.String())
 			if url == "" {
 				url = request.Request.URL.String()
 			}
 		}
-		apiError = apiError
+		apiError = apiErr
 	} else {
 		apiError = &httperror.APIError{
 			Code:    httperror.ServerError,
