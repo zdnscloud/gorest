@@ -11,7 +11,7 @@ import (
 func RegisterHandler(router gin.IRoutes, server *api.Server) {
 	handlerFunc := gin.WrapH(server)
 	for _, schema := range server.Schemas.Schemas() {
-		url := path.Join("/"+schema.Version.Group, schema.Version.Path, schema.ID)
+		url := path.Join("/"+schema.Version.Group, schema.Version.Path, schema.PluralName)
 		router.POST(url, handlerFunc)
 		router.POST(path.Join(url, ":id"), handlerFunc)
 		router.DELETE(path.Join(url, ":id"), handlerFunc)
