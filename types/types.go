@@ -70,6 +70,12 @@ type Schema struct {
 	ErrorHandler        ErrorHandler        `json:"-"`
 	StructVal           reflect.Value       `json:"-"`
 	Handler             Handler             `json:"-"`
+	Parent              Parent              `json:"-"`
+}
+
+type Parent struct {
+	ID   string `json:"-"`
+	Name string `json:"-"`
 }
 
 type Field struct {
@@ -104,6 +110,12 @@ func (c *Collection) AddAction(apiContext *APIContext, name string) {
 type Object interface {
 	ObjectID
 	ObjectType
+	ObjectParent
+}
+
+type ObjectParent interface {
+	GetParent() Parent
+	SetParent(Parent)
 }
 
 type ObjectID interface {
@@ -119,9 +131,9 @@ type ObjectType interface {
 type Handler interface {
 	Create(Object) (interface{}, error)
 	Delete(Object) error
-	BatchDelete(ObjectType) error
+	BatchDelete(Object) error
 	Update(ObjectType, ObjectID, Object) (interface{}, error)
-	List(ObjectType) interface{}
+	List(Object) interface{}
 	Get(Object) interface{}
 	Action(Object, string, map[string]interface{}) (interface{}, error)
 }

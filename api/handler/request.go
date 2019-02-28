@@ -37,13 +37,11 @@ func DeleteHandler(apiContext *types.APIContext, next types.RequestHandler) erro
 		return httperror.NewAPIError(httperror.NotFound, "no handler found")
 	}
 
-	var err error
-	obj, ok := getSchemaStructVal(apiContext).(types.Object)
-	if ok == false {
-		return httperror.NewAPIError(httperror.NotFound, "no found object interface")
+	obj, err := getSchemaObject(apiContext)
+	if err != nil {
+		return nil
 	}
 
-	obj.SetType(apiContext.Schema.ID)
 	if apiContext.ID != "" {
 		obj.SetID(apiContext.ID)
 		err = handler.Delete(obj)
@@ -69,13 +67,12 @@ func UpdateHandler(apiContext *types.APIContext, next types.RequestHandler) erro
 		return err
 	}
 
-	oldObj, ok := getSchemaStructVal(apiContext).(types.Object)
-	if ok == false {
-		return httperror.NewAPIError(httperror.NotFound, "no found object interface")
+	oldObj, err := getSchemaObject(apiContext)
+	if err != nil {
+		return nil
 	}
 
 	oldObj.SetID(apiContext.ID)
-	oldObj.SetType(apiContext.Schema.ID)
 	result, err := handler.Update(oldObj, oldObj, object)
 	if err != nil {
 		return err
@@ -92,12 +89,11 @@ func ListHandler(apiContext *types.APIContext, next types.RequestHandler) error 
 	}
 
 	var result interface{}
-	obj, ok := getSchemaStructVal(apiContext).(types.Object)
-	if ok == false {
-		return httperror.NewAPIError(httperror.NotFound, "no found object interface")
+	obj, err := getSchemaObject(apiContext)
+	if err != nil {
+		return nil
 	}
 
-	obj.SetType(apiContext.Schema.ID)
 	if apiContext.ID == "" {
 		result = handler.List(obj)
 	} else {
@@ -120,12 +116,11 @@ func ActionHandler(actionName string, action *types.Action, apiContext *types.AP
 		return err
 	}
 
-	obj, ok := getSchemaStructVal(apiContext).(types.Object)
-	if ok == false {
-		return httperror.NewAPIError(httperror.NotFound, "no found object interface")
+	obj, err := getSchemaObject(apiContext)
+	if err != nil {
+		return nil
 	}
 
-	obj.SetType(apiContext.Schema.ID)
 	obj.SetID(apiContext.ID)
 	result, err := handler.Action(obj, apiContext.Action, params)
 	if err != nil {
@@ -134,6 +129,17 @@ func ActionHandler(actionName string, action *types.Action, apiContext *types.AP
 
 	apiContext.WriteResponse(http.StatusOK, result)
 	return nil
+}
+
+func getSchemaObject(apiContext *types.APIContext) (types.Object, error) {
+	obj, ok := getSchemaStructVal(apiContext).(types.Object)
+	if ok == false {
+		return nil, httperror.NewAPIError(httperror.NotFound, "no found resource schema")
+	}
+
+	obj.SetType(apiContext.Schema.ID)
+	obj.SetParent(apiContext.Schema.Parent)
+	return obj, nil
 }
 
 func getSchemaStructVal(apiContext *types.APIContext) interface{} {
@@ -153,9 +159,10 @@ func parseRequestBody(apiContext *types.APIContext) (types.Object, error) {
 
 	if obj, ok := val.(types.Object); ok {
 		obj.SetType(apiContext.Schema.ID)
+		obj.SetParent(apiContext.Schema.Parent)
 		return obj, nil
 	} else {
-		return nil, httperror.NewAPIError(httperror.InvalidBodyContent, fmt.Sprintf("Failed trans to object interface"))
+		return nil, httperror.NewAPIError(httperror.InvalidBodyContent, fmt.Sprintf("Request Body mismatch resource schema"))
 	}
 }
 

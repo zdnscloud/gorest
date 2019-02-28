@@ -10,6 +10,7 @@ import (
 
 	"github.com/zdnscloud/gorest/api/builtin"
 	"github.com/zdnscloud/gorest/httperror"
+	"github.com/zdnscloud/gorest/name"
 	"github.com/zdnscloud/gorest/types"
 	"github.com/zdnscloud/gorest/urlbuilder"
 )
@@ -180,42 +181,21 @@ func parseVersionAndSubContext(schemas *types.Schemas, escapedPath string) (*typ
 
 	paths := pathParts[len(versionParts)+len(versionGroups):]
 
-	if !version.SubContext || len(versions) < 2 {
+	if len(paths) <= 2 {
 		return nil, version, "", paths, nil
-	}
-
-	// Handle the special case of /v3/clusters/schema(s)
-	if len(paths) >= 1 && (paths[0] == "schema" || paths[0] == "schemas") {
-		return nil, version, "", paths, nil
-	}
-
-	if len(paths) < 2 {
-		// Handle case like /v3/clusters/foo where /v3 and /v3/clusters are API versions.
-		// In this situation you want the version to be /v3 and the path "clusters", "foo"
-		newVersion := versions[0]
-		if len(paths) > 0 {
-			newVersion.Path = newVersion.Path + "/" + paths[0]
+	} else {
+		attrs := map[string]string{
+			version.SubContextSchema: paths[0],
 		}
-		return &newVersion, &versions[1], "", pathParts[len(versionGroups)+len(versionParts)-1:], nil
-	}
 
-	// Length is always >= 3
-
-	attrs := map[string]string{
-		version.SubContextSchema: paths[0],
-	}
-
-	for i, version := range versions {
-		schema := schemas.Schema(&version, paths[1])
-		if schema != nil {
-			if i == 0 {
-				break
-			}
-			return nil, &version, "", paths[1:], attrs
+		schema := schemas.Schema(version, paths[2])
+		if schema != nil && name.GuessPluralName(schema.Parent.Name) == paths[0] {
+			schema.Parent.ID = paths[1]
+			return nil, version, "", paths[2:], attrs
 		}
-	}
 
-	return nil, version, "/" + paths[0], paths[1:], attrs
+		return nil, version, "", nil, attrs
+	}
 }
 
 func DefaultResolver(typeName string, apiContext *types.APIContext) error {

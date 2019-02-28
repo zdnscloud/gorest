@@ -154,11 +154,6 @@ func jsonName(f reflect.StructField) string {
 }
 
 func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
-	if t == resourceType {
-		schema.CollectionMethods = []string{"GET", "POST"}
-		schema.ResourceMethods = []string{"GET", "PUT", "DELETE"}
-	}
-
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 
@@ -253,7 +248,7 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 }
 
 func applyTag(structField *reflect.StructField, field *Field) error {
-	for _, part := range strings.Split(structField.Tag.Get("norman"), ",") {
+	for _, part := range strings.Split(structField.Tag.Get("singlecloud"), ",") {
 		if part == "" {
 			continue
 		}

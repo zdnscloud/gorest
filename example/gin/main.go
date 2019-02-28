@@ -17,10 +17,42 @@ var (
 	}
 )
 
+type Poo struct {
+	ID     string       `json:"id,omitempty"`
+	Type   string       `json:"type,omitempty"`
+	Name   string       `json:"name,omitempty"`
+	parent types.Parent `json:"-"`
+}
+
+func (poo *Poo) GetID() string {
+	return poo.ID
+}
+
+func (poo *Poo) GetType() string {
+	return poo.Type
+}
+
+func (poo *Poo) SetID(id string) {
+	poo.ID = id
+}
+
+func (poo *Poo) SetType(typ string) {
+	poo.Type = typ
+}
+
+func (poo *Poo) GetParent() types.Parent {
+	return poo.parent
+}
+
+func (poo *Poo) SetParent(parent types.Parent) {
+	poo.parent = parent
+}
+
 type Foo struct {
-	ID   string `json:"id,omitempty"`
-	Type string `json:"type,omitempty"`
-	Name string `json:"name,omitempty"`
+	ID     string       `json:"id,omitempty"`
+	Type   string       `json:"type,omitempty"`
+	Name   string       `json:"name,omitempty"`
+	parent types.Parent `json:"-"`
 }
 
 func (foo *Foo) GetID() string {
@@ -39,10 +71,18 @@ func (foo *Foo) SetType(typ string) {
 	foo.Type = typ
 }
 
+func (foo *Foo) GetParent() types.Parent {
+	return foo.parent
+}
+
+func (foo *Foo) SetParent(parent types.Parent) {
+	foo.parent = parent
+}
+
 type Handler struct{}
 
 func (s *Handler) Create(obj types.Object) (interface{}, error) {
-	fmt.Printf("create %s %s\n", obj.GetType(), obj.(*Foo).Name)
+	fmt.Printf("create %s\n", obj.GetType())
 	return nil, nil
 }
 
@@ -51,8 +91,8 @@ func (s *Handler) Delete(obj types.Object) error {
 	return nil
 }
 
-func (s *Handler) BatchDelete(typ types.ObjectType) error {
-	fmt.Printf("delete all %s\n", typ.GetType())
+func (s *Handler) BatchDelete(obj types.Object) error {
+	fmt.Printf("delete all %s\n", obj.GetType())
 	return nil
 }
 
@@ -61,8 +101,8 @@ func (s *Handler) Update(typ types.ObjectType, id types.ObjectID, obj types.Obje
 	return nil, nil
 }
 
-func (s *Handler) List(typ types.ObjectType) interface{} {
-	fmt.Printf("get all %s\n", typ.GetType())
+func (s *Handler) List(obj types.Object) interface{} {
+	fmt.Printf("get all %s\n", obj.GetType())
 	return nil
 }
 
@@ -83,7 +123,16 @@ func main() {
 }
 
 func getApiServer() *api.Server {
-	server, err := adaptor.GetApiServer(&version, Foo{}, func(schema *types.Schema) {
+	server := api.NewAPIServer()
+	schemas := types.NewSchemas()
+	schemas.MustImportAndCustomize(&version, Poo{}, func(schema *types.Schema) {
+		schema.Handler = &Handler{}
+		schema.CollectionMethods = []string{"GET", "POST", "DELETE"}
+		schema.ResourceMethods = []string{"GET", "PUT", "DELETE", "POST"}
+	})
+
+	schemas.MustImportAndCustomize(&version, Foo{}, func(schema *types.Schema) {
+		schema.Parent = types.Parent{Name: "poo"}
 		schema.Handler = &Handler{}
 		schema.CollectionMethods = []string{"GET", "POST", "DELETE"}
 		schema.ResourceMethods = []string{"GET", "PUT", "DELETE", "POST"}
@@ -99,7 +148,7 @@ func getApiServer() *api.Server {
 			}}
 	})
 
-	if err != nil {
+	if err := server.AddSchemas(schemas); err != nil {
 		panic(err.Error())
 	}
 
