@@ -7,7 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/zdnscloud/gorest/api"
 	"github.com/zdnscloud/gorest/name"
-	"github.com/zdnscloud/gorest/types"
 )
 
 func RegisterHandler(router gin.IRoutes, server *api.Server) {
@@ -36,13 +35,4 @@ func registerHandler(router gin.IRoutes, handlerFunc gin.HandlerFunc, url string
 			router.GET(url, handlerFunc)
 		}
 	}
-}
-
-func GetApiServer(version *types.APIVersion, obj interface{}, f func(*types.Schema)) (*api.Server, error) {
-	server := api.NewAPIServer()
-	if err := server.AddSchemas(types.NewSchemas().MustImportAndCustomize(version, obj, f)); err != nil {
-		return nil, err
-	}
-
-	return server, nil
 }

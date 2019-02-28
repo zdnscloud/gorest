@@ -53,9 +53,9 @@ func (s *Schemas) MustImport(version *APIVersion, obj interface{}, externalOverr
 	return s
 }
 
-func (s *Schemas) MustImportAndCustomize(version *APIVersion, obj interface{}, f func(*Schema), externalOverrides ...interface{}) *Schemas {
+func (s *Schemas) MustImportAndCustomize(version *APIVersion, obj interface{}, handler Handler, f func(*Schema, Handler), externalOverrides ...interface{}) *Schemas {
 	return s.MustImport(version, obj, externalOverrides...).
-		MustCustomizeType(version, obj, f)
+		MustCustomizeType(version, obj, handler, f)
 }
 
 func (s *Schemas) Import(version *APIVersion, obj interface{}, externalOverrides ...interface{}) (*Schema, error) {
@@ -86,14 +86,14 @@ func (s *Schemas) newSchemaFromType(version *APIVersion, t reflect.Type, typeNam
 	return schema, nil
 }
 
-func (s *Schemas) MustCustomizeType(version *APIVersion, obj interface{}, f func(*Schema)) *Schemas {
+func (s *Schemas) MustCustomizeType(version *APIVersion, obj interface{}, handler Handler, f func(*Schema, Handler)) *Schemas {
 	name := s.getTypeName(reflect.TypeOf(obj))
 	schema := s.Schema(version, name)
 	if schema == nil {
 		panic("Failed to find schema " + name)
 	}
 
-	f(schema)
+	f(schema, handler)
 
 	return s
 }

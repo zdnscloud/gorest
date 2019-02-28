@@ -125,15 +125,15 @@ func main() {
 func getApiServer() *api.Server {
 	server := api.NewAPIServer()
 	schemas := types.NewSchemas()
-	schemas.MustImportAndCustomize(&version, Poo{}, func(schema *types.Schema) {
-		schema.Handler = &Handler{}
+	schemas.MustImportAndCustomize(&version, Poo{}, &Handler{}, func(schema *types.Schema, handler types.Handler) {
+		schema.Handler = handler
 		schema.CollectionMethods = []string{"GET", "POST", "DELETE"}
 		schema.ResourceMethods = []string{"GET", "PUT", "DELETE", "POST"}
 	})
 
-	schemas.MustImportAndCustomize(&version, Foo{}, func(schema *types.Schema) {
+	schemas.MustImportAndCustomize(&version, Foo{}, &Handler{}, func(schema *types.Schema, handler types.Handler) {
 		schema.Parent = types.Parent{Name: "poo"}
-		schema.Handler = &Handler{}
+		schema.Handler = handler
 		schema.CollectionMethods = []string{"GET", "POST", "DELETE"}
 		schema.ResourceMethods = []string{"GET", "PUT", "DELETE", "POST"}
 		schema.CollectionActions = map[string]types.Action{
