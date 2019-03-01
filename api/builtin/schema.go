@@ -6,14 +6,25 @@ import (
 
 var (
 	Version = types.APIVersion{
-		Group:   "zdns.cloud.cn",
+		Group:   "zcloud.cn",
 		Version: "v1",
-		Path:    "/api",
+		Path:    "/meta",
 	}
 
 	Schema = types.Schema{
 		ID:         "schema",
 		PluralName: "schemas",
 		Version:    Version,
+	}
+
+	Error = types.Schema{
+		ID:      "error",
+		Version: Version,
+		ResourceFields: map[string]types.Field{
+			"code":      {Type: "string"},
+			"message":   {Type: "string"},
+			"fieldName": {Type: "string"},
+			"status":    {Type: "int"},
+		},
 	}
 )

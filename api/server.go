@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 
+	"github.com/zdnscloud/gorest/api/builtin"
 	"github.com/zdnscloud/gorest/api/handler"
 	"github.com/zdnscloud/gorest/api/writer"
 	"github.com/zdnscloud/gorest/authorization"
@@ -66,6 +67,7 @@ func NewAPIServer() *Server {
 	}
 
 	s.Schemas.AddHook = s.setupDefaults
+	s.Schemas.AddSchema(builtin.Error)
 	s.Parser = s.parser
 	return s
 }
@@ -194,6 +196,11 @@ func (s *Server) handle(rw http.ResponseWriter, req *http.Request) (*types.APICo
 }
 
 func (s *Server) handleError(apiRequest *types.APIContext, err error) {
+	schema := apiRequest.Schemas.Schema(&builtin.Version, "error")
+	if schema != nil {
+		apiRequest.Schema = schema
+	}
+
 	if apiRequest.Schema == nil {
 		s.Defaults.ErrorHandler(apiRequest, err)
 	} else if apiRequest.Schema.ErrorHandler != nil {

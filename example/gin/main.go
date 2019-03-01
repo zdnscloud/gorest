@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/gin-gonic/gin"
 	"github.com/zdnscloud/gorest/adaptor"
 	"github.com/zdnscloud/gorest/api"
@@ -79,41 +77,66 @@ func (foo *Foo) SetParent(parent types.Parent) {
 	foo.parent = parent
 }
 
+func getTestPoo() Poo {
+	return Poo{
+		ID:   "123321asd",
+		Type: "poo",
+		Name: "testPoo",
+	}
+}
+
+func getTestFoo() Foo {
+	return Foo{
+		ID:   "123321asd",
+		Type: "foo",
+		Name: "testfoo",
+	}
+}
+
 type Handler struct{}
 
 func (s *Handler) Create(obj types.Object) (interface{}, error) {
-	fmt.Printf("create %s\n", obj.GetType())
-	return nil, nil
+	if obj.GetParent().Name != "" {
+		return getTestFoo(), nil
+	} else {
+		return getTestPoo(), nil
+	}
 }
 
 func (s *Handler) Delete(obj types.Object) error {
-	fmt.Printf("delete %s %s\n", obj.GetType(), obj.GetID())
 	return nil
 }
 
 func (s *Handler) BatchDelete(obj types.Object) error {
-	fmt.Printf("delete all %s\n", obj.GetType())
 	return nil
 }
 
 func (s *Handler) Update(typ types.ObjectType, id types.ObjectID, obj types.Object) (interface{}, error) {
-	fmt.Printf("update %s %s\n", typ.GetType(), id.GetID())
-	return nil, nil
+	if obj.GetParent().Name != "" {
+		return getTestFoo(), nil
+	} else {
+		return getTestPoo(), nil
+	}
 }
 
 func (s *Handler) List(obj types.Object) interface{} {
-	fmt.Printf("get all %s\n", obj.GetType())
-	return nil
+	if obj.GetParent().Name != "" {
+		return []Foo{getTestFoo()}
+	} else {
+		return []Poo{getTestPoo()}
+	}
 }
 
 func (s *Handler) Get(obj types.Object) interface{} {
-	fmt.Printf("get %s %s\n", obj.GetType(), obj.GetID())
-	return nil
+	if obj.GetParent().Name != "" {
+		return getTestFoo()
+	} else {
+		return getTestPoo()
+	}
 }
 
 func (s *Handler) Action(obj types.Object, action string, params map[string]interface{}) (interface{}, error) {
-	fmt.Printf("do action %s with params %s for %s\n", action, params, obj.GetType())
-	return nil, nil
+	return params, nil
 }
 
 func main() {
