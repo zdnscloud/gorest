@@ -5,4 +5,4 @@ An rest server by golang
 
 ## Example
 
-Refer to example/main.go
+Refer to example/gin/main.go
