@@ -1,20 +1,19 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"reflect"
 
-	"github.com/zdnscloud/gorest/httperror"
-	"github.com/zdnscloud/gorest/parse"
 	"github.com/zdnscloud/gorest/types"
 )
 
-func CreateHandler(apiContext *types.APIContext, next types.RequestHandler) error {
+func CreateHandler(apiContext *types.APIContext) *types.APIError {
 	handler := apiContext.Schema.Handler
 	if handler == nil {
-		return httperror.NewAPIError(httperror.NotFound, "no handler found")
+		return types.NewAPIError(types.NotFound, "no found schema handler")
 	}
 
 	object, err := parseRequestBody(apiContext)
@@ -27,19 +26,19 @@ func CreateHandler(apiContext *types.APIContext, next types.RequestHandler) erro
 		return err
 	}
 
-	apiContext.WriteResponse(http.StatusCreated, result)
+	WriteResponse(apiContext, http.StatusCreated, result)
 	return nil
 }
 
-func DeleteHandler(apiContext *types.APIContext, next types.RequestHandler) error {
+func DeleteHandler(apiContext *types.APIContext) *types.APIError {
 	handler := apiContext.Schema.Handler
 	if handler == nil {
-		return httperror.NewAPIError(httperror.NotFound, "no handler found")
+		return types.NewAPIError(types.NotFound, "no found schema handler")
 	}
 
 	obj, err := getSchemaObject(apiContext)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	if apiContext.ID != "" {
@@ -52,14 +51,15 @@ func DeleteHandler(apiContext *types.APIContext, next types.RequestHandler) erro
 	if err != nil {
 		return err
 	}
-	apiContext.WriteResponse(http.StatusOK, nil)
+
+	WriteResponse(apiContext, http.StatusOK, nil)
 	return nil
 }
 
-func UpdateHandler(apiContext *types.APIContext, next types.RequestHandler) error {
+func UpdateHandler(apiContext *types.APIContext) *types.APIError {
 	handler := apiContext.Schema.Handler
 	if handler == nil {
-		return httperror.NewAPIError(httperror.NotFound, "no handler found")
+		return types.NewAPIError(types.NotFound, "no found schema handler")
 	}
 
 	object, err := parseRequestBody(apiContext)
@@ -69,7 +69,7 @@ func UpdateHandler(apiContext *types.APIContext, next types.RequestHandler) erro
 
 	oldObj, err := getSchemaObject(apiContext)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	oldObj.SetID(apiContext.ID)
@@ -78,47 +78,51 @@ func UpdateHandler(apiContext *types.APIContext, next types.RequestHandler) erro
 		return err
 	}
 
-	apiContext.WriteResponse(http.StatusOK, result)
+	WriteResponse(apiContext, http.StatusOK, result)
 	return nil
 }
 
-func ListHandler(apiContext *types.APIContext, next types.RequestHandler) error {
+func ListHandler(apiContext *types.APIContext) *types.APIError {
 	handler := apiContext.Schema.Handler
 	if handler == nil {
-		return httperror.NewAPIError(httperror.NotFound, "no handler found")
+		return types.NewAPIError(types.NotFound, "no found schema handler")
 	}
 
 	var result interface{}
 	obj, err := getSchemaObject(apiContext)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	if apiContext.ID == "" {
-		result = handler.List(obj)
+		result = types.Collection{
+			Type:         "collection",
+			ResourceType: apiContext.Schema.ID,
+			Data:         handler.List(obj),
+		}
 	} else {
 		obj.SetID(apiContext.ID)
 		result = handler.Get(obj)
 	}
 
-	apiContext.WriteResponse(http.StatusOK, result)
+	WriteResponse(apiContext, http.StatusOK, result)
 	return nil
 }
 
-func ActionHandler(actionName string, action *types.Action, apiContext *types.APIContext) error {
+func ActionHandler(apiContext *types.APIContext, action *types.Action) *types.APIError {
 	handler := apiContext.Schema.Handler
 	if handler == nil {
-		return httperror.NewAPIError(httperror.NotFound, "no handler found")
+		return types.NewAPIError(types.NotFound, "no found schema handler")
 	}
 
-	params, err := parseActionBody(apiContext)
-	if err != nil {
+	var params map[string]interface{}
+	if err := decodeBody(apiContext.Request, &params); err != nil {
 		return err
 	}
 
 	obj, err := getSchemaObject(apiContext)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	obj.SetID(apiContext.ID)
@@ -127,18 +131,18 @@ func ActionHandler(actionName string, action *types.Action, apiContext *types.AP
 		return err
 	}
 
-	apiContext.WriteResponse(http.StatusOK, result)
+	WriteResponse(apiContext, http.StatusOK, result)
 	return nil
 }
 
-func getSchemaObject(apiContext *types.APIContext) (types.Object, error) {
+func getSchemaObject(apiContext *types.APIContext) (types.Object, *types.APIError) {
 	obj, ok := getSchemaStructVal(apiContext).(types.Object)
 	if ok == false {
-		return nil, httperror.NewAPIError(httperror.NotFound, "no found resource schema")
+		return nil, types.NewAPIError(types.NotFound, "no found resource schema")
 	}
 
 	obj.SetType(apiContext.Schema.ID)
-	obj.SetParent(apiContext.Schema.Parent)
+	obj.SetParent(apiContext.Parent)
 	return obj, nil
 }
 
@@ -149,30 +153,34 @@ func getSchemaStructVal(apiContext *types.APIContext) interface{} {
 	return valPtr.Interface()
 }
 
-func parseRequestBody(apiContext *types.APIContext) (types.Object, error) {
-	decode := parse.GetDecoder(apiContext.Request, io.LimitReader(apiContext.Request.Body, parse.MaxFormSize))
+func parseRequestBody(apiContext *types.APIContext) (types.Object, *types.APIError) {
 	val := getSchemaStructVal(apiContext)
-	if err := decode(val); err != nil {
-		return nil, httperror.NewAPIError(httperror.InvalidBodyContent,
-			fmt.Sprintf("Failed to parse body: %v", err))
+	if err := decodeBody(apiContext.Request, val); err != nil {
+		return nil, err
 	}
 
 	if obj, ok := val.(types.Object); ok {
 		obj.SetType(apiContext.Schema.ID)
-		obj.SetParent(apiContext.Schema.Parent)
+		obj.SetParent(apiContext.Parent)
 		return obj, nil
 	} else {
-		return nil, httperror.NewAPIError(httperror.InvalidBodyContent, fmt.Sprintf("Request Body mismatch resource schema"))
+		return nil, types.NewAPIError(types.InvalidBodyContent, fmt.Sprintf("Request Body mismatch resource schema"))
 	}
 }
 
-func parseActionBody(apiContext *types.APIContext) (map[string]interface{}, error) {
-	var params map[string]interface{}
-	decode := parse.GetDecoder(apiContext.Request, io.LimitReader(apiContext.Request.Body, parse.MaxFormSize))
-	if err := decode(&params); err != nil {
-		return nil, httperror.NewAPIError(httperror.InvalidBodyContent,
-			fmt.Sprintf("Failed to parse action body: %v", err))
+func decodeBody(req *http.Request, params interface{}) *types.APIError {
+	reqBody, err := ioutil.ReadAll(req.Body)
+	defer req.Body.Close()
+	if err != nil {
+		return types.NewAPIError(types.InvalidBodyContent,
+			fmt.Sprintf("Failed to read request body: %v", err.Error()))
 	}
 
-	return params, nil
+	err = json.Unmarshal(reqBody, params)
+	if err != nil {
+		return types.NewAPIError(types.InvalidBodyContent,
+			fmt.Sprintf("Failed to parse request body: %v", err.Error()))
+	}
+
+	return nil
 }

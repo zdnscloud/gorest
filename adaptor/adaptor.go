@@ -6,16 +6,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/zdnscloud/gorest/api"
-	"github.com/zdnscloud/gorest/name"
+	"github.com/zdnscloud/gorest/util/name"
 )
 
 func RegisterHandler(router gin.IRoutes, server *api.Server) {
 	handlerFunc := gin.WrapH(server)
 	for _, schema := range server.Schemas.Schemas() {
 		url := path.Join("/"+schema.Version.Group, schema.Version.Path, schema.PluralName)
-		if schema.Parent.Name != "" {
+		if schema.Parent != "" {
 			url = path.Join("/"+schema.Version.Group, schema.Version.Path,
-				name.GuessPluralName(schema.Parent.Name), ":"+schema.Parent.Name+"_id", schema.PluralName)
+				name.GuessPluralName(schema.Parent), ":"+schema.Parent+"_id", schema.PluralName)
 		}
 		registerHandler(router, handlerFunc, url, schema.CollectionMethods)
 		registerHandler(router, handlerFunc, path.Join(url, ":"+schema.ID+"_id"), schema.ResourceMethods)

@@ -95,7 +95,7 @@ func getTestFoo() Foo {
 
 type Handler struct{}
 
-func (s *Handler) Create(obj types.Object) (interface{}, error) {
+func (s *Handler) Create(obj types.Object) (interface{}, *types.APIError) {
 	if obj.GetParent().Name != "" {
 		return getTestFoo(), nil
 	} else {
@@ -103,15 +103,15 @@ func (s *Handler) Create(obj types.Object) (interface{}, error) {
 	}
 }
 
-func (s *Handler) Delete(obj types.Object) error {
+func (s *Handler) Delete(obj types.Object) *types.APIError {
 	return nil
 }
 
-func (s *Handler) BatchDelete(obj types.Object) error {
+func (s *Handler) BatchDelete(obj types.Object) *types.APIError {
 	return nil
 }
 
-func (s *Handler) Update(typ types.ObjectType, id types.ObjectID, obj types.Object) (interface{}, error) {
+func (s *Handler) Update(typ types.ObjectType, id types.ObjectID, obj types.Object) (interface{}, *types.APIError) {
 	if obj.GetParent().Name != "" {
 		return getTestFoo(), nil
 	} else {
@@ -135,7 +135,7 @@ func (s *Handler) Get(obj types.Object) interface{} {
 	}
 }
 
-func (s *Handler) Action(obj types.Object, action string, params map[string]interface{}) (interface{}, error) {
+func (s *Handler) Action(obj types.Object, action string, params map[string]interface{}) (interface{}, *types.APIError) {
 	return params, nil
 }
 
@@ -155,7 +155,7 @@ func getApiServer() *api.Server {
 	})
 
 	schemas.MustImportAndCustomize(&version, Foo{}, &Handler{}, func(schema *types.Schema, handler types.Handler) {
-		schema.Parent = types.Parent{Name: "poo"}
+		schema.Parent = "poo"
 		schema.Handler = handler
 		schema.CollectionMethods = []string{"GET", "POST", "DELETE"}
 		schema.ResourceMethods = []string{"GET", "PUT", "DELETE", "POST"}
