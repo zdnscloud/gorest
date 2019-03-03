@@ -16,12 +16,12 @@ var (
 	}
 )
 
-type Poo struct {
+type Cluster struct {
 	types.Resource `json:",inline"`
 	Name           string `json:"name,omitempty"`
 }
 
-type Foo struct {
+type Node struct {
 	types.Resource `json:",inline"`
 	Name           string `json:"name,omitempty"`
 }
@@ -39,32 +39,32 @@ func newHandler() *Handler {
 func (h *Handler) Create(obj types.Object) (interface{}, *types.APIError) {
 	id, _ := uuid.Gen()
 	switch obj.GetType() {
-	case "poo":
-		poo := obj.(*Poo)
+	case "cluster":
+		cluster := obj.(*Cluster)
 		for _, object := range h.objects {
-			if object.GetType() == "poo" && object.(*Poo).Name == poo.Name {
-				return nil, types.NewAPIError(types.DuplicateResource, "poo "+poo.Name+" already exists")
+			if object.GetType() == "cluster" && object.(*Cluster).Name == cluster.Name {
+				return nil, types.NewAPIError(types.DuplicateResource, "cluster "+cluster.Name+" already exists")
 			}
 		}
 
-		poo.SetID(id)
-		h.objects[id] = poo
-		return poo, nil
-	case "foo":
+		cluster.SetID(id)
+		h.objects[id] = cluster
+		return cluster, nil
+	case "node":
 		if h.hasID(obj.GetParent().ID) == false {
-			return nil, types.NewAPIError(types.NotFound, "poo "+obj.GetParent().ID+" is non-exists")
+			return nil, types.NewAPIError(types.NotFound, "cluster "+obj.GetParent().ID+" is non-exists")
 		}
 
-		foo := obj.(*Foo)
+		node := obj.(*Node)
 		for _, object := range h.objects {
-			if object.GetType() == "foo" && object.(*Foo).Name == foo.Name {
-				return nil, types.NewAPIError(types.DuplicateResource, "poo "+foo.Name+" already exists")
+			if object.GetType() == "node" && object.(*Node).Name == node.Name {
+				return nil, types.NewAPIError(types.DuplicateResource, "node "+node.Name+" already exists")
 			}
 		}
 
-		foo.SetID(id)
-		h.objects[id] = foo
-		return foo, nil
+		node.SetID(id)
+		h.objects[id] = node
+		return node, nil
 	default:
 		return nil, types.NewAPIError(types.NotFound, "no found resource type "+obj.GetType())
 	}
@@ -158,14 +158,14 @@ func getApiServer() *api.Server {
 	server := api.NewAPIServer()
 	schemas := types.NewSchemas()
 	handler := newHandler()
-	schemas.MustImportAndCustomize(&version, Poo{}, handler, func(schema *types.Schema, handler types.Handler) {
+	schemas.MustImportAndCustomize(&version, Cluster{}, handler, func(schema *types.Schema, handler types.Handler) {
 		schema.Handler = handler
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "PUT", "DELETE", "POST"}
 	})
 
-	schemas.MustImportAndCustomize(&version, Foo{}, handler, func(schema *types.Schema, handler types.Handler) {
-		schema.Parent = "poo"
+	schemas.MustImportAndCustomize(&version, Node{}, handler, func(schema *types.Schema, handler types.Handler) {
+		schema.Parent = "cluster"
 		schema.Handler = handler
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "PUT", "DELETE", "POST"}
