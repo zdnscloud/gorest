@@ -66,3 +66,33 @@ type Action struct {
 type ActionHandler func(request *APIContext, action *Action) *APIError
 
 type RequestHandler func(request *APIContext) *APIError
+
+type Resource struct {
+	ID     string `json:"id,omitempty"`
+	Type   string `json:"type,omitempty"`
+	Parent Parent `json:"-"`
+}
+
+func (r *Resource) GetID() string {
+	return r.ID
+}
+
+func (r *Resource) SetID(id string) {
+	r.ID = id
+}
+
+func (r *Resource) GetType() string {
+	return r.Type
+}
+
+func (r *Resource) SetType(typ string) {
+	r.Type = typ
+}
+
+func (r *Resource) GetParent() Parent {
+	return r.Parent
+}
+
+func (r *Resource) SetParent(parent Parent) {
+	r.Parent = parent
+}

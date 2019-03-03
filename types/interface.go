@@ -24,8 +24,7 @@ type ObjectType interface {
 type Handler interface {
 	Create(Object) (interface{}, *APIError)
 	Delete(Object) *APIError
-	BatchDelete(Object) *APIError
-	Update(ObjectType, ObjectID, Object) (interface{}, *APIError)
+	Update(Object) (interface{}, *APIError)
 	List(Object) interface{}
 	Get(Object) interface{}
 	Action(Object, string, map[string]interface{}) (interface{}, *APIError)

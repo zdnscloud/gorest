@@ -7,6 +7,8 @@ var (
 	MethodNotAllowed = ErrorCode{"MethodNotAllow", 405}
 	Conflict         = ErrorCode{"Conflict", 409}
 
+	DuplicateResource  = ErrorCode{"DuplicateResource", 422}
+	DeleteParent       = ErrorCode{"DeleteParent", 422}
 	InvalidFormat      = ErrorCode{"InvalidFormat", 422}
 	NotNullable        = ErrorCode{"NotNullable", 422}
 	NotUnique          = ErrorCode{"NotUnique", 422}

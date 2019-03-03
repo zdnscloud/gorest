@@ -41,14 +41,8 @@ func DeleteHandler(apiContext *types.APIContext) *types.APIError {
 		return err
 	}
 
-	if apiContext.ID != "" {
-		obj.SetID(apiContext.ID)
-		err = handler.Delete(obj)
-	} else {
-		err = handler.BatchDelete(obj)
-	}
-
-	if err != nil {
+	obj.SetID(apiContext.ID)
+	if err = handler.Delete(obj); err != nil {
 		return err
 	}
 
@@ -67,13 +61,8 @@ func UpdateHandler(apiContext *types.APIContext) *types.APIError {
 		return err
 	}
 
-	oldObj, err := getSchemaObject(apiContext)
-	if err != nil {
-		return err
-	}
-
-	oldObj.SetID(apiContext.ID)
-	result, err := handler.Update(oldObj, oldObj, object)
+	object.SetID(apiContext.ID)
+	result, err := handler.Update(object)
 	if err != nil {
 		return err
 	}
