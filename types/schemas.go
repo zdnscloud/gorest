@@ -3,6 +3,7 @@ package types
 import (
 	"bytes"
 	"fmt"
+	"path"
 	"reflect"
 	"strings"
 
@@ -93,6 +94,21 @@ func (s *Schemas) Schema(version *APIVersion, name string) *Schema {
 	}
 
 	return nil
+}
+
+func (s *Schemas) UrlMethods() map[string][]string {
+	urlMethods := make(map[string][]string)
+	for _, schema := range s.schemas {
+		url := path.Join("/"+schema.Version.Group, schema.Version.Path, schema.PluralName)
+		if schema.Parent != "" {
+			url = path.Join("/"+schema.Version.Group, schema.Version.Path,
+				name.GuessPluralName(schema.Parent), ":"+schema.Parent+"_id", schema.PluralName)
+		}
+		urlMethods[url] = schema.CollectionMethods
+		urlMethods[path.Join(url, ":"+schema.ID+"_id")] = schema.ResourceMethods
+	}
+
+	return urlMethods
 }
 
 type MultiErrors struct {

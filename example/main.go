@@ -149,7 +149,8 @@ func (h *Handler) Action(obj types.Object, action string, params map[string]inte
 
 func main() {
 	router := gin.Default()
-	adaptor.RegisterHandler(router, getApiServer())
+	apiServer := getApiServer()
+	adaptor.RegisterHandler(router, gin.WrapH(apiServer), apiServer.Schemas.UrlMethods())
 	router.Run("0.0.0.0:1234")
 }
 
