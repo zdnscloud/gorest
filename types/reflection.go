@@ -15,7 +15,7 @@ var (
 	}
 )
 
-func GetTypeName(obj interface{}) string {
+func GetResourceType(obj interface{}) string {
 	return convert.LowerTitle(reflect.TypeOf(obj).Name())
 }
 
