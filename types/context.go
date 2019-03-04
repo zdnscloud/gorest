@@ -16,7 +16,6 @@ type APIContext struct {
 	Version        *APIVersion
 	Query          url.Values
 	ResponseFormat string
-	AccessControl  AccessControl
 	Request        *http.Request
 	Response       http.ResponseWriter
 	Parent         Parent

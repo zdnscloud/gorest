@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/zdnscloud/gorest/types"
+	"github.com/zdnscloud/gorest/util/slice"
 )
 
 var (
@@ -17,10 +18,6 @@ var (
 )
 
 func ValidateMethod(request *types.APIContext) *types.APIError {
-	if request.Action != "" && request.Method == http.MethodPost {
-		return nil
-	}
-
 	if !supportedMethods[request.Method] {
 		return types.NewAPIError(types.MethodNotAllowed, fmt.Sprintf("Method %s not supported", request.Method))
 	}
@@ -34,10 +31,8 @@ func ValidateMethod(request *types.APIContext) *types.APIError {
 		allowed = request.Schema.CollectionMethods
 	}
 
-	for _, method := range allowed {
-		if method == request.Method {
-			return nil
-		}
+	if slice.ContainsString(allowed, request.Method) {
+		return nil
 	}
 
 	return types.NewAPIError(types.MethodNotAllowed, fmt.Sprintf("Method %s not supported", request.Method))

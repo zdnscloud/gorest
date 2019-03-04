@@ -4,20 +4,17 @@ import (
 	"net/http"
 
 	"github.com/zdnscloud/gorest/api/handler"
-	"github.com/zdnscloud/gorest/authorization"
 	"github.com/zdnscloud/gorest/parse"
 	"github.com/zdnscloud/gorest/types"
 )
 
 type Server struct {
-	Schemas       *types.Schemas
-	AccessControl types.AccessControl
+	Schemas *types.Schemas
 }
 
 func NewAPIServer() *Server {
 	s := &Server{
-		Schemas:       types.NewSchemas(),
-		AccessControl: &authorization.AllAccess{},
+		Schemas: types.NewSchemas(),
 	}
 
 	return s
@@ -47,7 +44,6 @@ func (s *Server) handle(rw http.ResponseWriter, req *http.Request) (*types.APICo
 		return apiRequest, err
 	}
 
-	apiRequest.AccessControl = s.AccessControl
 	if err := CheckCSRF(apiRequest); err != nil {
 		return apiRequest, err
 	}
@@ -65,30 +61,12 @@ func (s *Server) handle(rw http.ResponseWriter, req *http.Request) (*types.APICo
 		var reqHandler types.RequestHandler
 		switch apiRequest.Method {
 		case http.MethodGet:
-			if apiRequest.ID == "" {
-				if err := apiRequest.AccessControl.CanList(apiRequest, apiRequest.Schema); err != nil {
-					return apiRequest, err
-				}
-			} else {
-				if err := apiRequest.AccessControl.CanGet(apiRequest, apiRequest.Schema); err != nil {
-					return apiRequest, err
-				}
-			}
 			reqHandler = handler.ListHandler
 		case http.MethodPost:
-			if err := apiRequest.AccessControl.CanCreate(apiRequest, apiRequest.Schema); err != nil {
-				return apiRequest, err
-			}
 			reqHandler = handler.CreateHandler
 		case http.MethodPut:
-			if err := apiRequest.AccessControl.CanUpdate(apiRequest, apiRequest.Schema); err != nil {
-				return apiRequest, err
-			}
 			reqHandler = handler.UpdateHandler
 		case http.MethodDelete:
-			if err := apiRequest.AccessControl.CanDelete(apiRequest, apiRequest.Schema); err != nil {
-				return apiRequest, err
-			}
 			reqHandler = handler.DeleteHandler
 		}
 

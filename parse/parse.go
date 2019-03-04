@@ -23,7 +23,6 @@ type ParsedURL struct {
 	Version *types.APIVersion
 	Type    string
 	ID      string
-	Method  string
 	Action  string
 	Parent  types.Parent
 	Query   url.Values
@@ -37,11 +36,11 @@ func defaultURLParser(schemas *types.Schemas, url *url.URL) (ParsedURL, *types.A
 	version, parent, parts := parseVersionAndParent(schemas, path)
 
 	if version == nil {
-		return result, types.NewAPIError(types.NotFound, "no found version")
+		return result, types.NewAPIError(types.NotFound, "no found version with url "+path)
 	}
 
 	result.Version = version
-	result.Action, result.Method = parseAction(url)
+	result.Action = parseAction(url)
 	result.Query = url.Query()
 	result.Parent = parent
 
@@ -64,10 +63,6 @@ func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas) (*
 	result.ID = parsedURL.ID
 	result.Action = parsedURL.Action
 	result.Query = parsedURL.Query
-	if parsedURL.Method != "" {
-		result.Method = parsedURL.Method
-	}
-
 	result.Version = parsedURL.Version
 	result.Parent = parsedURL.Parent
 
@@ -79,15 +74,7 @@ func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas) (*
 		return result, err
 	}
 
-	if result.Schema == nil {
-		if result.Type != "" {
-			err = types.NewAPIError(types.NotFound, "failed to find schema "+result.Type)
-		}
-		return result, err
-	}
-
 	result.Type = result.Schema.ID
-
 	if err := ValidateMethod(result); err != nil {
 		return result, err
 	}
@@ -194,11 +181,6 @@ func parseMethod(req *http.Request) string {
 	return method
 }
 
-func parseAction(url *url.URL) (string, string) {
-	action := url.Query().Get("action")
-	if action == "remove" {
-		return "", http.MethodDelete
-	}
-
-	return action, ""
+func parseAction(url *url.URL) string {
+	return url.Query().Get("action")
 }
