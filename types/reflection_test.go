@@ -38,7 +38,7 @@ func TestReflection(t *testing.T) {
 	ut.Equal(t, schema.Parent, GetResourceType(Cluster{}))
 	ut.Equal(t, schema.CollectionMethods, []string{"GET", "POST"})
 	ut.Equal(t, schema.ResourceMethods, []string{"GET", "DELETE", "PUT"})
-	ut.Equal(t, len(schema.ResourceFields), 3)
+	ut.Equal(t, len(schema.ResourceFields), 4)
 	for _, field := range schema.ResourceFields {
 		if field.CodeName == "Name" {
 			ut.Equal(t, field.Nullable, false)

@@ -4,6 +4,7 @@ type Object interface {
 	ObjectID
 	ObjectType
 	ObjectParent
+	ObjectLinks
 }
 
 type ObjectParent interface {
@@ -19,6 +20,11 @@ type ObjectID interface {
 type ObjectType interface {
 	GetType() string
 	SetType(string)
+}
+
+type ObjectLinks interface {
+	GetLinks() map[string]string
+	SetLinks(map[string]string)
 }
 
 type Handler interface {

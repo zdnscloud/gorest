@@ -5,9 +5,10 @@ import (
 )
 
 type Collection struct {
-	Type         string      `json:"type,omitempty"`
-	ResourceType string      `json:"resourceType,omitempty"`
-	Data         interface{} `json:"data"`
+	Type         string            `json:"type,omitempty"`
+	ResourceType string            `json:"resourceType,omitempty"`
+	Links        map[string]string `json:"links,omitempty"`
+	Data         interface{}       `json:"data"`
 }
 
 type APIVersion struct {
@@ -68,9 +69,10 @@ type ActionHandler func(request *APIContext, action *Action) *APIError
 type RequestHandler func(request *APIContext) *APIError
 
 type Resource struct {
-	ID     string `json:"id,omitempty"`
-	Type   string `json:"type,omitempty"`
-	Parent Parent `json:"-"`
+	ID     string            `json:"id,omitempty"`
+	Type   string            `json:"type,omitempty"`
+	Links  map[string]string `json:"links,omitempty"`
+	Parent Parent            `json:"-"`
 }
 
 func (r *Resource) GetID() string {
@@ -95,4 +97,12 @@ func (r *Resource) GetParent() Parent {
 
 func (r *Resource) SetParent(parent Parent) {
 	r.Parent = parent
+}
+
+func (r *Resource) GetLinks() map[string]string {
+	return r.Links
+}
+
+func (r *Resource) SetLinks(links map[string]string) {
+	r.Links = links
 }
