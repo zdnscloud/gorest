@@ -22,13 +22,7 @@ func CreateHandler(apiContext *types.APIContext) *types.APIError {
 		return err
 	}
 
-	var result interface{}
-	if yamlContent != nil {
-		result, err = handler.CreateByYaml(yamlContent)
-	} else {
-		result, err = handler.Create(object)
-	}
-
+	result, err := handler.Create(object, yamlContent)
 	if err != nil {
 		return err
 	}
@@ -161,9 +155,12 @@ func decodeBody(req *http.Request, params interface{}) *types.APIError {
 }
 
 func parseCreateBody(apiContext *types.APIContext) ([]byte, types.Object, *types.APIError) {
-	var params struct {
-		Yaml string `json:"yaml_"`
-	}
+	var (
+		params struct {
+			Yaml string `json:"yaml_"`
+		}
+		content []byte
+	)
 
 	reqBody, err := ioutil.ReadAll(apiContext.Request.Body)
 	defer apiContext.Request.Body.Close()
@@ -178,12 +175,10 @@ func parseCreateBody(apiContext *types.APIContext) ([]byte, types.Object, *types
 	}
 
 	if params.Yaml != "" {
-		content, err := base64.StdEncoding.DecodeString(params.Yaml)
+		content, err = base64.StdEncoding.DecodeString(params.Yaml)
 		if err != nil {
 			return nil, nil, types.NewAPIError(types.InvalidBodyContent,
 				fmt.Sprintf("Failed to parse request body: %v", err.Error()))
-		} else {
-			return content, nil, nil
 		}
 	}
 
@@ -194,7 +189,7 @@ func parseCreateBody(apiContext *types.APIContext) ([]byte, types.Object, *types
 	}
 
 	obj, apiErr := getObject(apiContext, val)
-	return nil, obj, apiErr
+	return content, obj, apiErr
 }
 
 func getObject(apiContext *types.APIContext, val interface{}) (types.Object, *types.APIError) {

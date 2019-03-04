@@ -23,23 +23,15 @@ func TestParseCreateBody(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/", bytes.NewBufferString(fmt.Sprintf("{\"name\":\"bar\", \"yaml_\":\"%s\"}", yamlContent)))
 	apiContext := &types.APIContext{
 		Request: req,
+		Schema: &types.Schema{
+			ID:        "foo",
+			StructVal: reflect.ValueOf(Foo{}),
+		},
 	}
 
 	content, obj, err := parseCreateBody(apiContext)
 	ut.Equal(t, err, noerr)
 	ut.Equal(t, string(content), "testContent")
-	ut.Equal(t, obj, nil)
-
-	apiContext.Schema = &types.Schema{
-		ID:        "foo",
-		StructVal: reflect.ValueOf(Foo{}),
-	}
-
-	req, _ = http.NewRequest("POST", "/", bytes.NewBufferString("{\"name\":\"bar\", \"yaml_\":\"\"}"))
-	apiContext.Request = req
-	content, obj, noerr = parseCreateBody(apiContext)
-	ut.Equal(t, err, noerr)
-	ut.Equal(t, string(content), "")
 	ut.Equal(t, obj.(*Foo).Type, "foo")
 	ut.Equal(t, obj.(*Foo).Name, "bar")
 }
