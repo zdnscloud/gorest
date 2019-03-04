@@ -23,6 +23,7 @@ type ObjectType interface {
 
 type Handler interface {
 	Create(Object) (interface{}, *APIError)
+	CreateByYaml([]byte) (interface{}, *APIError)
 	Delete(Object) *APIError
 	Update(Object) (interface{}, *APIError)
 	List(Object) interface{}

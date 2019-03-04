@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -16,12 +17,18 @@ func CreateHandler(apiContext *types.APIContext) *types.APIError {
 		return types.NewAPIError(types.NotFound, "no found schema handler")
 	}
 
-	object, err := parseRequestBody(apiContext)
+	yamlContent, object, err := parseCreateBody(apiContext)
 	if err != nil {
 		return err
 	}
 
-	result, err := handler.Create(object)
+	var result interface{}
+	if yamlContent != nil {
+		result, err = handler.CreateByYaml(yamlContent)
+	} else {
+		result, err = handler.Create(object)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -36,7 +43,7 @@ func DeleteHandler(apiContext *types.APIContext) *types.APIError {
 		return types.NewAPIError(types.NotFound, "no found schema handler")
 	}
 
-	obj, err := getSchemaObject(apiContext)
+	obj, err := getObject(apiContext, getSchemaStructVal(apiContext))
 	if err != nil {
 		return err
 	}
@@ -56,7 +63,12 @@ func UpdateHandler(apiContext *types.APIContext) *types.APIError {
 		return types.NewAPIError(types.NotFound, "no found schema handler")
 	}
 
-	object, err := parseRequestBody(apiContext)
+	val := getSchemaStructVal(apiContext)
+	if err := decodeBody(apiContext.Request, val); err != nil {
+		return err
+	}
+
+	object, err := getObject(apiContext, val)
 	if err != nil {
 		return err
 	}
@@ -78,7 +90,7 @@ func ListHandler(apiContext *types.APIContext) *types.APIError {
 	}
 
 	var result interface{}
-	obj, err := getSchemaObject(apiContext)
+	obj, err := getObject(apiContext, getSchemaStructVal(apiContext))
 	if err != nil {
 		return err
 	}
@@ -109,7 +121,7 @@ func ActionHandler(apiContext *types.APIContext, action *types.Action) *types.AP
 		return err
 	}
 
-	obj, err := getSchemaObject(apiContext)
+	obj, err := getObject(apiContext, getSchemaStructVal(apiContext))
 	if err != nil {
 		return err
 	}
@@ -124,37 +136,11 @@ func ActionHandler(apiContext *types.APIContext, action *types.Action) *types.AP
 	return nil
 }
 
-func getSchemaObject(apiContext *types.APIContext) (types.Object, *types.APIError) {
-	obj, ok := getSchemaStructVal(apiContext).(types.Object)
-	if ok == false {
-		return nil, types.NewAPIError(types.NotFound, "no found resource schema")
-	}
-
-	obj.SetType(apiContext.Schema.ID)
-	obj.SetParent(apiContext.Parent)
-	return obj, nil
-}
-
 func getSchemaStructVal(apiContext *types.APIContext) interface{} {
 	val := apiContext.Schema.StructVal
 	valPtr := reflect.New(val.Type())
 	valPtr.Elem().Set(val)
 	return valPtr.Interface()
-}
-
-func parseRequestBody(apiContext *types.APIContext) (types.Object, *types.APIError) {
-	val := getSchemaStructVal(apiContext)
-	if err := decodeBody(apiContext.Request, val); err != nil {
-		return nil, err
-	}
-
-	if obj, ok := val.(types.Object); ok {
-		obj.SetType(apiContext.Schema.ID)
-		obj.SetParent(apiContext.Parent)
-		return obj, nil
-	} else {
-		return nil, types.NewAPIError(types.InvalidBodyContent, fmt.Sprintf("Request Body mismatch resource schema"))
-	}
 }
 
 func decodeBody(req *http.Request, params interface{}) *types.APIError {
@@ -172,4 +158,51 @@ func decodeBody(req *http.Request, params interface{}) *types.APIError {
 	}
 
 	return nil
+}
+
+func parseCreateBody(apiContext *types.APIContext) ([]byte, types.Object, *types.APIError) {
+	var params struct {
+		Yaml string `json:"yaml_"`
+	}
+
+	reqBody, err := ioutil.ReadAll(apiContext.Request.Body)
+	defer apiContext.Request.Body.Close()
+	if err != nil {
+		return nil, nil, types.NewAPIError(types.InvalidBodyContent,
+			fmt.Sprintf("Failed to read request body: %v", err.Error()))
+	}
+
+	if err := json.Unmarshal(reqBody, &params); err != nil {
+		return nil, nil, types.NewAPIError(types.InvalidBodyContent,
+			fmt.Sprintf("Failed to parse request body: %v", err.Error()))
+	}
+
+	if params.Yaml != "" {
+		content, err := base64.StdEncoding.DecodeString(params.Yaml)
+		if err != nil {
+			return nil, nil, types.NewAPIError(types.InvalidBodyContent,
+				fmt.Sprintf("Failed to parse request body: %v", err.Error()))
+		} else {
+			return content, nil, nil
+		}
+	}
+
+	val := getSchemaStructVal(apiContext)
+	if err := json.Unmarshal(reqBody, val); err != nil {
+		return nil, nil, types.NewAPIError(types.InvalidBodyContent,
+			fmt.Sprintf("Failed to parse request body: %v", err.Error()))
+	}
+
+	obj, apiErr := getObject(apiContext, val)
+	return nil, obj, apiErr
+}
+
+func getObject(apiContext *types.APIContext, val interface{}) (types.Object, *types.APIError) {
+	if obj, ok := val.(types.Object); ok {
+		obj.SetType(apiContext.Schema.ID)
+		obj.SetParent(apiContext.Parent)
+		return obj, nil
+	} else {
+		return nil, types.NewAPIError(types.NotFound, fmt.Sprintf("no found resource schema"))
+	}
 }

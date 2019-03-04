@@ -36,6 +36,10 @@ func newHandler() *Handler {
 	}
 }
 
+func (h *Handler) CreateByYaml(content []byte) (interface{}, *types.APIError) {
+	return nil, nil
+}
+
 func (h *Handler) Create(obj types.Object) (interface{}, *types.APIError) {
 	id, _ := uuid.Gen()
 	switch obj.GetType() {
