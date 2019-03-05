@@ -14,12 +14,17 @@ func addLinks(apiContext *types.APIContext, obj types.Object) {
 	links := make(map[string]string)
 	self := genResourceLink(apiContext.Request, obj.GetID())
 	links["self"] = self
+
 	if slice.ContainsString(apiContext.Schema.ResourceMethods, http.MethodPut) {
 		links["update"] = self
 	}
 
 	if slice.ContainsString(apiContext.Schema.ResourceMethods, http.MethodDelete) {
 		links["remove"] = self
+	}
+
+	if slice.ContainsString(apiContext.Schema.CollectionMethods, http.MethodGet) {
+		links["collection"] = genCollectionLink(apiContext.Request, obj.GetID())
 	}
 
 	obj.SetLinks(links)
@@ -36,10 +41,10 @@ func addCollectionLinks(apiContext *types.APIContext, collection *types.Collecti
 		"self": getRequestURL(apiContext.Request),
 	}
 
-	slice := reflect.ValueOf(collection.Data)
-	if slice.Kind() == reflect.Slice {
-		for i := 0; i < slice.Len(); i++ {
-			addResourceLinks(apiContext, slice.Index(i).Interface())
+	sliceData := reflect.ValueOf(collection.Data)
+	if sliceData.Kind() == reflect.Slice {
+		for i := 0; i < sliceData.Len(); i++ {
+			addResourceLinks(apiContext, sliceData.Index(i).Interface())
 		}
 	}
 }
@@ -54,6 +59,16 @@ func genResourceLink(req *http.Request, id string) string {
 		return requestURL
 	} else {
 		return requestURL + "/" + id
+	}
+}
+
+func genCollectionLink(req *http.Request, id string) string {
+	requestURL := getRequestURL(req)
+	index := strings.LastIndex(requestURL, id)
+	if index == -1 {
+		return requestURL
+	} else {
+		return requestURL[:index-1]
 	}
 }
 

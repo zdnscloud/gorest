@@ -19,12 +19,15 @@ type Testnoresourceobject struct {
 }
 
 func TestAddResourceLink(t *testing.T) {
-	expectLink := "http://127.0.0.1:1234/test/testresourceobjects/1de5f1bb403524c280c220f3a366b538"
+	expectSelfLink := "http://127.0.0.1:1234/test/testresourceobjects/1de5f1bb403524c280c220f3a366b538"
+	expectCollectionLink := "http://127.0.0.1:1234/test/testresourceobjects"
 	req, _ := http.NewRequest("POST", "/test/testresourceobjects", nil)
 	req.Host = "127.0.0.1:1234"
 	apiContext := &types.APIContext{
 		Request: req,
-		Schema:  &types.Schema{},
+		Schema: &types.Schema{
+			CollectionMethods: []string{"GET"},
+		},
 	}
 
 	obj := &Testresourceobject{
@@ -34,23 +37,27 @@ func TestAddResourceLink(t *testing.T) {
 		},
 	}
 	addResourceLinks(apiContext, obj)
-	ut.Equal(t, len(obj.Links), 1)
-	ut.Equal(t, obj.Links["self"], expectLink)
+	ut.Equal(t, len(obj.Links), 2)
+	ut.Equal(t, obj.Links["self"], expectSelfLink)
+	ut.Equal(t, obj.Links["collection"], expectCollectionLink)
 
 	req, _ = http.NewRequest("PUT", "/test/testresourceobjects/1de5f1bb403524c280c220f3a366b538", nil)
 	req.Host = "127.0.0.1:1234"
 	apiContext.Request = req
 	addResourceLinks(apiContext, obj)
-	ut.Equal(t, len(obj.Links), 1)
-	ut.Equal(t, obj.Links["self"], expectLink)
+	ut.Equal(t, len(obj.Links), 2)
+	ut.Equal(t, obj.Links["self"], expectSelfLink)
+	ut.Equal(t, obj.Links["collection"], expectCollectionLink)
 
-	expectLink = "http://127.0.0.1:1234/test/resourceobjectparent/d6db994a406ab41c80dc6e4e31ecf890/testresourceobjects/1de5f1bb403524c280c220f3a366b538"
+	expectSelfLink = "http://127.0.0.1:1234/test/resourceobjectparent/d6db994a406ab41c80dc6e4e31ecf890/testresourceobjects/1de5f1bb403524c280c220f3a366b538"
+	expectCollectionLink = "http://127.0.0.1:1234/test/resourceobjectparent/d6db994a406ab41c80dc6e4e31ecf890/testresourceobjects"
 	req, _ = http.NewRequest("POST", "/test/resourceobjectparent/d6db994a406ab41c80dc6e4e31ecf890/testresourceobjects", nil)
 	req.Host = "127.0.0.1:1234"
 	apiContext.Request = req
 	addResourceLinks(apiContext, obj)
-	ut.Equal(t, len(obj.Links), 1)
-	ut.Equal(t, obj.Links["self"], expectLink)
+	ut.Equal(t, len(obj.Links), 2)
+	ut.Equal(t, obj.Links["self"], expectSelfLink)
+	ut.Equal(t, obj.Links["collection"], expectCollectionLink)
 }
 
 func TestAddLinkFail(t *testing.T) {
