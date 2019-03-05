@@ -27,7 +27,7 @@ func CreateHandler(apiContext *types.APIContext) *types.APIError {
 		return err
 	}
 
-	addLinks(apiContext, result.(types.Object))
+	addResourceLinks(apiContext, result)
 	WriteResponse(apiContext, http.StatusCreated, result)
 	return nil
 }
@@ -74,7 +74,7 @@ func UpdateHandler(apiContext *types.APIContext) *types.APIError {
 		return err
 	}
 
-	addLinks(apiContext, result.(types.Object))
+	addResourceLinks(apiContext, result)
 	WriteResponse(apiContext, http.StatusOK, result)
 	return nil
 }
@@ -92,20 +92,17 @@ func ListHandler(apiContext *types.APIContext) *types.APIError {
 	}
 
 	if apiContext.ID == "" {
-		data := handler.List(obj)
-		addCollectionLinks(apiContext, data)
-		result = types.Collection{
+		collection := &types.Collection{
 			Type:         "collection",
 			ResourceType: apiContext.Schema.ID,
-			Links: map[string]string{
-				"self": getRequestURL(apiContext.Request),
-			},
-			Data: data,
+			Data:         handler.List(obj),
 		}
+		addCollectionLinks(apiContext, collection)
+		result = collection
 	} else {
 		obj.SetID(apiContext.ID)
 		result = handler.Get(obj)
-		addLinks(apiContext, result.(types.Object))
+		addResourceLinks(apiContext, result)
 	}
 
 	WriteResponse(apiContext, http.StatusOK, result)
