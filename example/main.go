@@ -51,8 +51,8 @@ func (h *Handler) Create(obj types.Object, yamlContent []byte) (interface{}, *ty
 		h.objects[id] = cluster
 		return cluster, nil
 	case "node":
-		if h.hasID(obj.GetParent().ID) == false {
-			return nil, types.NewAPIError(types.NotFound, "cluster "+obj.GetParent().ID+" is non-exists")
+		if h.hasID(obj.GetParent().GetID()) == false {
+			return nil, types.NewAPIError(types.NotFound, "cluster "+obj.GetParent().GetID()+" is non-exists")
 		}
 
 		node := obj.(*Node)
@@ -71,9 +71,9 @@ func (h *Handler) Create(obj types.Object, yamlContent []byte) (interface{}, *ty
 }
 
 func (h *Handler) hasObject(obj types.Object) *types.APIError {
-	parentID := obj.GetParent().ID
+	parentID := obj.GetParent().GetID()
 	if parentID != "" && h.hasID(parentID) == false {
-		return types.NewAPIError(types.NotFound, "no found resource "+obj.GetParent().Name+" with id "+parentID)
+		return types.NewAPIError(types.NotFound, "no found resource "+obj.GetParent().GetType()+" with id "+parentID)
 	}
 
 	if h.hasID(obj.GetID()) == false {
@@ -90,7 +90,7 @@ func (h *Handler) hasID(id string) bool {
 
 func (h *Handler) hasChild(id string) bool {
 	for _, obj := range h.objects {
-		if obj.GetParent().ID == id {
+		if obj.GetParent().GetID() == id {
 			return true
 		}
 	}
@@ -131,7 +131,7 @@ func (h *Handler) List(obj types.Object) interface{} {
 }
 
 func (h *Handler) Get(obj types.Object) interface{} {
-	parentID := obj.GetParent().ID
+	parentID := obj.GetParent().GetID()
 	if parentID != "" && h.hasID(parentID) == false {
 		return nil
 	}
@@ -165,7 +165,7 @@ func getApiServer() *api.Server {
 	})
 
 	schemas.MustImportAndCustomize(&version, Node{}, handler, func(schema *types.Schema, handler types.Handler) {
-		schema.Parent = "cluster"
+		schema.Parent = &types.Schema{ID: types.GetResourceType(Cluster{})}
 		schema.Handler = handler
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "PUT", "DELETE", "POST"}

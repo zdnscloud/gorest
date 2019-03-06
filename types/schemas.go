@@ -99,11 +99,27 @@ func (s *Schemas) Schema(version *APIVersion, name string) *Schema {
 func (s *Schemas) UrlMethods() map[string][]string {
 	urlMethods := make(map[string][]string)
 	for _, schema := range s.schemas {
-		url := path.Join("/"+schema.Version.Group, schema.Version.Path, schema.PluralName)
-		if schema.Parent != "" {
-			url = path.Join("/"+schema.Version.Group, schema.Version.Path,
-				name.GuessPluralName(schema.Parent), ":"+schema.Parent+"_id", schema.PluralName)
+		url := path.Join("/"+schema.Version.Group, schema.Version.Path)
+		var parents []string
+		for parent := schema.Parent; parent != nil; parent = parent.Parent {
+			if parent.ID == "" {
+				panic(fmt.Sprintf("schema %v parent ID must not be empty", schema.ID))
+			}
+
+			parents = append(parents, parent.ID)
 		}
+
+		buffer := bytes.Buffer{}
+		for i := len(parents) - 1; i >= 0; i-- {
+			buffer.WriteString("/")
+			buffer.WriteString(name.GuessPluralName(parents[i]))
+			buffer.WriteString("/:")
+			buffer.WriteString(parents[i])
+			buffer.WriteString("_id")
+		}
+
+		parentUrl := buffer.String()
+		url = path.Join("/"+schema.Version.Group, schema.Version.Path, parentUrl, schema.PluralName)
 		urlMethods[url] = schema.CollectionMethods
 		urlMethods[path.Join(url, ":"+schema.ID+"_id")] = schema.ResourceMethods
 	}

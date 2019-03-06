@@ -25,7 +25,7 @@ type Node struct {
 func TestReflection(t *testing.T) {
 	schemas := NewSchemas()
 	schemas.MustImportAndCustomize(&version, Node{}, nil, func(schema *Schema, handler Handler) {
-		schema.Parent = GetResourceType(Cluster{})
+		schema.Parent = &Schema{ID: GetResourceType(Cluster{})}
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
 	})
@@ -35,10 +35,10 @@ func TestReflection(t *testing.T) {
 	ut.Equal(t, schema.PluralName, "nodes")
 	ut.Equal(t, schema.Version.Group, "testing")
 	ut.Equal(t, schema.Version.Path, "/v1")
-	ut.Equal(t, schema.Parent, GetResourceType(Cluster{}))
+	ut.Equal(t, schema.Parent.ID, GetResourceType(Cluster{}))
 	ut.Equal(t, schema.CollectionMethods, []string{"GET", "POST"})
 	ut.Equal(t, schema.ResourceMethods, []string{"GET", "DELETE", "PUT"})
-	ut.Equal(t, len(schema.ResourceFields), 4)
+	ut.Equal(t, len(schema.ResourceFields), 5)
 	for _, field := range schema.ResourceFields {
 		if field.CodeName == "Name" {
 			ut.Equal(t, field.Nullable, false)

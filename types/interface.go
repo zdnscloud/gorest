@@ -5,11 +5,13 @@ type Object interface {
 	ObjectType
 	ObjectParent
 	ObjectLinks
+	ObjectTimestamp
 }
 
 type ObjectParent interface {
-	GetParent() Parent
-	SetParent(Parent)
+	GetParent() Object
+	SetParent(Object)
+	GetAncestors() []Object
 }
 
 type ObjectID interface {
@@ -25,6 +27,11 @@ type ObjectType interface {
 type ObjectLinks interface {
 	GetLinks() map[string]string
 	SetLinks(map[string]string)
+}
+
+type ObjectTimestamp interface {
+	GetCreationTimestamp() string
+	SetCreationTimestamp(string)
 }
 
 type Handler interface {
