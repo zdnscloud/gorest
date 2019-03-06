@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/zdnscloud/cement/uuid"
 	"github.com/zdnscloud/gorest/adaptor"
@@ -48,11 +50,14 @@ func (h *Handler) Create(obj types.Object, yamlContent []byte) (interface{}, *ty
 		}
 
 		cluster.SetID(id)
+		cluster.SetCreationTimestamp(time.Now())
 		h.objects[id] = cluster
 		return cluster, nil
 	case "node":
-		if h.hasID(obj.GetParent().GetID()) == false {
-			return nil, types.NewAPIError(types.NotFound, "cluster "+obj.GetParent().GetID()+" is non-exists")
+		if parent := obj.GetParent(); parent != nil {
+			if h.hasID(parent.GetID()) == false {
+				return nil, types.NewAPIError(types.NotFound, "cluster "+parent.GetID()+" is non-exists")
+			}
 		}
 
 		node := obj.(*Node)
@@ -63,6 +68,7 @@ func (h *Handler) Create(obj types.Object, yamlContent []byte) (interface{}, *ty
 		}
 
 		node.SetID(id)
+		node.SetCreationTimestamp(time.Now())
 		h.objects[id] = node
 		return node, nil
 	default:
@@ -71,9 +77,10 @@ func (h *Handler) Create(obj types.Object, yamlContent []byte) (interface{}, *ty
 }
 
 func (h *Handler) hasObject(obj types.Object) *types.APIError {
-	parentID := obj.GetParent().GetID()
-	if parentID != "" && h.hasID(parentID) == false {
-		return types.NewAPIError(types.NotFound, "no found resource "+obj.GetParent().GetType()+" with id "+parentID)
+	if parent := obj.GetParent(); parent != nil {
+		if h.hasID(parent.GetID()) == false {
+			return types.NewAPIError(types.NotFound, "cluster "+parent.GetID()+" is non-exists")
+		}
 	}
 
 	if h.hasID(obj.GetID()) == false {
@@ -90,7 +97,7 @@ func (h *Handler) hasID(id string) bool {
 
 func (h *Handler) hasChild(id string) bool {
 	for _, obj := range h.objects {
-		if obj.GetParent().GetID() == id {
+		if parent := obj.GetParent(); parent != nil && parent.GetID() == id {
 			return true
 		}
 	}
@@ -131,8 +138,7 @@ func (h *Handler) List(obj types.Object) interface{} {
 }
 
 func (h *Handler) Get(obj types.Object) interface{} {
-	parentID := obj.GetParent().GetID()
-	if parentID != "" && h.hasID(parentID) == false {
+	if parent := obj.GetParent(); parent != nil && h.hasID(parent.GetID()) == false {
 		return nil
 	}
 

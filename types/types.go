@@ -1,7 +1,9 @@
 package types
 
 import (
+	"fmt"
 	"reflect"
+	"time"
 )
 
 type Collection struct {
@@ -67,7 +69,7 @@ type Resource struct {
 	ID                string            `json:"id,omitempty"`
 	Type              string            `json:"type,omitempty"`
 	Links             map[string]string `json:"links,omitempty"`
-	CreationTimestamp string            `json:"creationTimestamp,omitempty"`
+	CreationTimestamp ISOTime           `json:"creationTimestamp,omitempty"`
 	Parent            Object            `json:"-"`
 }
 
@@ -87,6 +89,22 @@ func (r *Resource) SetType(typ string) {
 	r.Type = typ
 }
 
+func (r *Resource) GetLinks() map[string]string {
+	return r.Links
+}
+
+func (r *Resource) SetLinks(links map[string]string) {
+	r.Links = links
+}
+
+func (r *Resource) GetCreationTimestamp() time.Time {
+	return time.Time(r.CreationTimestamp)
+}
+
+func (r *Resource) SetCreationTimestamp(timestamp time.Time) {
+	r.CreationTimestamp = ISOTime(timestamp)
+}
+
 func (r *Resource) GetParent() Object {
 	return r.Parent
 }
@@ -95,9 +113,9 @@ func (r *Resource) SetParent(parent Object) {
 	r.Parent = parent
 }
 
-func (r *Resource) GetAncestors() []Object {
+func GetAncestors(parent ObjectParent) []Object {
 	var antiAncestors []Object
-	for obj := r.Parent; obj != nil; obj = obj.GetParent() {
+	for obj := parent.GetParent(); obj != nil; obj = obj.GetParent() {
 		antiAncestors = append(antiAncestors, obj)
 	}
 
@@ -109,18 +127,8 @@ func (r *Resource) GetAncestors() []Object {
 	return ancestors
 }
 
-func (r *Resource) GetLinks() map[string]string {
-	return r.Links
-}
+type ISOTime time.Time
 
-func (r *Resource) SetLinks(links map[string]string) {
-	r.Links = links
-}
-
-func (r *Resource) GetCreationTimestamp() string {
-	return r.CreationTimestamp
-}
-
-func (r *Resource) SetCreationTimestamp(timestamp string) {
-	r.CreationTimestamp = timestamp
+func (t ISOTime) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf("\"%s\"", time.Time(t).Format(time.RFC3339))), nil
 }

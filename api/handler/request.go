@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"reflect"
-	"time"
 
 	"github.com/zdnscloud/gorest/types"
 )
@@ -28,9 +27,6 @@ func CreateHandler(apiContext *types.APIContext) *types.APIError {
 		return err
 	}
 
-	if obj, ok := result.(types.Object); ok {
-		obj.SetCreationTimestamp(time.Now().String())
-	}
 	addResourceLinks(apiContext, result)
 	WriteResponse(apiContext, http.StatusCreated, result)
 	return nil

@@ -93,7 +93,7 @@ func TestParse(t *testing.T) {
 	ut.Equal(t, ctx.Parent.GetType(), "pod")
 	ut.Equal(t, ctx.Version.Group, "testing")
 	ut.Equal(t, ctx.Version.Path, "/v1")
-	objs := ctx.Parent.GetAncestors()
+	objs := types.GetAncestors(ctx.Parent)
 	ut.Equal(t, len(objs), 3)
 	ut.Equal(t, objs[0].GetType(), "cluster")
 	ut.Equal(t, objs[1].GetType(), "namespace")

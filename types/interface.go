@@ -1,17 +1,20 @@
 package types
 
+import (
+	"time"
+)
+
 type Object interface {
 	ObjectID
 	ObjectType
-	ObjectParent
 	ObjectLinks
 	ObjectTimestamp
+	ObjectParent
 }
 
 type ObjectParent interface {
 	GetParent() Object
 	SetParent(Object)
-	GetAncestors() []Object
 }
 
 type ObjectID interface {
@@ -30,8 +33,8 @@ type ObjectLinks interface {
 }
 
 type ObjectTimestamp interface {
-	GetCreationTimestamp() string
-	SetCreationTimestamp(string)
+	GetCreationTimestamp() time.Time
+	SetCreationTimestamp(time.Time)
 }
 
 type Handler interface {
