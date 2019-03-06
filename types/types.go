@@ -33,7 +33,7 @@ type Schema struct {
 
 	StructVal reflect.Value `json:"-"`
 	Handler   Handler       `json:"-"`
-	Parent    *Schema       `json:"-"`
+	Parent    string        `json:"-"`
 }
 
 type Field struct {

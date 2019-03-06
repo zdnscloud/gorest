@@ -171,7 +171,7 @@ func getApiServer() *api.Server {
 	})
 
 	schemas.MustImportAndCustomize(&version, Node{}, handler, func(schema *types.Schema, handler types.Handler) {
-		schema.Parent = &types.Schema{ID: types.GetResourceType(Cluster{})}
+		schema.Parent = types.GetResourceType(Cluster{})
 		schema.Handler = handler
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "PUT", "DELETE", "POST"}

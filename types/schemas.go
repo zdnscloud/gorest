@@ -101,12 +101,11 @@ func (s *Schemas) UrlMethods() map[string][]string {
 	for _, schema := range s.schemas {
 		url := path.Join("/"+schema.Version.Group, schema.Version.Path)
 		var parents []string
-		for parent := schema.Parent; parent != nil; parent = parent.Parent {
-			if parent.ID == "" {
-				panic(fmt.Sprintf("schema %v parent ID must not be empty", schema.ID))
+		for parent := schema.Parent; parent != ""; {
+			parents = append(parents, parent)
+			if parentSchema := s.Schema(&schema.Version, parent); parentSchema != nil {
+				parent = parentSchema.Parent
 			}
-
-			parents = append(parents, parent.ID)
 		}
 
 		buffer := bytes.Buffer{}

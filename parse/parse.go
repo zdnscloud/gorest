@@ -95,7 +95,7 @@ func parseVersionAndResource(schemas *types.Schemas, escapedPath string) (*types
 			continue
 		}
 
-		if schema.Parent == nil || schema.Parent.ID != obj.Type {
+		if schema.Parent != obj.Type {
 			return version, nil, nil, types.NewAPIError(types.InvalidType,
 				fmt.Sprintf("schema %v parent should not be %s", schema.ID, obj.Type))
 		}
