@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/zdnscloud/gorest/util/name"
+	"github.com/zdnscloud/gorest/util"
 )
 
 type Schemas struct {
@@ -64,7 +64,7 @@ func (s *Schemas) setupDefaults(schema *Schema) {
 		return
 	}
 	if schema.PluralName == "" {
-		schema.PluralName = name.GuessPluralName(schema.ID)
+		schema.PluralName = util.GuessPluralName(schema.ID)
 	}
 }
 
@@ -113,7 +113,7 @@ func (s *Schemas) UrlMethods() map[string][]string {
 		buffer := bytes.Buffer{}
 		for i := len(parents) - 1; i >= 0; i-- {
 			buffer.WriteString("/")
-			buffer.WriteString(name.GuessPluralName(parents[i]))
+			buffer.WriteString(util.GuessPluralName(parents[i]))
 			buffer.WriteString("/:")
 			buffer.WriteString(parents[i])
 			buffer.WriteString("_id")

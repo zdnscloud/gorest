@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/zdnscloud/gorest/types"
-	"github.com/zdnscloud/gorest/util/slice"
+	"github.com/zdnscloud/gorest/util"
 )
 
 func addLinks(apiContext *types.APIContext, obj types.Object) {
@@ -15,15 +15,15 @@ func addLinks(apiContext *types.APIContext, obj types.Object) {
 	self := genResourceLink(apiContext.Request, obj.GetID())
 	links["self"] = self
 
-	if slice.ContainsString(apiContext.Schema.ResourceMethods, http.MethodPut) {
+	if util.ContainsString(apiContext.Schema.ResourceMethods, http.MethodPut) {
 		links["update"] = self
 	}
 
-	if slice.ContainsString(apiContext.Schema.ResourceMethods, http.MethodDelete) {
+	if util.ContainsString(apiContext.Schema.ResourceMethods, http.MethodDelete) {
 		links["remove"] = self
 	}
 
-	if slice.ContainsString(apiContext.Schema.CollectionMethods, http.MethodGet) {
+	if util.ContainsString(apiContext.Schema.CollectionMethods, http.MethodGet) {
 		links["collection"] = genCollectionLink(apiContext.Request, obj.GetID())
 	}
 
