@@ -27,6 +27,10 @@ func addLinks(apiContext *types.APIContext, obj types.Object) {
 		links["collection"] = genCollectionLink(apiContext.Request, obj.GetID())
 	}
 
+	for child, childPluralName := range apiContext.Schemas.GetChildren(apiContext.Schema.ID) {
+		links[child] = genChildLink(apiContext.Request, obj.GetID(), childPluralName)
+	}
+
 	obj.SetLinks(links)
 }
 
@@ -64,12 +68,20 @@ func genResourceLink(req *http.Request, id string) string {
 
 func genCollectionLink(req *http.Request, id string) string {
 	requestURL := getRequestURL(req)
-	index := strings.LastIndex(requestURL, id)
-	if index == -1 {
-		return requestURL
-	} else {
+	if id != "" && strings.HasSuffix(requestURL, "/"+id) {
+		index := strings.LastIndex(requestURL, id)
 		return requestURL[:index-1]
 	}
+
+	return requestURL
+}
+
+func genChildLink(req *http.Request, id, childPluralName string) string {
+	if id == "" {
+		return ""
+	}
+
+	return genResourceLink(req, id) + "/" + childPluralName
 }
 
 func getRequestURL(req *http.Request) string {

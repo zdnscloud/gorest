@@ -133,6 +133,21 @@ func (s *Schemas) UrlMethods() map[string][]string {
 	return urlMethods
 }
 
+func (s *Schemas) GetChildren(parent string) map[string]string {
+	if parent == "" {
+		return nil
+	}
+
+	children := map[string]string{}
+	for _, schema := range s.schemas {
+		if schema.Parent == parent {
+			children[schema.ID] = schema.PluralName
+		}
+	}
+
+	return children
+}
+
 type MultiErrors struct {
 	Errors []error
 }

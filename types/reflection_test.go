@@ -65,6 +65,10 @@ func TestReflection(t *testing.T) {
 		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
 	})
 
+	clusterChildren := schemas.GetChildren(GetResourceType(Cluster{}))
+	ut.Equal(t, clusterChildren[GetResourceType(Node{})], "nodes")
+	ut.Equal(t, clusterChildren[GetResourceType(Namespace{})], "namespaces")
+
 	schema := schemas.Schema(&version, GetResourceType(Node{}))
 	ut.Equal(t, schema.ID, GetResourceType(Node{}))
 	ut.Equal(t, schema.PluralName, "nodes")
