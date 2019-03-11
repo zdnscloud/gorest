@@ -75,7 +75,7 @@ func TestParse(t *testing.T) {
 		schema.ResourceMethods = []string{"GET"}
 	})
 
-	req, _ := http.NewRequest("GET", "/testing/v1/clusters/123321/nodes/345543", nil)
+	req, _ := http.NewRequest("GET", "/apis/testing/v1/clusters/123321/nodes/345543", nil)
 	ctx, _ := Parse(nil, req, schemas)
 	ut.Equal(t, ctx.Schema.ID, "node")
 	ut.Equal(t, ctx.ID, "345543")
@@ -84,7 +84,7 @@ func TestParse(t *testing.T) {
 	ut.Equal(t, ctx.Version.Group, "testing")
 	ut.Equal(t, ctx.Version.Path, "/v1")
 
-	req, _ = http.NewRequest("GET", "/testing/v1/clusters/clusters123/namespaces/namespaces123/deployments/deployments123/pods/pods123/containers/containers123", nil)
+	req, _ = http.NewRequest("GET", "/apis/testing/v1/clusters/clusters123/namespaces/namespaces123/deployments/deployments123/pods/pods123/containers/containers123", nil)
 	ctx, _ = Parse(nil, req, schemas)
 	ut.Equal(t, ctx.Schema.ID, "container")
 	ut.Equal(t, ctx.ID, "containers123")
@@ -99,7 +99,7 @@ func TestParse(t *testing.T) {
 	ut.Equal(t, objs[1].GetType(), "namespace")
 	ut.Equal(t, objs[2].GetType(), "deployment")
 
-	req, _ = http.NewRequest("GET", "/testing/v1/clusters/123321", nil)
+	req, _ = http.NewRequest("GET", "/apis/testing/v1/clusters/123321", nil)
 	ctx, _ = Parse(nil, req, schemas)
 	ut.Equal(t, ctx.Schema.ID, "cluster")
 	ut.Equal(t, ctx.ID, "123321")
@@ -107,28 +107,28 @@ func TestParse(t *testing.T) {
 	ut.Equal(t, ctx.Version.Group, "testing")
 	ut.Equal(t, ctx.Version.Path, "/v1")
 
-	req, _ = http.NewRequest("DELETE", "/testing/v1/clusters/123321", nil)
+	req, _ = http.NewRequest("DELETE", "/apis/testing/v1/clusters/123321", nil)
 	deleteNotAllowedErr := types.NewAPIError(types.MethodNotAllowed, fmt.Sprintf("Method %s not supported", req.Method))
 	_, err := Parse(nil, req, schemas)
 	ut.Equal(t, err, deleteNotAllowedErr)
 
-	req, _ = http.NewRequest("POST", "/testing/v1/clusters", nil)
+	req, _ = http.NewRequest("POST", "/apis/testing/v1/clusters", nil)
 	var nilErr *types.APIError
 	_, err = Parse(nil, req, schemas)
 	ut.Equal(t, err, nilErr)
 
-	req, _ = http.NewRequest("POST", "/testing/v1/clusters/123123/nodes", nil)
+	req, _ = http.NewRequest("POST", "/apis/testing/v1/clusters/123123/nodes", nil)
 	postNotAllowedErr := types.NewAPIError(types.MethodNotAllowed, fmt.Sprintf("Method %s not supported", req.Method))
 	_, err = Parse(nil, req, schemas)
 	ut.Equal(t, err, postNotAllowedErr)
 
-	req, _ = http.NewRequest("GET", "/testing/v1/noshemas", nil)
+	req, _ = http.NewRequest("GET", "/apis/testing/v1/noshemas", nil)
 	schemaNoFoundErr := types.NewAPIError(types.NotFound, fmt.Sprintf("no found schema for noshemas"))
 	_, err = Parse(nil, req, schemas)
 	ut.Equal(t, err, schemaNoFoundErr)
 
-	req, _ = http.NewRequest("GET", "/testing/v2/clusters", nil)
-	versionNoFoundErr := types.NewAPIError(types.NotFound, fmt.Sprintf("no found version with /testing/v2/clusters"))
+	req, _ = http.NewRequest("GET", "/apis/testing/v2/clusters", nil)
+	versionNoFoundErr := types.NewAPIError(types.NotFound, fmt.Sprintf("no found version with /apis/testing/v2/clusters"))
 	_, err = Parse(nil, req, schemas)
 	ut.Equal(t, err, versionNoFoundErr)
 }

@@ -85,16 +85,16 @@ func TestReflection(t *testing.T) {
 	}
 
 	expectUrl := []string{
-		"/testing/v1/clusters",
-		"/testing/v1/clusters/:cluster_id",
-		"/testing/v1/clusters/:cluster_id/nodes",
-		"/testing/v1/clusters/:cluster_id/nodes/:node_id",
-		"/testing/v1/clusters/:cluster_id/namespaces",
-		"/testing/v1/clusters/:cluster_id/namespaces/:namespace_id",
-		"/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/pods",
-		"/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/pods/:pod_id",
-		"/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/pods/:pod_id/containers",
-		"/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/pods/:pod_id/containers/:container_id",
+		"/apis/testing/v1/clusters",
+		"/apis/testing/v1/clusters/:cluster_id",
+		"/apis/testing/v1/clusters/:cluster_id/nodes",
+		"/apis/testing/v1/clusters/:cluster_id/nodes/:node_id",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/pods",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/pods/:pod_id",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/pods/:pod_id/containers",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/pods/:pod_id/containers/:container_id",
 	}
 	urlMethods := schemas.UrlMethods()
 	ut.Equal(t, len(urlMethods), len(expectUrl))
