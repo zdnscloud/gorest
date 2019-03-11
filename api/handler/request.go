@@ -48,7 +48,7 @@ func DeleteHandler(apiContext *types.APIContext) *types.APIError {
 		return err
 	}
 
-	WriteResponse(apiContext, http.StatusOK, nil)
+	WriteResponse(apiContext, http.StatusNoContent, nil)
 	return nil
 }
 
@@ -92,10 +92,15 @@ func ListHandler(apiContext *types.APIContext) *types.APIError {
 	}
 
 	if apiContext.ID == "" {
+		data := handler.List(obj)
+		if data == nil || reflect.ValueOf(data).IsNil() {
+			data = make([]types.Object, 0)
+		}
+
 		collection := &types.Collection{
 			Type:         "collection",
 			ResourceType: apiContext.Schema.ID,
-			Data:         handler.List(obj),
+			Data:         data,
 		}
 		addCollectionLinks(apiContext, collection)
 		result = collection
@@ -131,7 +136,7 @@ func ActionHandler(apiContext *types.APIContext, action *types.Action) *types.AP
 		return err
 	}
 
-	WriteResponse(apiContext, http.StatusOK, result)
+	WriteResponse(apiContext, http.StatusAccepted, result)
 	return nil
 }
 
