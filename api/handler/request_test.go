@@ -2,7 +2,6 @@ package handler
 
 import (
 	"bytes"
-	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -15,13 +14,12 @@ import (
 
 type Foo struct {
 	types.Resource
-	Name    string `json:"name"`
-	Content string `json:"yaml_"`
+	Name string `json:"name"`
 }
 
 func TestParseCreateBody(t *testing.T) {
 	var noerr *types.APIError
-	yamlContent := base64.StdEncoding.EncodeToString([]byte("testContent"))
+	yamlContent := "testContent"
 	req, _ := http.NewRequest("POST", "/", bytes.NewBufferString(fmt.Sprintf("{\"name\":\"bar\", \"yaml_\":\"%s\"}", yamlContent)))
 	apiContext := &types.APIContext{
 		Request: req,
@@ -31,16 +29,16 @@ func TestParseCreateBody(t *testing.T) {
 		},
 	}
 
-	obj, err := parseBody(apiContext)
+	content, obj, err := parseCreateBody(apiContext)
 	ut.Equal(t, err, noerr)
 	ut.Equal(t, obj.(*Foo).Type, "foo")
 	ut.Equal(t, obj.(*Foo).Name, "bar")
-	ut.Equal(t, obj.(*Foo).Content, yamlContent)
+	ut.Equal(t, string(content), "testContent")
 }
 
 type Handler struct{}
 
-func (h *Handler) Create(obj types.Object) (interface{}, *types.APIError) {
+func (h *Handler) Create(obj types.Object, content []byte) (interface{}, *types.APIError) {
 	return nil, nil
 }
 
