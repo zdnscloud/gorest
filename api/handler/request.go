@@ -107,6 +107,10 @@ func ListHandler(apiContext *types.APIContext) *types.APIError {
 	} else {
 		obj.SetID(apiContext.ID)
 		result = handler.Get(obj)
+		if result == nil || reflect.ValueOf(result).IsNil() {
+			return types.NewAPIError(types.NotFound,
+				fmt.Sprintf("no found %v with id %v", obj.GetType(), apiContext.ID))
+		}
 		addResourceLinks(apiContext, result)
 	}
 
