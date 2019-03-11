@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -17,12 +16,12 @@ func CreateHandler(apiContext *types.APIContext) *types.APIError {
 		return types.NewAPIError(types.NotFound, "no found schema handler")
 	}
 
-	yamlContent, object, err := parseCreateBody(apiContext)
+	object, err := parseBody(apiContext)
 	if err != nil {
 		return err
 	}
 
-	result, err := handler.Create(object, yamlContent)
+	result, err := handler.Create(object)
 	if err != nil {
 		return err
 	}
@@ -58,12 +57,7 @@ func UpdateHandler(apiContext *types.APIContext) *types.APIError {
 		return types.NewAPIError(types.NotFound, "no found schema handler")
 	}
 
-	val := getSchemaStructVal(apiContext)
-	if err := decodeBody(apiContext.Request, val); err != nil {
-		return err
-	}
-
-	object, err := getObject(apiContext, val)
+	object, err := parseBody(apiContext)
 	if err != nil {
 		return err
 	}
@@ -168,42 +162,13 @@ func decodeBody(req *http.Request, params interface{}) *types.APIError {
 	return nil
 }
 
-func parseCreateBody(apiContext *types.APIContext) ([]byte, types.Object, *types.APIError) {
-	var (
-		params struct {
-			Yaml string `json:"yaml_"`
-		}
-		content []byte
-	)
-
-	reqBody, err := ioutil.ReadAll(apiContext.Request.Body)
-	defer apiContext.Request.Body.Close()
-	if err != nil {
-		return nil, nil, types.NewAPIError(types.InvalidBodyContent,
-			fmt.Sprintf("Failed to read request body: %v", err.Error()))
-	}
-
-	if err := json.Unmarshal(reqBody, &params); err != nil {
-		return nil, nil, types.NewAPIError(types.InvalidBodyContent,
-			fmt.Sprintf("Failed to parse request body: %v", err.Error()))
-	}
-
-	if params.Yaml != "" {
-		content, err = base64.StdEncoding.DecodeString(params.Yaml)
-		if err != nil {
-			return nil, nil, types.NewAPIError(types.InvalidBodyContent,
-				fmt.Sprintf("Failed to parse request body: %v", err.Error()))
-		}
-	}
-
+func parseBody(apiContext *types.APIContext) (types.Object, *types.APIError) {
 	val := getSchemaStructVal(apiContext)
-	if err := json.Unmarshal(reqBody, val); err != nil {
-		return nil, nil, types.NewAPIError(types.InvalidBodyContent,
-			fmt.Sprintf("Failed to parse request body: %v", err.Error()))
+	if err := decodeBody(apiContext.Request, val); err != nil {
+		return nil, err
 	}
 
-	obj, apiErr := getObject(apiContext, val)
-	return content, obj, apiErr
+	return getObject(apiContext, val)
 }
 
 func getObject(apiContext *types.APIContext, val interface{}) (types.Object, *types.APIError) {

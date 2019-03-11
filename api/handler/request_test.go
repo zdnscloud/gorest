@@ -15,7 +15,8 @@ import (
 
 type Foo struct {
 	types.Resource
-	Name string `json:"name"`
+	Name    string `json:"name"`
+	Content string `json:"yaml_"`
 }
 
 func TestParseCreateBody(t *testing.T) {
@@ -30,16 +31,16 @@ func TestParseCreateBody(t *testing.T) {
 		},
 	}
 
-	content, obj, err := parseCreateBody(apiContext)
+	obj, err := parseBody(apiContext)
 	ut.Equal(t, err, noerr)
-	ut.Equal(t, string(content), "testContent")
 	ut.Equal(t, obj.(*Foo).Type, "foo")
 	ut.Equal(t, obj.(*Foo).Name, "bar")
+	ut.Equal(t, obj.(*Foo).Content, yamlContent)
 }
 
 type Handler struct{}
 
-func (h *Handler) Create(obj types.Object, yamlContent []byte) (interface{}, *types.APIError) {
+func (h *Handler) Create(obj types.Object) (interface{}, *types.APIError) {
 	return nil, nil
 }
 

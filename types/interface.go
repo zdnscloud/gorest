@@ -38,7 +38,7 @@ type ObjectTimestamp interface {
 }
 
 type Handler interface {
-	Create(Object, []byte) (interface{}, *APIError)
+	Create(Object) (interface{}, *APIError)
 	Delete(Object) *APIError
 	Update(Object) (interface{}, *APIError)
 	List(Object) interface{}

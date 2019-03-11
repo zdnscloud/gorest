@@ -38,7 +38,7 @@ func newHandler() *Handler {
 	}
 }
 
-func (h *Handler) Create(obj types.Object, yamlContent []byte) (interface{}, *types.APIError) {
+func (h *Handler) Create(obj types.Object) (interface{}, *types.APIError) {
 	id, _ := uuid.Gen()
 	switch obj.GetType() {
 	case "cluster":
