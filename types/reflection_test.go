@@ -14,27 +14,32 @@ var version = APIVersion{
 
 type Cluster struct {
 	Resource
-	Name string `singlecloud:"notnullable"`
+	Name string
 }
 
 type Node struct {
 	Resource
-	Name string `singlecloud:"notnullable"`
+	Name string
 }
 
-type Namespace struct {
+type NameSpace struct {
 	Resource
-	Name string `singlecloud:"notnullable"`
+	Name string
 }
 
 type Pod struct {
 	Resource
-	Name string `singlecloud:"notnullable"`
+	Name string
 }
 
 type Container struct {
 	Resource
-	Name string `singlecloud:"notnullable"`
+	Name string
+}
+
+type ConfigMap struct {
+	Resource
+	Name string
 }
 
 func TestReflection(t *testing.T) {
@@ -49,13 +54,13 @@ func TestReflection(t *testing.T) {
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
 	})
-	schemas.MustImportAndCustomize(&version, Namespace{}, nil, func(schema *Schema, handler Handler) {
+	schemas.MustImportAndCustomize(&version, NameSpace{}, nil, func(schema *Schema, handler Handler) {
 		schema.Parent = GetResourceType(Cluster{})
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
 	})
 	schemas.MustImportAndCustomize(&version, Pod{}, nil, func(schema *Schema, handler Handler) {
-		schema.Parent = GetResourceType(Namespace{})
+		schema.Parent = GetResourceType(NameSpace{})
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
 	})
@@ -64,10 +69,15 @@ func TestReflection(t *testing.T) {
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
 	})
+	schemas.MustImportAndCustomize(&version, ConfigMap{}, nil, func(schema *Schema, handler Handler) {
+		schema.Parent = GetResourceType(NameSpace{})
+		schema.CollectionMethods = []string{"GET", "POST"}
+		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
+	})
 
 	clusterChildren := schemas.GetChildren(GetResourceType(Cluster{}))
 	ut.Equal(t, clusterChildren[GetResourceType(Node{})], "nodes")
-	ut.Equal(t, clusterChildren[GetResourceType(Namespace{})], "namespaces")
+	ut.Equal(t, clusterChildren[GetResourceType(NameSpace{})], "namespaces")
 
 	schema := schemas.Schema(&version, GetResourceType(Node{}))
 	ut.Equal(t, schema.ID, GetResourceType(Node{}))
@@ -78,11 +88,6 @@ func TestReflection(t *testing.T) {
 	ut.Equal(t, schema.CollectionMethods, []string{"GET", "POST"})
 	ut.Equal(t, schema.ResourceMethods, []string{"GET", "DELETE", "PUT"})
 	ut.Equal(t, len(schema.ResourceFields), 5)
-	for _, field := range schema.ResourceFields {
-		if field.CodeName == "Name" {
-			ut.Equal(t, field.Nullable, false)
-		}
-	}
 
 	expectUrl := []string{
 		"/apis/testing/v1/clusters",
@@ -93,6 +98,8 @@ func TestReflection(t *testing.T) {
 		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id",
 		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/pods",
 		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/pods/:pod_id",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/configmaps",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/configmaps/:configmap_id",
 		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/pods/:pod_id/containers",
 		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/pods/:pod_id/containers/:container_id",
 	}
