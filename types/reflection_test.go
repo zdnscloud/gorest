@@ -87,7 +87,7 @@ func TestReflection(t *testing.T) {
 	ut.Equal(t, schema.Parent, GetResourceType(Cluster{}))
 	ut.Equal(t, schema.CollectionMethods, []string{"GET", "POST"})
 	ut.Equal(t, schema.ResourceMethods, []string{"GET", "DELETE", "PUT"})
-	ut.Equal(t, len(schema.ResourceFields), 5)
+	ut.Equal(t, len(schema.ResourceFields), 3)
 
 	expectUrl := []string{
 		"/apis/testing/v1/clusters",

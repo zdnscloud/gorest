@@ -41,7 +41,6 @@ type Field struct {
 	Default      interface{} `json:"default,omitempty"`
 	Nullable     bool        `json:"nullable,omitempty"`
 	Create       bool        `json:"create"`
-	WriteOnly    bool        `json:"writeOnly,omitempty"`
 	Required     bool        `json:"required,omitempty"`
 	Update       bool        `json:"update"`
 	MinLength    *int64      `json:"minLength,omitempty"`
@@ -51,9 +50,7 @@ type Field struct {
 	Options      []string    `json:"options,omitempty"`
 	ValidChars   string      `json:"validChars,omitempty"`
 	InvalidChars string      `json:"invalidChars,omitempty"`
-	Description  string      `json:"description,omitempty"`
 	CodeName     string      `json:"-"`
-	DynamicField bool        `json:"dynamicField,omitempty"`
 }
 
 type Action struct {
@@ -131,4 +128,10 @@ type ISOTime time.Time
 
 func (t ISOTime) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf("\"%s\"", time.Time(t).Format(time.RFC3339))), nil
+}
+
+func (t *ISOTime) UnmarshalJSON(data []byte) (err error) {
+	now, err := time.Parse(`"`+time.RFC3339+`"`, string(data))
+	*t = ISOTime(now)
+	return
 }

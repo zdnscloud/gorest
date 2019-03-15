@@ -10,8 +10,10 @@ import (
 )
 
 var (
-	blacklistNames = map[string]bool{
-		"actions": true,
+	BlacklistNames = map[string]bool{
+		"actions":           true,
+		"links":             true,
+		"creationTimestamp": true,
 	}
 )
 
@@ -106,7 +108,7 @@ func (s *Schemas) importType(version *APIVersion, t reflect.Type, overrides ...r
 	return s.Schema(&schema.Version, schema.ID), s.Err()
 }
 
-func jsonName(f reflect.StructField) string {
+func GetJsonName(f reflect.StructField) string {
 	return strings.SplitN(f.Tag.Get("json"), ",", 2)[0]
 }
 
@@ -115,11 +117,10 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 		field := t.Field(i)
 
 		if field.PkgPath != "" {
-			// unexported field
 			continue
 		}
 
-		jsonName := jsonName(field)
+		jsonName := GetJsonName(field)
 		if jsonName == "-" {
 			continue
 		}
@@ -145,7 +146,7 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 			}
 		}
 
-		if blacklistNames[fieldName] {
+		if BlacklistNames[fieldName] {
 			continue
 		}
 
@@ -218,17 +219,13 @@ func applyTag(structField *reflect.StructField, field *Field) error {
 		case "default":
 			field.Default = value
 		case "nullable":
-			field.Nullable = true
-		case "notnullable":
-			field.Nullable = false
-		case "nocreate":
-			field.Create = false
-		case "writeOnly":
-			field.WriteOnly = true
+			field.Nullable = value != "false"
+		case "create":
+			field.Create = value != "false"
 		case "required":
-			field.Required = true
-		case "noupdate":
-			field.Update = false
+			field.Required = value == "true"
+		case "update":
+			field.Update = value != "false"
 		case "minLength":
 			field.MinLength, err = toInt(value, structField)
 		case "maxLength":
@@ -334,14 +331,8 @@ func (s *Schemas) determineSchemaType(version *APIVersion, t reflect.Type) (stri
 	case reflect.String:
 		return "string", nil
 	case reflect.Struct:
-		if t.Name() == "Time" {
+		if t.Name() == "ISOTime" {
 			return "date", nil
-		}
-		if t.Name() == "IntOrString" {
-			return "intOrString", nil
-		}
-		if t.Name() == "Quantity" {
-			return "string", nil
 		}
 		schema, err := s.importType(version, t)
 		if err != nil {
