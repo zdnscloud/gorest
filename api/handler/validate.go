@@ -8,13 +8,6 @@ import (
 	"github.com/zdnscloud/gorest/types"
 )
 
-type Operation string
-
-var (
-	Create = Operation("create")
-	Update = Operation("update")
-)
-
 func CheckObjectFields(ctx *types.APIContext, obj types.Object) *types.APIError {
 	structVal, ok := reflector.GetStructFromPointer(obj)
 	if ok == false {

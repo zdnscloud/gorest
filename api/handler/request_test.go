@@ -5,27 +5,30 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"testing"
 
 	ut "github.com/zdnscloud/cement/unittest"
 	"github.com/zdnscloud/gorest/types"
 )
 
-var ctx = &types.APIContext{
-	Schema: &types.Schema{
-		ID:        "foo",
-		StructVal: reflect.ValueOf(Foo{}),
-		Handler:   &Handler{},
-	},
-	Schemas:        types.NewSchemas(),
-	ResponseFormat: "json",
-}
+var (
+	schemas = types.NewSchemas().MustImportAndCustomize(&version, Foo{}, &Handler{}, func(schema *types.Schema, handler types.Handler) {
+		schema.Handler = handler
+	})
+
+	schema = schemas.Schema(&version, types.GetResourceType(Foo{}))
+
+	ctx = &types.APIContext{
+		Schema:         schema,
+		Schemas:        schemas,
+		ResponseFormat: "json",
+	}
+)
 
 type Foo struct {
 	types.Resource
-	Name string `json:"name"`
-	Role string `json:"role"`
+	Name string `json:"name"singlecloud:"required=true"`
+	Role string `json:"role"singlecloud:"required=true"`
 }
 
 type testServer struct {
@@ -55,7 +58,7 @@ func (t *testServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func TestCreateHandler(t *testing.T) {
 	yamlContent := "testContent"
 	expectBody := "{\"id\":\"12138\",\"type\":\"foo\",\"links\":{\"self\":\"http://127.0.0.1:1234/test/v1/foos/12138\"},\"creationTimestamp\":\"0001-01-01T00:00:00Z\",\"name\":\"bar\",\"role\":\"master\"}"
-	req, _ := http.NewRequest("POST", "/test/v1/foos", bytes.NewBufferString(fmt.Sprintf("{\"name\":\"bar\", \"yaml_\":\"%s\", \"role\": \"master\"}", yamlContent)))
+	req, _ := http.NewRequest("POST", "/test/v1/foos", bytes.NewBufferString(fmt.Sprintf("{\"name\":\"bar\", \"yaml_\":\"%s\",\"role\":\"master\"}", yamlContent)))
 	req.Host = "127.0.0.1:1234"
 	w := httptest.NewRecorder()
 	ctx.Request = req
