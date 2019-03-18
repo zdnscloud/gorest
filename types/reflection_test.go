@@ -7,9 +7,8 @@ import (
 )
 
 var version = APIVersion{
-	Version: "v1",
 	Group:   "testing",
-	Path:    "/v1",
+	Version: "v1",
 }
 
 type Cluster struct {
@@ -83,7 +82,7 @@ func TestReflection(t *testing.T) {
 	ut.Equal(t, schema.ID, GetResourceType(Node{}))
 	ut.Equal(t, schema.PluralName, "nodes")
 	ut.Equal(t, schema.Version.Group, "testing")
-	ut.Equal(t, schema.Version.Path, "/v1")
+	ut.Equal(t, schema.Version.Version, "v1")
 	ut.Equal(t, schema.Parent, GetResourceType(Cluster{}))
 	ut.Equal(t, schema.CollectionMethods, []string{"GET", "POST"})
 	ut.Equal(t, schema.ResourceMethods, []string{"GET", "DELETE", "PUT"})

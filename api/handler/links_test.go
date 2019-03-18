@@ -9,9 +9,8 @@ import (
 )
 
 var version = types.APIVersion{
-	Version: "v1",
 	Group:   "testing",
-	Path:    "/v1",
+	Version: "v1",
 }
 
 type Testresourceobjectparent struct {
@@ -29,9 +28,9 @@ type Testnoresourceobject struct {
 }
 
 func TestAddResourceLink(t *testing.T) {
-	expectSelfLink := "http://127.0.0.1:1234/test/testresourceobjects/1de5f1bb403524c280c220f3a366b538"
-	expectCollectionLink := "http://127.0.0.1:1234/test/testresourceobjects"
-	req, _ := http.NewRequest("POST", "/test/testresourceobjects", nil)
+	expectSelfLink := "http://127.0.0.1:1234/apis/testing/v1/testresourceobjects/1de5f1bb403524c280c220f3a366b538"
+	expectCollectionLink := "http://127.0.0.1:1234/apis/testing/v1/testresourceobjects"
+	req, _ := http.NewRequest("POST", "/apis/testing/v1/testresourceobjects", nil)
 	req.Host = "127.0.0.1:1234"
 	schemas := types.NewSchemas()
 	schemas.MustImportAndCustomize(&version, Testresourceobjectparent{}, nil, func(schema *types.Schema, handler types.Handler) {
@@ -64,7 +63,7 @@ func TestAddResourceLink(t *testing.T) {
 	ut.Equal(t, obj.Links["remove"], expectSelfLink)
 	ut.Equal(t, obj.Links["update"], expectSelfLink)
 
-	req, _ = http.NewRequest("PUT", "/test/testresourceobjects/1de5f1bb403524c280c220f3a366b538", nil)
+	req, _ = http.NewRequest("PUT", "/apis/testing/v1/testresourceobjects/1de5f1bb403524c280c220f3a366b538", nil)
 	req.Host = "127.0.0.1:1234"
 	apiContext.Request = req
 	addResourceLinks(apiContext, obj)
@@ -74,11 +73,11 @@ func TestAddResourceLink(t *testing.T) {
 	ut.Equal(t, obj.Links["remove"], expectSelfLink)
 	ut.Equal(t, obj.Links["update"], expectSelfLink)
 
-	expectSelfLink = "http://127.0.0.1:1234/test/resourceobjectparents/d6db994a406ab41c80dc6e4e31ecf890"
-	expectCollectionLink = "http://127.0.0.1:1234/test/resourceobjectparents"
-	expectTestObjectLink := "http://127.0.0.1:1234/test/resourceobjectparents/d6db994a406ab41c80dc6e4e31ecf890/testresourceobjects"
+	expectSelfLink = "http://127.0.0.1:1234/apis/testing/v1/resourceobjectparents/d6db994a406ab41c80dc6e4e31ecf890"
+	expectCollectionLink = "http://127.0.0.1:1234/apis/testing/v1/resourceobjectparents"
+	expectTestObjectLink := "http://127.0.0.1:1234/apis/testing/v1/resourceobjectparents/d6db994a406ab41c80dc6e4e31ecf890/testresourceobjects"
 
-	req, _ = http.NewRequest("POST", "/test/resourceobjectparents", nil)
+	req, _ = http.NewRequest("POST", "/apis/testing/v1/resourceobjectparents", nil)
 	req.Host = "127.0.0.1:1234"
 	apiContext.Schema = schemas.Schema(&version, types.GetResourceType(Testresourceobjectparent{}))
 	apiContext.Request = req
@@ -99,7 +98,7 @@ func TestAddResourceLink(t *testing.T) {
 }
 
 func TestAddLinkFail(t *testing.T) {
-	req, _ := http.NewRequest("POST", "/test/testresourceobjects", nil)
+	req, _ := http.NewRequest("POST", "/apis/testing/v1/testresourceobjects", nil)
 	req.Host = "127.0.0.1:1234"
 	apiContext := &types.APIContext{
 		Request: req,
@@ -129,7 +128,7 @@ func TestAddCollectionLinks(t *testing.T) {
 		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
 	})
 
-	req, _ := http.NewRequest("GET", "/test/testresourceobjectparents", nil)
+	req, _ := http.NewRequest("GET", "/apis/testing/v1/testresourceobjectparents", nil)
 	req.Host = "127.0.0.1:1234"
 	apiContext := &types.APIContext{
 		Request: req,
@@ -155,11 +154,11 @@ func TestAddCollectionLinks(t *testing.T) {
 			},
 		},
 	}
-	expectCollectionLink := "http://127.0.0.1:1234/test/testresourceobjectparents"
-	expectResourceLink1 := "http://127.0.0.1:1234/test/testresourceobjectparents/1de5f1bb403524c280c220f3a366b538"
-	expectChildLink1 := "http://127.0.0.1:1234/test/testresourceobjectparents/1de5f1bb403524c280c220f3a366b538/testresourceobjects"
-	expectResourceLink2 := "http://127.0.0.1:1234/test/testresourceobjectparents/0ad4bcfd408086438084f774097712d5"
-	expectChildLink2 := "http://127.0.0.1:1234/test/testresourceobjectparents/0ad4bcfd408086438084f774097712d5/testresourceobjects"
+	expectCollectionLink := "http://127.0.0.1:1234/apis/testing/v1/testresourceobjectparents"
+	expectResourceLink1 := "http://127.0.0.1:1234/apis/testing/v1/testresourceobjectparents/1de5f1bb403524c280c220f3a366b538"
+	expectChildLink1 := "http://127.0.0.1:1234/apis/testing/v1/testresourceobjectparents/1de5f1bb403524c280c220f3a366b538/testresourceobjects"
+	expectResourceLink2 := "http://127.0.0.1:1234/apis/testing/v1/testresourceobjectparents/0ad4bcfd408086438084f774097712d5"
+	expectChildLink2 := "http://127.0.0.1:1234/apis/testing/v1/testresourceobjectparents/0ad4bcfd408086438084f774097712d5/testresourceobjects"
 
 	addCollectionLinks(apiContext, collection)
 	ut.Equal(t, len(collection.Links), 1)

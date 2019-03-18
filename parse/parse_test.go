@@ -10,9 +10,8 @@ import (
 )
 
 var version = types.APIVersion{
-	Version: "v1",
 	Group:   "testing",
-	Path:    "/v1",
+	Version: "v1",
 }
 
 type Cluster struct {
@@ -84,7 +83,7 @@ func TestParse(t *testing.T) {
 	ut.Equal(t, ctx.Schema.Parent, "cluster")
 	ut.Equal(t, ctx.Parent.GetID(), "123321")
 	ut.Equal(t, ctx.Version.Group, "testing")
-	ut.Equal(t, ctx.Version.Path, "/v1")
+	ut.Equal(t, ctx.Version.Version, "v1")
 
 	req, _ = http.NewRequest("GET", "/apis/testing/v1/clusters/clusters123/namespaces/namespaces123/deployments/deployments123/pods/pods123/containers/containers123", nil)
 	ctx, err = Parse(nil, req, schemas)
@@ -95,7 +94,7 @@ func TestParse(t *testing.T) {
 	ut.Equal(t, ctx.Parent.GetID(), "pods123")
 	ut.Equal(t, ctx.Parent.GetType(), "pod")
 	ut.Equal(t, ctx.Version.Group, "testing")
-	ut.Equal(t, ctx.Version.Path, "/v1")
+	ut.Equal(t, ctx.Version.Version, "v1")
 	objs := types.GetAncestors(ctx.Parent)
 	ut.Equal(t, len(objs), 3)
 	ut.Equal(t, objs[0].GetType(), "cluster")
@@ -109,7 +108,7 @@ func TestParse(t *testing.T) {
 	ut.Equal(t, ctx.ID, "123321")
 	ut.Equal(t, ctx.Schema.Parent, "")
 	ut.Equal(t, ctx.Version.Group, "testing")
-	ut.Equal(t, ctx.Version.Path, "/v1")
+	ut.Equal(t, ctx.Version.Version, "v1")
 
 	req, _ = http.NewRequest("DELETE", "/apis/testing/v1/clusters/123321", nil)
 	deleteNotAllowedErr := types.NewAPIError(types.MethodNotAllowed, fmt.Sprintf("Method %s not supported", req.Method))
@@ -132,12 +131,12 @@ func TestParse(t *testing.T) {
 	ut.Equal(t, err, schemaNoFoundErr)
 
 	req, _ = http.NewRequest("GET", "/apis/testing/v2/clusters", nil)
-	versionNoFoundErr := types.NewAPIError(types.NotFound, fmt.Sprintf("no found version with testing/v2/clusters"))
+	versionNoFoundErr := types.NewAPIError(types.NotFound, fmt.Sprintf("no found version with /apis/testing/v2/clusters"))
 	_, err = Parse(nil, req, schemas)
 	ut.Equal(t, err, versionNoFoundErr)
 
 	req, _ = http.NewRequest("GET", "/apis/testing/v1", nil)
-	noSchemaErr := types.NewAPIError(types.InvalidFormat, fmt.Sprintf("no schema name in url testing/v1"))
+	noSchemaErr := types.NewAPIError(types.InvalidFormat, fmt.Sprintf("no schema name in url /apis/testing/v1"))
 	_, err = Parse(nil, req, schemas)
 	ut.Equal(t, err, noSchemaErr)
 }

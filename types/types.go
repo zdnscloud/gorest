@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"path"
 	"reflect"
 	"time"
 )
@@ -16,7 +17,10 @@ type Collection struct {
 type APIVersion struct {
 	Group   string `json:"group,omitempty"`
 	Version string `json:"version,omitempty"`
-	Path    string `json:"path,omitempty"`
+}
+
+func (v *APIVersion) GetVersionURL() string {
+	return path.Join(GroupPrefix, v.Group, v.Version)
 }
 
 type Schema struct {

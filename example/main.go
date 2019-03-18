@@ -12,9 +12,8 @@ import (
 
 var (
 	version = types.APIVersion{
-		Version: "v1",
 		Group:   "zdns.cloud.example",
-		Path:    "/example/v1",
+		Version: "example/v1",
 	}
 )
 
