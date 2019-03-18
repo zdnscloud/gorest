@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	BlacklistNames = map[string]bool{
+	blacklistNames = map[string]bool{
 		"actions":           true,
 		"links":             true,
 		"creationTimestamp": true,
@@ -108,45 +108,59 @@ func (s *Schemas) importType(version *APIVersion, t reflect.Type, overrides ...r
 	return s.Schema(&schema.Version, schema.ID), s.Err()
 }
 
-func GetJsonName(f reflect.StructField) string {
+func getJsonName(f reflect.StructField) string {
 	return strings.SplitN(f.Tag.Get("json"), ",", 2)[0]
+}
+
+func GetFieldJsonName(field reflect.StructField) (string, bool) {
+	if field.PkgPath != "" {
+		return "", false
+	}
+
+	jsonName := getJsonName(field)
+	if jsonName == "-" {
+		return "", false
+	}
+
+	if field.Anonymous && jsonName == "" {
+		t := field.Type
+		if t.Kind() == reflect.Ptr {
+			t = t.Elem()
+		}
+		if t.Kind() == reflect.Struct {
+			return "", true
+		}
+		return "", false
+	}
+
+	fieldJsonName := jsonName
+	if fieldJsonName == "" {
+		fieldJsonName = strings.ToLower(field.Name)
+		if strings.HasSuffix(fieldJsonName, "ID") {
+			fieldJsonName = strings.TrimSuffix(fieldJsonName, "ID") + "Id"
+		}
+	}
+
+	if blacklistNames[fieldJsonName] {
+		return "", false
+	}
+
+	return fieldJsonName, false
 }
 
 func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 
-		if field.PkgPath != "" {
-			continue
-		}
-
-		jsonName := GetJsonName(field)
-		if jsonName == "-" {
-			continue
-		}
-
-		if field.Anonymous && jsonName == "" {
-			t := field.Type
-			if t.Kind() == reflect.Ptr {
-				t = t.Elem()
-			}
-			if t.Kind() == reflect.Struct {
-				if err := s.readFields(schema, t); err != nil {
-					return err
-				}
+		fieldJsonName, isAnonymous := GetFieldJsonName(field)
+		if isAnonymous {
+			if err := s.readFields(schema, field.Type); err != nil {
+				return err
 			}
 			continue
 		}
 
-		fieldName := jsonName
-		if fieldName == "" {
-			fieldName = strings.ToLower(field.Name)
-			if strings.HasSuffix(fieldName, "ID") {
-				fieldName = strings.TrimSuffix(fieldName, "ID") + "Id"
-			}
-		}
-
-		if BlacklistNames[fieldName] {
+		if fieldJsonName == "" {
 			continue
 		}
 
@@ -178,7 +192,7 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 		if schemaField.Type == "" {
 			inferedType, err := s.determineSchemaType(&schema.Version, fieldType)
 			if err != nil {
-				return fmt.Errorf("failed inspecting type %s, field %s: %v", t, fieldName, err)
+				return fmt.Errorf("failed inspecting type %s, field %s: %v", t, fieldJsonName, err)
 			}
 			schemaField.Type = inferedType
 		}
@@ -196,7 +210,7 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 			}
 		}
 
-		schema.ResourceFields[fieldName] = schemaField
+		schema.ResourceFields[fieldJsonName] = schemaField
 	}
 
 	return nil

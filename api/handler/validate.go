@@ -37,38 +37,16 @@ func getStructValue(ctx *types.APIContext, schema *types.Schema, structVal refle
 
 	for i := 0; i < structVal.NumField(); i++ {
 		field := structTyp.Field(i)
-		if field.PkgPath != "" {
-			continue
-		}
-
-		jsonName := types.GetJsonName(field)
-		if jsonName == "-" {
-			continue
-		}
-
-		if field.Anonymous && jsonName == "" {
-			t := field.Type
-			if t.Kind() == reflect.Ptr {
-				t = t.Elem()
-			}
-			if t.Kind() == reflect.Struct {
-				fieldVal := structVal.FieldByName(field.Name)
-				if _, err := getStructValue(ctx, ctx.Schema, fieldVal); err != nil {
-					return nil, err
-				}
+		fieldJsonName, isAnonymous := types.GetFieldJsonName(field)
+		if isAnonymous {
+			fieldVal := structVal.FieldByName(field.Name)
+			if _, err := getStructValue(ctx, ctx.Schema, fieldVal); err != nil {
+				return nil, err
 			}
 			continue
 		}
 
-		fieldName := jsonName
-		if fieldName == "" {
-			fieldName = strings.ToLower(field.Name)
-			if strings.HasSuffix(fieldName, "ID") {
-				fieldName = strings.TrimSuffix(fieldName, "ID") + "Id"
-			}
-		}
-
-		if types.BlacklistNames[fieldName] {
+		if fieldJsonName == "" {
 			continue
 		}
 
@@ -77,12 +55,12 @@ func getStructValue(ctx *types.APIContext, schema *types.Schema, structVal refle
 			return nil, err
 		}
 
-		schemaField := schema.ResourceFields[fieldName]
+		schemaField := schema.ResourceFields[fieldJsonName]
 		if valueIsNil(value) && schemaField.Required {
-			return nil, types.NewAPIError(types.MissingRequired, "field "+fieldName+" must be set when create")
+			return nil, types.NewAPIError(types.MissingRequired, "field "+fieldJsonName+" must be set when create")
 		}
 
-		fieldValues[fieldName] = value
+		fieldValues[fieldJsonName] = value
 	}
 
 	return fieldValues, nil
