@@ -131,10 +131,19 @@ func GetAncestors(parent ObjectParent) []Object {
 type ISOTime time.Time
 
 func (t ISOTime) MarshalJSON() ([]byte, error) {
+	if time.Time(t).IsZero() {
+		return []byte("null"), nil
+	}
+
 	return []byte(fmt.Sprintf("\"%s\"", time.Time(t).Format(time.RFC3339))), nil
 }
 
 func (t *ISOTime) UnmarshalJSON(data []byte) (err error) {
+	if len(data) == 4 && string(data) == "null" {
+		*t = ISOTime(time.Time{})
+		return
+	}
+
 	now, err := time.Parse(`"`+time.RFC3339+`"`, string(data))
 	*t = ISOTime(now)
 	return

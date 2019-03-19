@@ -57,7 +57,7 @@ func (t *testServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 func TestCreateHandler(t *testing.T) {
 	yamlContent := "testContent"
-	expectBody := "{\"id\":\"12138\",\"type\":\"foo\",\"links\":{\"self\":\"http://127.0.0.1:1234/test/v1/foos/12138\"},\"creationTimestamp\":\"0001-01-01T00:00:00Z\",\"name\":\"bar\",\"role\":\"master\"}"
+	expectBody := "{\"id\":\"12138\",\"type\":\"foo\",\"links\":{\"self\":\"http://127.0.0.1:1234/test/v1/foos/12138\"},\"creationTimestamp\":null,\"name\":\"bar\",\"role\":\"master\"}"
 	req, _ := http.NewRequest("POST", "/test/v1/foos", bytes.NewBufferString(fmt.Sprintf("{\"name\":\"bar\", \"yaml_\":\"%s\",\"role\":\"master\"}", yamlContent)))
 	req.Host = "127.0.0.1:1234"
 	w := httptest.NewRecorder()
@@ -84,7 +84,7 @@ func TestDeleteHandler(t *testing.T) {
 
 func TestUpdateHandler(t *testing.T) {
 	yamlContent := "testContent"
-	expectBody := "{\"id\":\"12138\",\"type\":\"foo\",\"links\":{\"self\":\"http://127.0.0.1:1234/test/v1/foos/12138\"},\"creationTimestamp\":\"0001-01-01T00:00:00Z\",\"name\":\"bar\",\"role\":\"worker\"}"
+	expectBody := "{\"id\":\"12138\",\"type\":\"foo\",\"links\":{\"self\":\"http://127.0.0.1:1234/test/v1/foos/12138\"},\"creationTimestamp\":null,\"name\":\"bar\",\"role\":\"worker\"}"
 	req, _ := http.NewRequest("PUT", "/test/v1/foos/12138", bytes.NewBufferString(fmt.Sprintf("{\"name\":\"bar\", \"yaml_\":\"%s\",\"role\": \"worker\"}", yamlContent)))
 	req.Host = "127.0.0.1:1234"
 	w := httptest.NewRecorder()
@@ -112,7 +112,7 @@ func TestListHandler(t *testing.T) {
 }
 
 func TestListHandlerForGetOne(t *testing.T) {
-	expectResult := "{\"id\":\"12138\",\"type\":\"foo\",\"links\":{\"self\":\"http://127.0.0.1:1234/test/12138\"},\"creationTimestamp\":\"0001-01-01T00:00:00Z\",\"name\":\"bar\",\"role\":\"worker\"}"
+	expectResult := "{\"id\":\"12138\",\"type\":\"foo\",\"links\":{\"self\":\"http://127.0.0.1:1234/test/12138\"},\"creationTimestamp\":null,\"name\":\"bar\",\"role\":\"worker\"}"
 	req, _ := http.NewRequest("GET", "/test/12138", nil)
 	req.Host = "127.0.0.1:1234"
 	w := httptest.NewRecorder()
