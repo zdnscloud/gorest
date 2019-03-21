@@ -94,7 +94,7 @@ func TestAddResourceLink(t *testing.T) {
 	ut.Equal(t, objParent.Links["remove"], expectSelfLink)
 	ut.Equal(t, objParent.Links["update"], expectSelfLink)
 	ut.Equal(t, objParent.Links["collection"], expectCollectionLink)
-	ut.Equal(t, objParent.Links["testresourceobject"], expectTestObjectLink)
+	ut.Equal(t, objParent.Links["testresourceobjects"], expectTestObjectLink)
 }
 
 func TestAddLinkFail(t *testing.T) {
@@ -169,10 +169,10 @@ func TestAddCollectionLinks(t *testing.T) {
 	ut.Equal(t, collection.Data.([]*Testresourceobjectparent)[0].Links["remove"], expectResourceLink1)
 	ut.Equal(t, collection.Data.([]*Testresourceobjectparent)[0].Links["update"], expectResourceLink1)
 	ut.Equal(t, collection.Data.([]*Testresourceobjectparent)[0].Links["collection"], expectCollectionLink)
-	ut.Equal(t, collection.Data.([]*Testresourceobjectparent)[0].Links["testresourceobject"], expectChildLink1)
+	ut.Equal(t, collection.Data.([]*Testresourceobjectparent)[0].Links["testresourceobjects"], expectChildLink1)
 	ut.Equal(t, collection.Data.([]*Testresourceobjectparent)[1].Links["self"], expectResourceLink2)
 	ut.Equal(t, collection.Data.([]*Testresourceobjectparent)[1].Links["update"], expectResourceLink2)
 	ut.Equal(t, collection.Data.([]*Testresourceobjectparent)[1].Links["remove"], expectResourceLink2)
 	ut.Equal(t, collection.Data.([]*Testresourceobjectparent)[1].Links["collection"], expectCollectionLink)
-	ut.Equal(t, collection.Data.([]*Testresourceobjectparent)[1].Links["testresourceobject"], expectChildLink2)
+	ut.Equal(t, collection.Data.([]*Testresourceobjectparent)[1].Links["testresourceobjects"], expectChildLink2)
 }
