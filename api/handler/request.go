@@ -21,12 +21,14 @@ func CreateHandler(ctx *types.Context) *types.APIError {
 		return err
 	}
 
-	result, err := handler.Create(object, content)
+	schema := ctx.Object.GetSchema()
+	ctx.Object = object
+	result, err := handler.Create(ctx, content)
 	if err != nil {
 		return err
 	}
 
-	addResourceLinks(ctx, result)
+	addResourceLinks(ctx, schema, result)
 	WriteResponse(ctx, http.StatusCreated, result)
 	return nil
 }
@@ -43,7 +45,8 @@ func DeleteHandler(ctx *types.Context) *types.APIError {
 	}
 
 	obj.SetID(ctx.Object.GetID())
-	if err = handler.Delete(obj); err != nil {
+	ctx.Object = obj
+	if err = handler.Delete(ctx); err != nil {
 		return err
 	}
 
@@ -67,13 +70,15 @@ func UpdateHandler(ctx *types.Context) *types.APIError {
 		return err
 	}
 
+	schema := ctx.Object.GetSchema()
 	object.SetID(ctx.Object.GetID())
-	result, err := handler.Update(object)
+	ctx.Object = object
+	result, err := handler.Update(ctx)
 	if err != nil {
 		return err
 	}
 
-	addResourceLinks(ctx, result)
+	addResourceLinks(ctx, schema, result)
 	WriteResponse(ctx, http.StatusOK, result)
 	return nil
 }
@@ -90,8 +95,10 @@ func ListHandler(ctx *types.Context) *types.APIError {
 		return err
 	}
 
+	schema := ctx.Object.GetSchema()
 	if ctx.Object.GetID() == "" {
-		data := handler.List(obj)
+		ctx.Object = obj
+		data := handler.List(ctx)
 		if data == nil || reflect.ValueOf(data).IsNil() {
 			data = make([]types.Object, 0)
 		}
@@ -101,16 +108,17 @@ func ListHandler(ctx *types.Context) *types.APIError {
 			ResourceType: ctx.Object.GetType(),
 			Data:         data,
 		}
-		addCollectionLinks(ctx, collection)
+		addCollectionLinks(ctx, schema, collection)
 		result = collection
 	} else {
 		obj.SetID(ctx.Object.GetID())
-		result = handler.Get(obj)
+		ctx.Object = obj
+		result = handler.Get(ctx)
 		if result == nil || reflect.ValueOf(result).IsNil() {
 			return types.NewAPIError(types.NotFound,
 				fmt.Sprintf("no found %v with id %v", obj.GetType(), ctx.Object.GetID()))
 		}
-		addResourceLinks(ctx, result)
+		addResourceLinks(ctx, schema, result)
 	}
 
 	WriteResponse(ctx, http.StatusOK, result)
@@ -134,7 +142,8 @@ func ActionHandler(ctx *types.Context) *types.APIError {
 	}
 
 	obj.SetID(ctx.Object.GetID())
-	result, err := handler.Action(obj, ctx.Action.Name, params)
+	ctx.Object = obj
+	result, err := handler.Action(ctx, ctx.Action.Name, params)
 	if err != nil {
 		return err
 	}

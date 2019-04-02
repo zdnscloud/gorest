@@ -112,14 +112,12 @@ func TestListHandler(t *testing.T) {
 	ut.Equal(t, w.Body.String(), expectCollection)
 }
 
-func _TestListHandlerForGetOne(t *testing.T) {
-	expectResult := "{\"id\":\"12138\",\"type\":\"foo\",\"links\":{\"self\":\"http://127.0.0.1:1234/test/12138\"},\"creationTimestamp\":null,\"name\":\"bar\",\"role\":\"worker\"}"
-	req, _ := http.NewRequest("GET", "/apis/v1/testing/12138", nil)
+func TestGetOne(t *testing.T) {
+	expectResult := "{\"id\":\"12138\",\"type\":\"foo\",\"links\":{\"collection\":\"http://127.0.0.1:1234/apis/testing/v1/foos\",\"remove\":\"http://127.0.0.1:1234/apis/testing/v1/foos/12138\",\"self\":\"http://127.0.0.1:1234/apis/testing/v1/foos/12138\",\"update\":\"http://127.0.0.1:1234/apis/testing/v1/foos/12138\"},\"creationTimestamp\":null,\"name\":\"bar\",\"role\":\"worker\"}"
+	req, _ := http.NewRequest("GET", "/apis/testing/v1/foos/12138", nil)
 	req.Host = "127.0.0.1:1234"
 	w := httptest.NewRecorder()
-	ctx.Request = req
-	ctx.Response = w
-	ctx.Object.SetID("12138")
+	ctx, _ := parse.Parse(w, req, schemas)
 	server := &testServer{}
 	server.ctx = ctx
 	server.ServeHTTP(w, req)
@@ -127,14 +125,12 @@ func _TestListHandlerForGetOne(t *testing.T) {
 	ut.Equal(t, w.Body.String(), expectResult)
 }
 
-func _TestGetFail(t *testing.T) {
+func TestGetNonExists(t *testing.T) {
 	expectResult := "{\"code\":\"NotFound\",\"status\":404,\"type\":\"error\",\"message\":\"no found foo with id 23456\"}"
-	req, _ := http.NewRequest("GET", "/apis/v1/testing/12138", nil)
+	req, _ := http.NewRequest("GET", "/apis/testing/v1/foos/23456", nil)
 	req.Host = "127.0.0.1:1234"
 	w := httptest.NewRecorder()
-	ctx.Request = req
-	ctx.Response = w
-	ctx.Object.SetID("23456")
+	ctx, _ := parse.Parse(w, req, schemas)
 	server := &testServer{}
 	server.ctx = ctx
 	server.ServeHTTP(w, req)
@@ -144,27 +140,27 @@ func _TestGetFail(t *testing.T) {
 
 type Handler struct{}
 
-func (h *Handler) Create(obj types.Object, content []byte) (interface{}, *types.APIError) {
-	obj.SetID("12138")
-	return obj, nil
+func (h *Handler) Create(ctx *types.Context, content []byte) (interface{}, *types.APIError) {
+	ctx.Object.SetID("12138")
+	return ctx.Object, nil
 }
 
-func (h *Handler) Delete(obj types.Object) *types.APIError {
+func (h *Handler) Delete(ctx *types.Context) *types.APIError {
 	return nil
 }
 
-func (h *Handler) Update(obj types.Object) (interface{}, *types.APIError) {
-	obj.SetID("12138")
-	return obj, nil
+func (h *Handler) Update(ctx *types.Context) (interface{}, *types.APIError) {
+	ctx.Object.SetID("12138")
+	return ctx.Object, nil
 }
 
-func (h *Handler) List(obj types.Object) interface{} {
+func (h *Handler) List(ctx *types.Context) interface{} {
 	return []types.Object{}
 }
 
-func (h *Handler) Get(obj types.Object) interface{} {
-	if obj.GetID() == "12138" {
-		foo := obj.(*Foo)
+func (h *Handler) Get(ctx *types.Context) interface{} {
+	if ctx.Object.GetID() == "12138" {
+		foo := ctx.Object.(*Foo)
 		foo.Name = "bar"
 		foo.Role = "worker"
 		return foo
@@ -172,6 +168,6 @@ func (h *Handler) Get(obj types.Object) interface{} {
 	return nil
 }
 
-func (h *Handler) Action(obj types.Object, action string, params map[string]interface{}) (interface{}, *types.APIError) {
+func (h *Handler) Action(ctx *types.Context, action string, params map[string]interface{}) (interface{}, *types.APIError) {
 	return params, nil
 }

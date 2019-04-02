@@ -10,12 +10,11 @@ import (
 	"github.com/zdnscloud/gorest/util"
 )
 
-func addLinks(apiContext *types.Context, obj types.Object) {
+func addLinks(ctx *types.Context, schema *types.Schema, obj types.Object) {
 	links := make(map[string]string)
-	self := genResourceLink(apiContext.Request, obj.GetID())
+	self := genResourceLink(ctx.Request, obj.GetID())
 	links["self"] = self
 
-	schema := apiContext.Object.GetSchema()
 	if util.ContainsString(schema.ResourceMethods, http.MethodPut) {
 		links["update"] = self
 	}
@@ -25,31 +24,31 @@ func addLinks(apiContext *types.Context, obj types.Object) {
 	}
 
 	if util.ContainsString(schema.CollectionMethods, http.MethodGet) {
-		links["collection"] = genCollectionLink(apiContext.Request, obj.GetID())
+		links["collection"] = genCollectionLink(ctx.Request, obj.GetID())
 	}
 
-	for _, childPluralName := range apiContext.Schemas.GetChildren(obj.GetType()) {
-		links[childPluralName] = genChildLink(apiContext.Request, obj.GetID(), childPluralName)
+	for _, childPluralName := range ctx.Schemas.GetChildren(obj.GetType()) {
+		links[childPluralName] = genChildLink(ctx.Request, obj.GetID(), childPluralName)
 	}
 
 	obj.SetLinks(links)
 }
 
-func addResourceLinks(apiContext *types.Context, obj interface{}) {
+func addResourceLinks(ctx *types.Context, schema *types.Schema, obj interface{}) {
 	if object, ok := obj.(types.Object); ok {
-		addLinks(apiContext, object)
+		addLinks(ctx, schema, object)
 	}
 }
 
-func addCollectionLinks(apiContext *types.Context, collection *types.Collection) {
+func addCollectionLinks(ctx *types.Context, schema *types.Schema, collection *types.Collection) {
 	collection.Links = map[string]string{
-		"self": getRequestURL(apiContext.Request),
+		"self": getRequestURL(ctx.Request),
 	}
 
 	sliceData := reflect.ValueOf(collection.Data)
 	if sliceData.Kind() == reflect.Slice {
 		for i := 0; i < sliceData.Len(); i++ {
-			addResourceLinks(apiContext, sliceData.Index(i).Interface())
+			addResourceLinks(ctx, schema, sliceData.Index(i).Interface())
 		}
 	}
 }

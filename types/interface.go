@@ -44,10 +44,10 @@ type ObjectSchema interface {
 }
 
 type Handler interface {
-	Create(Object, []byte) (interface{}, *APIError)
-	Delete(Object) *APIError
-	Update(Object) (interface{}, *APIError)
-	List(Object) interface{}
-	Get(Object) interface{}
-	Action(Object, string, map[string]interface{}) (interface{}, *APIError)
+	Create(*Context, []byte) (interface{}, *APIError)
+	Delete(*Context) *APIError
+	Update(*Context) (interface{}, *APIError)
+	List(*Context) interface{}
+	Get(*Context) interface{}
+	Action(*Context, string, map[string]interface{}) (interface{}, *APIError)
 }

@@ -37,11 +37,11 @@ func newHandler() *Handler {
 	}
 }
 
-func (h *Handler) Create(obj types.Object, content []byte) (interface{}, *types.APIError) {
+func (h *Handler) Create(ctx *types.Context, content []byte) (interface{}, *types.APIError) {
 	id, _ := uuid.Gen()
-	switch obj.GetType() {
+	switch ctx.Object.GetType() {
 	case "cluster":
-		cluster := obj.(*Cluster)
+		cluster := ctx.Object.(*Cluster)
 		for _, object := range h.objects {
 			if object.GetType() == "cluster" && object.(*Cluster).Name == cluster.Name {
 				return nil, types.NewAPIError(types.DuplicateResource, "cluster "+cluster.Name+" already exists")
@@ -53,13 +53,13 @@ func (h *Handler) Create(obj types.Object, content []byte) (interface{}, *types.
 		h.objects[id] = cluster
 		return cluster, nil
 	case "node":
-		if parent := obj.GetParent(); parent != nil {
+		if parent := ctx.Object.GetParent(); parent != nil {
 			if h.hasID(parent.GetID()) == false {
 				return nil, types.NewAPIError(types.NotFound, "cluster "+parent.GetID()+" is non-exists")
 			}
 		}
 
-		node := obj.(*Node)
+		node := ctx.Object.(*Node)
 		for _, object := range h.objects {
 			if object.GetType() == "node" && object.(*Node).Name == node.Name {
 				return nil, types.NewAPIError(types.DuplicateResource, "node "+node.Name+" already exists")
@@ -71,7 +71,7 @@ func (h *Handler) Create(obj types.Object, content []byte) (interface{}, *types.
 		h.objects[id] = node
 		return node, nil
 	default:
-		return nil, types.NewAPIError(types.NotFound, "no found resource type "+obj.GetType())
+		return nil, types.NewAPIError(types.NotFound, "no found resource type "+ctx.Object.GetType())
 	}
 }
 
@@ -104,48 +104,48 @@ func (h *Handler) hasChild(id string) bool {
 	return false
 }
 
-func (h *Handler) Delete(obj types.Object) *types.APIError {
-	if err := h.hasObject(obj); err != nil {
+func (h *Handler) Delete(ctx *types.Context) *types.APIError {
+	if err := h.hasObject(ctx.Object); err != nil {
 		return err
 	}
 
-	if h.hasChild(obj.GetID()) {
+	if h.hasChild(ctx.Object.GetID()) {
 		return types.NewAPIError(types.DeleteParent, "resource has child resource")
 	}
 
-	delete(h.objects, obj.GetID())
+	delete(h.objects, ctx.Object.GetID())
 	return nil
 }
 
-func (h *Handler) Update(obj types.Object) (interface{}, *types.APIError) {
-	if err := h.hasObject(obj); err != nil {
+func (h *Handler) Update(ctx *types.Context) (interface{}, *types.APIError) {
+	if err := h.hasObject(ctx.Object); err != nil {
 		return nil, err
 	}
 
-	h.objects[obj.GetID()] = obj
-	return obj, nil
+	h.objects[ctx.Object.GetID()] = ctx.Object
+	return ctx.Object, nil
 }
 
-func (h *Handler) List(obj types.Object) interface{} {
+func (h *Handler) List(ctx *types.Context) interface{} {
 	var result []types.Object
 	for _, object := range h.objects {
-		if object.GetType() == obj.GetType() {
+		if object.GetType() == ctx.Object.GetType() {
 			result = append(result, object)
 		}
 	}
 	return result
 }
 
-func (h *Handler) Get(obj types.Object) interface{} {
-	if parent := obj.GetParent(); parent != nil && h.hasID(parent.GetID()) == false {
+func (h *Handler) Get(ctx *types.Context) interface{} {
+	if parent := ctx.Object.GetParent(); parent != nil && h.hasID(parent.GetID()) == false {
 		return nil
 	}
 
-	return h.objects[obj.GetID()]
+	return h.objects[ctx.Object.GetID()]
 }
 
-func (h *Handler) Action(obj types.Object, action string, params map[string]interface{}) (interface{}, *types.APIError) {
-	if err := h.hasObject(obj); err != nil {
+func (h *Handler) Action(ctx *types.Context, action string, params map[string]interface{}) (interface{}, *types.APIError) {
+	if err := h.hasObject(ctx.Object); err != nil {
 		return nil, err
 	}
 
