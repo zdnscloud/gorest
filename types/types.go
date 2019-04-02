@@ -65,9 +65,9 @@ type Action struct {
 	Output string `json:"output,omitempty"`
 }
 
-type ActionHandler func(request *APIContext, action *Action) *APIError
+type ActionHandler func(request *Context, action *Action) *APIError
 
-type RequestHandler func(request *APIContext) *APIError
+type RequestHandler func(request *Context) *APIError
 
 type Resource struct {
 	ID                string            `json:"id,omitempty"`

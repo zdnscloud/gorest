@@ -45,10 +45,10 @@ func TestAddResourceLink(t *testing.T) {
 	})
 
 	schema := schemas.Schema(&version, types.GetResourceType(Testresourceobject{}))
-	apiContext := &types.APIContext{
+	apiContext := &types.Context{
 		Request: req,
 		Schemas: schemas,
-		Obj: &types.Resource{
+		Object: &types.Resource{
 			Type:   schema.GetType(),
 			Schema: schema,
 		},
@@ -84,7 +84,7 @@ func TestAddResourceLink(t *testing.T) {
 	req, _ = http.NewRequest("POST", "/apis/testing/v1/resourceobjectparents", nil)
 	req.Host = "127.0.0.1:1234"
 	schema = schemas.Schema(&version, types.GetResourceType(Testresourceobjectparent{}))
-	apiContext.Obj.SetSchema(schema)
+	apiContext.Object.SetSchema(schema)
 	apiContext.Request = req
 	objParent := &Testresourceobjectparent{
 		types.Resource{
@@ -105,9 +105,9 @@ func TestAddResourceLink(t *testing.T) {
 func TestAddLinkFail(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/apis/testing/v1/testresourceobjects", nil)
 	req.Host = "127.0.0.1:1234"
-	apiContext := &types.APIContext{
+	apiContext := &types.Context{
 		Request: req,
-		Obj: &types.Resource{
+		Object: &types.Resource{
 			Schema: &types.Schema{},
 		},
 	}
@@ -138,10 +138,10 @@ func TestAddCollectionLinks(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/apis/testing/v1/testresourceobjectparents", nil)
 	req.Host = "127.0.0.1:1234"
 	schema := schemas.Schema(&version, types.GetResourceType(Testresourceobjectparent{}))
-	apiContext := &types.APIContext{
+	apiContext := &types.Context{
 		Request: req,
 		Schemas: schemas,
-		Obj: &types.Resource{
+		Object: &types.Resource{
 			Type:   schema.GetType(),
 			Schema: schema,
 		},

@@ -38,10 +38,10 @@ func TestValidate(t *testing.T) {
 	reqbody := bytes.NewBufferString("{\"name\":\"dm1\", \"replicas\": 1, \"containers\": [{\"name\": \"c1\", \"image\": \"testimage\", \"comamnd\": [\"ifconfig\", \"|\", \"grep\"], \"exposedPorts\": [{\"port\": 8080, \"protocol\": \"tcp\"}]}]}")
 	req, _ := http.NewRequest("POST", "/apis/testing/v1/deployments", reqbody)
 	req.Host = "127.0.0.1:1234"
-	ctx := &types.APIContext{
+	ctx := &types.Context{
 		Request: req,
 		Schemas: schemas,
-		Obj: &types.Resource{
+		Object: &types.Resource{
 			Schema: schema,
 		},
 	}

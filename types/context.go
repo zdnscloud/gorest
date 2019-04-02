@@ -5,17 +5,17 @@ import (
 	"net/http"
 )
 
-type APIContext struct {
+type Context struct {
 	Schemas  *Schemas
 	Request  *http.Request
 	Response http.ResponseWriter
-	Obj      Object
+	Object   Object
 }
 
 type apiContextKey struct{}
 
-func NewAPIContext(req *http.Request, resp http.ResponseWriter, schemas *Schemas) *APIContext {
-	apiCtx := &APIContext{
+func NewContext(req *http.Request, resp http.ResponseWriter, schemas *Schemas) *Context {
+	apiCtx := &Context{
 		Response: resp,
 		Schemas:  schemas,
 	}

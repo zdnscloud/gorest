@@ -10,12 +10,12 @@ import (
 	"github.com/zdnscloud/gorest/util"
 )
 
-func addLinks(apiContext *types.APIContext, obj types.Object) {
+func addLinks(apiContext *types.Context, obj types.Object) {
 	links := make(map[string]string)
 	self := genResourceLink(apiContext.Request, obj.GetID())
 	links["self"] = self
 
-	schema := apiContext.Obj.GetSchema()
+	schema := apiContext.Object.GetSchema()
 	if util.ContainsString(schema.ResourceMethods, http.MethodPut) {
 		links["update"] = self
 	}
@@ -35,13 +35,13 @@ func addLinks(apiContext *types.APIContext, obj types.Object) {
 	obj.SetLinks(links)
 }
 
-func addResourceLinks(apiContext *types.APIContext, obj interface{}) {
+func addResourceLinks(apiContext *types.Context, obj interface{}) {
 	if object, ok := obj.(types.Object); ok {
 		addLinks(apiContext, object)
 	}
 }
 
-func addCollectionLinks(apiContext *types.APIContext, collection *types.Collection) {
+func addCollectionLinks(apiContext *types.Context, collection *types.Collection) {
 	collection.Links = map[string]string{
 		"self": getRequestURL(apiContext.Request),
 	}

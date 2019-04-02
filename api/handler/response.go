@@ -8,7 +8,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-func WriteResponse(apiContext *types.APIContext, status int, result interface{}) {
+func WriteResponse(apiContext *types.Context, status int, result interface{}) {
 	resp := apiContext.Response
 	resp.WriteHeader(status)
 	var body []byte

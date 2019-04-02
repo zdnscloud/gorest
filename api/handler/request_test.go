@@ -18,9 +18,9 @@ var (
 
 	schema = schemas.Schema(&version, types.GetResourceType(Foo{}))
 
-	ctx = &types.APIContext{
+	ctx = &types.Context{
 		Schemas: schemas,
-		Obj: &types.Resource{
+		Object: &types.Resource{
 			Type:   schema.GetType(),
 			Schema: schema,
 		},
@@ -34,7 +34,7 @@ type Foo struct {
 }
 
 type testServer struct {
-	ctx *types.APIContext
+	ctx *types.Context
 }
 
 func (t *testServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -120,7 +120,7 @@ func TestListHandlerForGetOne(t *testing.T) {
 	w := httptest.NewRecorder()
 	ctx.Request = req
 	ctx.Response = w
-	ctx.Obj.SetID("12138")
+	ctx.Object.SetID("12138")
 	server := &testServer{}
 	server.ctx = ctx
 	server.ServeHTTP(w, req)
@@ -135,7 +135,7 @@ func TestGetFail(t *testing.T) {
 	w := httptest.NewRecorder()
 	ctx.Request = req
 	ctx.Response = w
-	ctx.Obj.SetID("23456")
+	ctx.Object.SetID("23456")
 	server := &testServer{}
 	server.ctx = ctx
 	server.ServeHTTP(w, req)

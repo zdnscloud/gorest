@@ -38,7 +38,7 @@ func (s *Server) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (s *Server) handle(rw http.ResponseWriter, req *http.Request) (*types.APIContext, *types.APIError) {
+func (s *Server) handle(rw http.ResponseWriter, req *http.Request) (*types.Context, *types.APIError) {
 	apiRequest, err := parse.Parse(rw, req, s.Schemas)
 	if err != nil {
 		return apiRequest, err
@@ -50,11 +50,11 @@ func (s *Server) handle(rw http.ResponseWriter, req *http.Request) (*types.APICo
 		return apiRequest, err
 	}
 
-	if apiRequest.Obj.GetSchema() == nil {
+	if apiRequest.Object.GetSchema() == nil {
 		return apiRequest, types.NewAPIError(types.NotFound, "no found schema")
 	}
 
-	if action == nil && apiRequest.Obj.GetType() != "" {
+	if action == nil && apiRequest.Object.GetType() != "" {
 		var reqHandler types.RequestHandler
 		switch method {
 		case http.MethodGet:

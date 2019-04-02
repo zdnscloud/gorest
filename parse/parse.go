@@ -18,8 +18,8 @@ var (
 	}
 )
 
-func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas) (*types.APIContext, *types.APIError) {
-	result := types.NewAPIContext(req, rw, schemas)
+func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas) (*types.Context, *types.APIError) {
+	result := types.NewContext(req, rw, schemas)
 	path := req.URL.EscapedPath()
 	path = multiSlashRegexp.ReplaceAllString(path, "/")
 	obj, err := parseVersionAndResource(schemas, path)
@@ -27,7 +27,7 @@ func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas) (*
 		return result, err
 	}
 
-	result.Obj = obj
+	result.Object = obj
 	if err := ValidateMethod(result); err != nil {
 		return result, err
 	}

@@ -17,19 +17,19 @@ var (
 	}
 )
 
-func ValidateMethod(apiContext *types.APIContext) *types.APIError {
+func ValidateMethod(apiContext *types.Context) *types.APIError {
 	method := ParseMethod(apiContext.Request)
 	if !supportedMethods[method] {
 		return types.NewAPIError(types.MethodNotAllowed, fmt.Sprintf("Method %s not supported", method))
 	}
 
-	schema := apiContext.Obj.GetSchema()
-	if apiContext.Obj.GetType() == "" || schema == nil {
+	schema := apiContext.Object.GetSchema()
+	if apiContext.Object.GetType() == "" || schema == nil {
 		return types.NewAPIError(types.NotFound, "no found schema")
 	}
 
 	allowed := schema.ResourceMethods
-	if apiContext.Obj.GetID() == "" {
+	if apiContext.Object.GetID() == "" {
 		allowed = schema.CollectionMethods
 	}
 
