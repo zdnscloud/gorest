@@ -7,17 +7,16 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/zdnscloud/gorest/parse"
 	"github.com/zdnscloud/gorest/types"
 )
 
-func CreateHandler(apiContext *types.Context) *types.APIError {
-	handler := apiContext.Object.GetSchema().Handler
+func CreateHandler(ctx *types.Context) *types.APIError {
+	handler := ctx.Object.GetSchema().Handler
 	if handler == nil {
 		return types.NewAPIError(types.NotFound, "no found schema handler")
 	}
 
-	content, object, err := parseCreateBody(apiContext)
+	content, object, err := parseCreateBody(ctx)
 	if err != nil {
 		return err
 	}
@@ -27,71 +26,71 @@ func CreateHandler(apiContext *types.Context) *types.APIError {
 		return err
 	}
 
-	addResourceLinks(apiContext, result)
-	WriteResponse(apiContext, http.StatusCreated, result)
+	addResourceLinks(ctx, result)
+	WriteResponse(ctx, http.StatusCreated, result)
 	return nil
 }
 
-func DeleteHandler(apiContext *types.Context) *types.APIError {
-	handler := apiContext.Object.GetSchema().Handler
+func DeleteHandler(ctx *types.Context) *types.APIError {
+	handler := ctx.Object.GetSchema().Handler
 	if handler == nil {
 		return types.NewAPIError(types.NotFound, "no found schema handler")
 	}
 
-	obj, err := getObject(apiContext, getSchemaStructVal(apiContext))
+	obj, err := getObject(ctx, getSchemaStructVal(ctx))
 	if err != nil {
 		return err
 	}
 
-	obj.SetID(apiContext.Object.GetID())
+	obj.SetID(ctx.Object.GetID())
 	if err = handler.Delete(obj); err != nil {
 		return err
 	}
 
-	WriteResponse(apiContext, http.StatusNoContent, nil)
+	WriteResponse(ctx, http.StatusNoContent, nil)
 	return nil
 }
 
-func UpdateHandler(apiContext *types.Context) *types.APIError {
-	handler := apiContext.Object.GetSchema().Handler
+func UpdateHandler(ctx *types.Context) *types.APIError {
+	handler := ctx.Object.GetSchema().Handler
 	if handler == nil {
 		return types.NewAPIError(types.NotFound, "no found schema handler")
 	}
 
-	val := getSchemaStructVal(apiContext)
-	if err := decodeBody(apiContext.Request, val); err != nil {
+	val := getSchemaStructVal(ctx)
+	if err := decodeBody(ctx.Request, val); err != nil {
 		return err
 	}
 
-	object, err := getObject(apiContext, val)
+	object, err := getObject(ctx, val)
 	if err != nil {
 		return err
 	}
 
-	object.SetID(apiContext.Object.GetID())
+	object.SetID(ctx.Object.GetID())
 	result, err := handler.Update(object)
 	if err != nil {
 		return err
 	}
 
-	addResourceLinks(apiContext, result)
-	WriteResponse(apiContext, http.StatusOK, result)
+	addResourceLinks(ctx, result)
+	WriteResponse(ctx, http.StatusOK, result)
 	return nil
 }
 
-func ListHandler(apiContext *types.Context) *types.APIError {
-	handler := apiContext.Object.GetSchema().Handler
+func ListHandler(ctx *types.Context) *types.APIError {
+	handler := ctx.Object.GetSchema().Handler
 	if handler == nil {
 		return types.NewAPIError(types.NotFound, "no found schema handler")
 	}
 
 	var result interface{}
-	obj, err := getObject(apiContext, getSchemaStructVal(apiContext))
+	obj, err := getObject(ctx, getSchemaStructVal(ctx))
 	if err != nil {
 		return err
 	}
 
-	if apiContext.Object.GetID() == "" {
+	if ctx.Object.GetID() == "" {
 		data := handler.List(obj)
 		if data == nil || reflect.ValueOf(data).IsNil() {
 			data = make([]types.Object, 0)
@@ -99,53 +98,53 @@ func ListHandler(apiContext *types.Context) *types.APIError {
 
 		collection := &types.Collection{
 			Type:         "collection",
-			ResourceType: apiContext.Object.GetType(),
+			ResourceType: ctx.Object.GetType(),
 			Data:         data,
 		}
-		addCollectionLinks(apiContext, collection)
+		addCollectionLinks(ctx, collection)
 		result = collection
 	} else {
-		obj.SetID(apiContext.Object.GetID())
+		obj.SetID(ctx.Object.GetID())
 		result = handler.Get(obj)
 		if result == nil || reflect.ValueOf(result).IsNil() {
 			return types.NewAPIError(types.NotFound,
-				fmt.Sprintf("no found %v with id %v", obj.GetType(), apiContext.Object.GetID()))
+				fmt.Sprintf("no found %v with id %v", obj.GetType(), ctx.Object.GetID()))
 		}
-		addResourceLinks(apiContext, result)
+		addResourceLinks(ctx, result)
 	}
 
-	WriteResponse(apiContext, http.StatusOK, result)
+	WriteResponse(ctx, http.StatusOK, result)
 	return nil
 }
 
-func ActionHandler(apiContext *types.Context, action *types.Action) *types.APIError {
-	handler := apiContext.Object.GetSchema().Handler
+func ActionHandler(ctx *types.Context) *types.APIError {
+	handler := ctx.Object.GetSchema().Handler
 	if handler == nil {
 		return types.NewAPIError(types.NotFound, "no found schema handler")
 	}
 
 	var params map[string]interface{}
-	if err := decodeBody(apiContext.Request, &params); err != nil {
+	if err := decodeBody(ctx.Request, &params); err != nil {
 		return err
 	}
 
-	obj, err := getObject(apiContext, getSchemaStructVal(apiContext))
+	obj, err := getObject(ctx, getSchemaStructVal(ctx))
 	if err != nil {
 		return err
 	}
 
-	obj.SetID(apiContext.Object.GetID())
-	result, err := handler.Action(obj, parse.ParseAction(apiContext.Request.URL), params)
+	obj.SetID(ctx.Object.GetID())
+	result, err := handler.Action(obj, ctx.Action.Name, params)
 	if err != nil {
 		return err
 	}
 
-	WriteResponse(apiContext, http.StatusAccepted, result)
+	WriteResponse(ctx, http.StatusAccepted, result)
 	return nil
 }
 
-func getSchemaStructVal(apiContext *types.Context) interface{} {
-	val := apiContext.Object.GetSchema().StructVal
+func getSchemaStructVal(ctx *types.Context) interface{} {
+	val := ctx.Object.GetSchema().StructVal
 	valPtr := reflect.New(val.Type())
 	valPtr.Elem().Set(val)
 	return valPtr.Interface()
@@ -168,23 +167,23 @@ func decodeBody(req *http.Request, params interface{}) *types.APIError {
 	return nil
 }
 
-func getObject(apiContext *types.Context, val interface{}) (types.Object, *types.APIError) {
+func getObject(ctx *types.Context, val interface{}) (types.Object, *types.APIError) {
 	if obj, ok := val.(types.Object); ok {
-		obj.SetType(apiContext.Object.GetType())
-		obj.SetParent(apiContext.Object.GetParent())
+		obj.SetType(ctx.Object.GetType())
+		obj.SetParent(ctx.Object.GetParent())
 		return obj, nil
 	} else {
 		return nil, types.NewAPIError(types.NotFound, fmt.Sprintf("no found resource schema"))
 	}
 }
 
-func parseCreateBody(apiContext *types.Context) ([]byte, types.Object, *types.APIError) {
+func parseCreateBody(ctx *types.Context) ([]byte, types.Object, *types.APIError) {
 	var params struct {
 		Yaml string `json:"yaml_"`
 	}
 
-	reqBody, err := ioutil.ReadAll(apiContext.Request.Body)
-	defer apiContext.Request.Body.Close()
+	reqBody, err := ioutil.ReadAll(ctx.Request.Body)
+	defer ctx.Request.Body.Close()
 	if err != nil {
 		return nil, nil, types.NewAPIError(types.InvalidBodyContent,
 			fmt.Sprintf("Failed to read request body: %v", err.Error()))
@@ -195,16 +194,16 @@ func parseCreateBody(apiContext *types.Context) ([]byte, types.Object, *types.AP
 			fmt.Sprintf("Failed to parse request body: %v", err.Error()))
 	}
 
-	val := getSchemaStructVal(apiContext)
+	val := getSchemaStructVal(ctx)
 	if err := json.Unmarshal(reqBody, val); err != nil {
 		return nil, nil, types.NewAPIError(types.InvalidBodyContent,
 			fmt.Sprintf("Failed to parse request body: %v", err.Error()))
 	}
 
-	obj, apiErr := getObject(apiContext, val)
+	obj, apiErr := getObject(ctx, val)
 	if apiErr != nil {
 		return nil, nil, apiErr
 	}
 
-	return []byte(params.Yaml), obj, CheckObjectFields(apiContext, obj)
+	return []byte(params.Yaml), obj, CheckObjectFields(ctx, obj)
 }

@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/zdnscloud/cement/slice"
 	"github.com/zdnscloud/gorest/types"
 )
 
@@ -19,48 +20,51 @@ var (
 )
 
 func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas) (*types.Context, *types.APIError) {
-	result := types.NewContext(req, rw, schemas)
-	path := req.URL.EscapedPath()
-	path = multiSlashRegexp.ReplaceAllString(path, "/")
-	obj, err := parseVersionAndResource(schemas, path)
+	ctx := types.NewContext(req, rw, schemas)
+	err := parseVersionAndResource(ctx)
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 
-	result.Object = obj
-	if err := ValidateMethod(result); err != nil {
-		return result, err
+	if err := parseMethod(ctx); err != nil {
+		return nil, err
 	}
 
-	return result, nil
+	if err := parseAction(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := parseResponseFormat(ctx); err != nil {
+		return nil, err
+	}
+
+	return ctx, nil
 }
 
-func versionsForPath(schemas *types.Schemas, escapedPath string) *types.APIVersion {
-	for _, version := range schemas.Versions() {
-		if strings.HasPrefix(escapedPath, version.GetVersionURL()) {
-			return &version
+func parseVersionAndResource(ctx *types.Context) *types.APIError {
+	path := multiSlashRegexp.ReplaceAllString(ctx.Request.URL.EscapedPath(), "/")
+	var version *types.APIVersion
+	for _, v := range ctx.Schemas.Versions() {
+		if strings.HasPrefix(path, v.GetVersionURL()) {
+			version = &v
+			break
 		}
 	}
-	return nil
-}
-
-func parseVersionAndResource(schemas *types.Schemas, escapedPath string) (types.Object, *types.APIError) {
-	version := versionsForPath(schemas, escapedPath)
 	if version == nil {
-		return nil, types.NewAPIError(types.NotFound, "no found version with "+escapedPath)
+		return types.NewAPIError(types.NotFound, "no found version with "+path)
 	}
 
-	if strings.HasSuffix(escapedPath, "/") {
-		escapedPath = escapedPath[:len(escapedPath)-1]
+	if strings.HasSuffix(path, "/") {
+		path = path[:len(path)-1]
 	}
 
 	versionURL := version.GetVersionURL()
-	if len(escapedPath) <= len(versionURL) {
-		return nil, types.NewAPIError(types.InvalidFormat, "no schema name in url "+escapedPath)
+	if len(path) <= len(versionURL) {
+		return types.NewAPIError(types.InvalidFormat, "no schema name in url "+path)
 	}
 
-	escapedPath = escapedPath[len(versionURL)+1:]
-	pp := strings.Split(escapedPath, "/")
+	path = path[len(versionURL)+1:]
+	pp := strings.Split(path, "/")
 	var paths []string
 	for _, p := range pp {
 		part, err := url.PathUnescape(p)
@@ -72,15 +76,15 @@ func parseVersionAndResource(schemas *types.Schemas, escapedPath string) (types.
 	}
 
 	if len(paths) == 0 {
-		return nil, types.NewAPIError(types.NotFound, "no found schema with url "+escapedPath)
+		return types.NewAPIError(types.NotFound, "no found schema with url "+path)
 	}
 
 	var obj *types.Resource
 	var schema *types.Schema
 	for i := 0; i < len(paths); i += 2 {
-		schema = schemas.Schema(version, paths[i])
+		schema = ctx.Schemas.Schema(version, paths[i])
 		if schema == nil {
-			return nil, types.NewAPIError(types.NotFound, "no found schema for "+paths[i])
+			return types.NewAPIError(types.NotFound, "no found schema for "+paths[i])
 		}
 
 		if i == 0 {
@@ -93,7 +97,7 @@ func parseVersionAndResource(schemas *types.Schemas, escapedPath string) (types.
 		}
 
 		if schema.Parent != obj.Type {
-			return nil, types.NewAPIError(types.InvalidType,
+			return types.NewAPIError(types.InvalidType,
 				fmt.Sprintf("schema %v parent should not be %s", schema.GetType(), obj.Type))
 		}
 
@@ -105,7 +109,8 @@ func parseVersionAndResource(schemas *types.Schemas, escapedPath string) (types.
 		}
 	}
 
-	return obj, nil
+	ctx.Object = obj
+	return nil
 }
 
 func safeIndex(slice []string, index int) string {
@@ -115,36 +120,54 @@ func safeIndex(slice []string, index int) string {
 	return slice[index]
 }
 
-func ParseResponseFormat(req *http.Request) string {
-	format := req.URL.Query().Get("_format")
+func parseResponseFormat(ctx *types.Context) *types.APIError {
+	format_ := ctx.Request.URL.Query().Get("_format")
 
-	if format != "" {
-		format = strings.TrimSpace(strings.ToLower(format))
+	if format_ != "" {
+		format := types.ResponseFormat(format_)
+		if format != types.ResponseJSON && format != types.ResponseYAML {
+			return types.NewAPIError(types.NotFound, "unsupported format"+format_)
+		}
+		ctx.ResponseFormat = format
+	} else if strings.Contains(ctx.Request.Header.Get("Accept"), "application/yaml") {
+		ctx.ResponseFormat = types.ResponseYAML
+	} else {
+		ctx.ResponseFormat = types.ResponseJSON
 	}
-
-	if allowedFormats[format] {
-		return format
-	}
-
-	if isYaml(req) {
-		return "yaml"
-	}
-
-	return "json"
+	return nil
 }
 
-func isYaml(req *http.Request) bool {
-	return strings.Contains(req.Header.Get("Accept"), "application/yaml")
-}
-
-func ParseMethod(req *http.Request) string {
-	method := req.URL.Query().Get("_method")
-	if method == "" {
-		method = req.Method
+func parseMethod(ctx *types.Context) *types.APIError {
+	method := ctx.Request.Method
+	schema := ctx.Object.GetSchema()
+	allowed := schema.ResourceMethods
+	if ctx.Object.GetID() == "" {
+		allowed = schema.CollectionMethods
 	}
-	return method
+
+	if slice.SliceIndex(allowed, method) == -1 {
+		return types.NewAPIError(types.MethodNotAllowed, fmt.Sprintf("Method %s not supported", method))
+	}
+
+	ctx.Method = method
+	return nil
 }
 
-func ParseAction(url *url.URL) string {
-	return url.Query().Get("action")
+func parseAction(ctx *types.Context) *types.APIError {
+	action := ctx.Request.URL.Query().Get("action")
+	if action == "" || ctx.Method != http.MethodPost {
+		return nil
+	}
+
+	actions := ctx.Object.GetSchema().CollectionActions
+	if ctx.Object.GetID() != "" {
+		actions = ctx.Object.GetSchema().ResourceActions
+	}
+
+	if action_, ok := actions[action]; ok == false {
+		return types.NewAPIError(types.InvalidAction, fmt.Sprintf("Invalid action: %s", action))
+	} else {
+		ctx.Action = &action_
+		return nil
+	}
 }

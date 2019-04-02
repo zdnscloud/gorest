@@ -8,8 +8,12 @@ import (
 	"github.com/zdnscloud/gorest/types"
 )
 
+type HandlerFunc func(*types.Context) *types.APIError
+type HandlersChain []HandlerFunc
+
 type Server struct {
-	Schemas *types.Schemas
+	Schemas  *types.Schemas
+	handlers HandlersChain
 }
 
 func NewAPIServer() *Server {
@@ -33,48 +37,20 @@ func (s *Server) AddSchemas(schemas *types.Schemas) error {
 }
 
 func (s *Server) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if apiResponse, err := s.handle(rw, req); err != nil {
-		handler.WriteResponse(apiResponse, err.Status, err)
+	ctx, err := parse.Parse(rw, req, s.Schemas)
+	if err != nil {
+		handler.WriteResponse(ctx, err.Status, err)
+		return
+	}
+
+	for _, h := range s.handlers {
+		if err := h(ctx); err != nil {
+			handler.WriteResponse(ctx, err.Status, err)
+			return
+		}
 	}
 }
 
-func (s *Server) handle(rw http.ResponseWriter, req *http.Request) (*types.Context, *types.APIError) {
-	apiRequest, err := parse.Parse(rw, req, s.Schemas)
-	if err != nil {
-		return apiRequest, err
-	}
-
-	method := parse.ParseMethod(apiRequest.Request)
-	action, err := ValidateAction(apiRequest, method)
-	if err != nil {
-		return apiRequest, err
-	}
-
-	if apiRequest.Object.GetSchema() == nil {
-		return apiRequest, types.NewAPIError(types.NotFound, "no found schema")
-	}
-
-	if action == nil && apiRequest.Object.GetType() != "" {
-		var reqHandler types.RequestHandler
-		switch method {
-		case http.MethodGet:
-			reqHandler = handler.ListHandler
-		case http.MethodPost:
-			reqHandler = handler.CreateHandler
-		case http.MethodPut:
-			reqHandler = handler.UpdateHandler
-		case http.MethodDelete:
-			reqHandler = handler.DeleteHandler
-		}
-
-		if reqHandler == nil {
-			return apiRequest, types.NewAPIError(types.NotFound, "no found request handler")
-		}
-
-		return apiRequest, reqHandler(apiRequest)
-	} else if action != nil {
-		return apiRequest, handler.ActionHandler(apiRequest, action)
-	}
-
-	return apiRequest, nil
+func (s *Server) Use(h HandlerFunc) {
+	s.handlers = append(s.handlers, h)
 }

@@ -176,11 +176,13 @@ func getApiServer() *api.Server {
 		schema.ResourceMethods = []string{"GET", "PUT", "DELETE", "POST"}
 		schema.CollectionActions = map[string]types.Action{
 			"decrypt": types.Action{
+				Name:   "decrypt",
 				Input:  "cryptInput",
 				Output: "file",
 			}}
 		schema.ResourceActions = map[string]types.Action{
 			"encrypt": types.Action{
+				Name:   "encrypt",
 				Input:  "cryptInput",
 				Output: "file",
 			}}

@@ -61,6 +61,7 @@ type Field struct {
 }
 
 type Action struct {
+	Name   string
 	Input  string `json:"input,omitempty"`
 	Output string `json:"output,omitempty"`
 }
