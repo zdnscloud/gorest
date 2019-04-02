@@ -14,7 +14,7 @@ func CheckObjectFields(ctx *types.APIContext, obj types.Object) *types.APIError 
 		return types.NewAPIError(types.ServerError, "get object structure but return "+structVal.Kind().String())
 	}
 
-	_, err := getStructValue(ctx, ctx.Schema, structVal)
+	_, err := getStructValue(ctx, ctx.Obj.GetSchema(), structVal)
 	return err
 }
 
@@ -22,7 +22,7 @@ func getStructValue(ctx *types.APIContext, schema *types.Schema, structVal refle
 	fieldValues := map[string]interface{}{}
 	structTyp := structVal.Type()
 	if schema == nil {
-		schema = ctx.Schemas.Schema(ctx.Version, strings.ToLower(structTyp.Name()))
+		schema = ctx.Schemas.Schema(&ctx.Obj.GetSchema().Version, strings.ToLower(structTyp.Name()))
 		if schema == nil {
 			return nil, types.NewAPIError(types.NotFound, "no found schema "+strings.ToLower(structTyp.Name()))
 		}
@@ -33,7 +33,7 @@ func getStructValue(ctx *types.APIContext, schema *types.Schema, structVal refle
 		fieldJsonName, isAnonymous := types.GetFieldJsonName(field)
 		if isAnonymous {
 			fieldVal := structVal.FieldByName(field.Name)
-			if _, err := getStructValue(ctx, ctx.Schema, fieldVal); err != nil {
+			if _, err := getStructValue(ctx, ctx.Obj.GetSchema(), fieldVal); err != nil {
 				return nil, err
 			}
 			continue

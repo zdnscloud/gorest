@@ -10,6 +10,7 @@ type Object interface {
 	ObjectLinks
 	ObjectTimestamp
 	ObjectParent
+	ObjectSchema
 }
 
 type ObjectParent interface {
@@ -35,6 +36,11 @@ type ObjectLinks interface {
 type ObjectTimestamp interface {
 	GetCreationTimestamp() time.Time
 	SetCreationTimestamp(time.Time)
+}
+
+type ObjectSchema interface {
+	GetSchema() *Schema
+	SetSchema(*Schema)
 }
 
 type Handler interface {

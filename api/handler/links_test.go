@@ -1,6 +1,7 @@
 package handler
 
 import (
+	//	"fmt"
 	"net/http"
 	"testing"
 
@@ -44,16 +45,20 @@ func TestAddResourceLink(t *testing.T) {
 		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
 	})
 
+	schema := schemas.Schema(&version, types.GetResourceType(Testresourceobject{}))
 	apiContext := &types.APIContext{
 		Request: req,
 		Schemas: schemas,
-		Schema:  schemas.Schema(&version, types.GetResourceType(Testresourceobject{})),
+		Obj: &types.Resource{
+			Type:   schema.ID,
+			Schema: schema,
+		},
 	}
 
 	obj := &Testresourceobject{
 		types.Resource{
 			ID:   "1de5f1bb403524c280c220f3a366b538",
-			Type: "testResourceObject",
+			Type: schema.ID,
 		},
 	}
 	addResourceLinks(apiContext, obj)
@@ -79,12 +84,13 @@ func TestAddResourceLink(t *testing.T) {
 
 	req, _ = http.NewRequest("POST", "/apis/testing/v1/resourceobjectparents", nil)
 	req.Host = "127.0.0.1:1234"
-	apiContext.Schema = schemas.Schema(&version, types.GetResourceType(Testresourceobjectparent{}))
+	schema = schemas.Schema(&version, types.GetResourceType(Testresourceobjectparent{}))
+	apiContext.Obj.SetSchema(schema)
 	apiContext.Request = req
 	objParent := &Testresourceobjectparent{
 		types.Resource{
 			ID:   "d6db994a406ab41c80dc6e4e31ecf890",
-			Type: "testResourceObjectParent",
+			Type: schema.ID,
 		},
 	}
 
@@ -102,7 +108,9 @@ func TestAddLinkFail(t *testing.T) {
 	req.Host = "127.0.0.1:1234"
 	apiContext := &types.APIContext{
 		Request: req,
-		Schema:  &types.Schema{},
+		Obj: &types.Resource{
+			Schema: &types.Schema{},
+		},
 	}
 
 	obj := &Testnoresourceobject{
@@ -133,7 +141,9 @@ func TestAddCollectionLinks(t *testing.T) {
 	apiContext := &types.APIContext{
 		Request: req,
 		Schemas: schemas,
-		Schema:  schemas.Schema(&version, types.GetResourceType(Testresourceobjectparent{})),
+		Obj: &types.Resource{
+			Schema: schemas.Schema(&version, types.GetResourceType(Testresourceobjectparent{})),
+		},
 	}
 
 	collection := &types.Collection{

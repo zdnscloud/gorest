@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 
+	"github.com/zdnscloud/gorest/parse"
 	"github.com/zdnscloud/gorest/types"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -11,7 +12,7 @@ func WriteResponse(apiContext *types.APIContext, status int, result interface{})
 	resp := apiContext.Response
 	resp.WriteHeader(status)
 	var body []byte
-	switch apiContext.ResponseFormat {
+	switch parse.ParseResponseFormat(apiContext.Request) {
 	case "json":
 		resp.Header().Set("content-type", "application/json")
 		body, _ = json.Marshal(result)

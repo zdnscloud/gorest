@@ -15,19 +15,20 @@ func addLinks(apiContext *types.APIContext, obj types.Object) {
 	self := genResourceLink(apiContext.Request, obj.GetID())
 	links["self"] = self
 
-	if util.ContainsString(apiContext.Schema.ResourceMethods, http.MethodPut) {
+	schema := apiContext.Obj.GetSchema()
+	if util.ContainsString(schema.ResourceMethods, http.MethodPut) {
 		links["update"] = self
 	}
 
-	if util.ContainsString(apiContext.Schema.ResourceMethods, http.MethodDelete) {
+	if util.ContainsString(schema.ResourceMethods, http.MethodDelete) {
 		links["remove"] = self
 	}
 
-	if util.ContainsString(apiContext.Schema.CollectionMethods, http.MethodGet) {
+	if util.ContainsString(schema.CollectionMethods, http.MethodGet) {
 		links["collection"] = genCollectionLink(apiContext.Request, obj.GetID())
 	}
 
-	for _, childPluralName := range apiContext.Schemas.GetChildren(apiContext.Schema.ID) {
+	for _, childPluralName := range apiContext.Schemas.GetChildren(schema.ID) {
 		links[childPluralName] = genChildLink(apiContext.Request, obj.GetID(), childPluralName)
 	}
 

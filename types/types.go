@@ -25,7 +25,6 @@ func (v *APIVersion) GetVersionURL() string {
 
 type Schema struct {
 	ID                string            `json:"id,omitempty"`
-	Type              string            `json:"type,omitempty"`
 	Version           APIVersion        `json:"version"`
 	PluralName        string            `json:"pluralName,omitempty"`
 	ResourceMethods   []string          `json:"resourceMethods,omitempty"`
@@ -72,6 +71,7 @@ type Resource struct {
 	Links             map[string]string `json:"links,omitempty"`
 	CreationTimestamp ISOTime           `json:"creationTimestamp,omitempty"`
 	Parent            Object            `json:"-"`
+	Schema            *Schema           `json:"-"`
 }
 
 func (r *Resource) GetID() string {
@@ -112,6 +112,14 @@ func (r *Resource) GetParent() Object {
 
 func (r *Resource) SetParent(parent Object) {
 	r.Parent = parent
+}
+
+func (r *Resource) GetSchema() *Schema {
+	return r.Schema
+}
+
+func (r *Resource) SetSchema(schema *Schema) {
+	r.Schema = schema
 }
 
 func GetAncestors(parent ObjectParent) []Object {

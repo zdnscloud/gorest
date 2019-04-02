@@ -39,10 +39,11 @@ func TestValidate(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/apis/testing/v1/deployments", reqbody)
 	req.Host = "127.0.0.1:1234"
 	ctx := &types.APIContext{
-		Version: &version,
 		Request: req,
-		Schema:  schema,
 		Schemas: schemas,
+		Obj: &types.Resource{
+			Schema: schema,
+		},
 	}
 
 	var noerr *types.APIError

@@ -19,9 +19,11 @@ var (
 	schema = schemas.Schema(&version, types.GetResourceType(Foo{}))
 
 	ctx = &types.APIContext{
-		Schema:         schema,
-		Schemas:        schemas,
-		ResponseFormat: "json",
+		Schemas: schemas,
+		Obj: &types.Resource{
+			Type:   schema.ID,
+			Schema: schema,
+		},
 	}
 )
 
@@ -118,7 +120,7 @@ func TestListHandlerForGetOne(t *testing.T) {
 	w := httptest.NewRecorder()
 	ctx.Request = req
 	ctx.Response = w
-	ctx.ID = "12138"
+	ctx.Obj.SetID("12138")
 	server := &testServer{}
 	server.ctx = ctx
 	server.ServeHTTP(w, req)
@@ -133,7 +135,7 @@ func TestGetFail(t *testing.T) {
 	w := httptest.NewRecorder()
 	ctx.Request = req
 	ctx.Response = w
-	ctx.ID = "23456"
+	ctx.Obj.SetID("23456")
 	server := &testServer{}
 	server.ctx = ctx
 	server.ServeHTTP(w, req)

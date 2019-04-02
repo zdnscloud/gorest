@@ -48,8 +48,8 @@ func (s *Schemas) AddSchema(schema Schema) *Schemas {
 		s.versions = append(s.versions, schema.Version)
 	}
 
-	if _, ok := schemas[schema.ID]; !ok {
-		schemas[schema.ID] = &schema
+	if _, ok := schemas[schema.PluralName]; !ok {
+		schemas[schema.PluralName] = &schema
 		s.schemas = append(s.schemas, &schema)
 	}
 
@@ -103,7 +103,7 @@ func (s *Schemas) UrlMethods() map[string][]string {
 	for _, schema := range s.schemas {
 		var parents []string
 		for parent := schema.Parent; parent != ""; {
-			if parentSchema := s.Schema(&schema.Version, parent); parentSchema != nil {
+			if parentSchema := s.Schema(&schema.Version, util.GuessPluralName(parent)); parentSchema != nil {
 				parents = append(parents, parent)
 				parent = parentSchema.Parent
 			} else {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/zdnscloud/gorest/parse"
 	"github.com/zdnscloud/gorest/types"
 )
 
@@ -12,19 +13,20 @@ const (
 	csrfHeader = "X-API-CSRF"
 )
 
-func ValidateAction(request *types.APIContext) (*types.Action, *types.APIError) {
-	if request.Action == "" || request.Method != http.MethodPost {
+func ValidateAction(apiContext *types.APIContext, method string) (*types.Action, *types.APIError) {
+	urlAction := parse.ParseAction(apiContext.Request.URL)
+	if urlAction == "" || method != http.MethodPost {
 		return nil, nil
 	}
 
-	actions := request.Schema.CollectionActions
-	if request.ID != "" {
-		actions = request.Schema.ResourceActions
+	actions := apiContext.Obj.GetSchema().CollectionActions
+	if apiContext.Obj.GetID() != "" {
+		actions = apiContext.Obj.GetSchema().ResourceActions
 	}
 
-	action, ok := actions[request.Action]
+	action, ok := actions[urlAction]
 	if !ok {
-		return nil, types.NewAPIError(types.InvalidAction, fmt.Sprintf("Invalid action: %s", request.Action))
+		return nil, types.NewAPIError(types.InvalidAction, fmt.Sprintf("Invalid action: %s", urlAction))
 	}
 
 	return &action, nil

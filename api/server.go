@@ -44,18 +44,19 @@ func (s *Server) handle(rw http.ResponseWriter, req *http.Request) (*types.APICo
 		return apiRequest, err
 	}
 
-	action, err := ValidateAction(apiRequest)
+	method := parse.ParseMethod(apiRequest.Request)
+	action, err := ValidateAction(apiRequest, method)
 	if err != nil {
 		return apiRequest, err
 	}
 
-	if apiRequest.Schema == nil {
+	if apiRequest.Obj.GetSchema() == nil {
 		return apiRequest, types.NewAPIError(types.NotFound, "no found schema")
 	}
 
-	if action == nil && apiRequest.Type != "" {
+	if action == nil && apiRequest.Obj.GetType() != "" {
 		var reqHandler types.RequestHandler
-		switch apiRequest.Method {
+		switch method {
 		case http.MethodGet:
 			reqHandler = handler.ListHandler
 		case http.MethodPost:

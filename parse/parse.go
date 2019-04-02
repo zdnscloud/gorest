@@ -20,23 +20,14 @@ var (
 
 func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas) (*types.APIContext, *types.APIError) {
 	result := types.NewAPIContext(req, rw, schemas)
-	result.Method = parseMethod(req)
-	result.ResponseFormat = parseResponseFormat(req)
 	path := req.URL.EscapedPath()
 	path = multiSlashRegexp.ReplaceAllString(path, "/")
-	version, obj, schema, err := parseVersionAndResource(schemas, path)
+	obj, err := parseVersionAndResource(schemas, path)
 	if err != nil {
 		return result, err
 	}
 
-	result.Type = obj.GetType()
-	result.ID = obj.GetID()
-	result.Action = parseAction(req.URL)
-	result.Query = req.URL.Query()
-	result.Version = version
-	result.Parent = obj.GetParent()
-	result.Schema = schema
-
+	result.Obj = obj
 	if err := ValidateMethod(result); err != nil {
 		return result, err
 	}
@@ -53,10 +44,10 @@ func versionsForPath(schemas *types.Schemas, escapedPath string) *types.APIVersi
 	return nil
 }
 
-func parseVersionAndResource(schemas *types.Schemas, escapedPath string) (*types.APIVersion, types.Object, *types.Schema, *types.APIError) {
+func parseVersionAndResource(schemas *types.Schemas, escapedPath string) (types.Object, *types.APIError) {
 	version := versionsForPath(schemas, escapedPath)
 	if version == nil {
-		return nil, nil, nil, types.NewAPIError(types.NotFound, "no found version with "+escapedPath)
+		return nil, types.NewAPIError(types.NotFound, "no found version with "+escapedPath)
 	}
 
 	if strings.HasSuffix(escapedPath, "/") {
@@ -65,7 +56,7 @@ func parseVersionAndResource(schemas *types.Schemas, escapedPath string) (*types
 
 	versionURL := version.GetVersionURL()
 	if len(escapedPath) <= len(versionURL) {
-		return nil, nil, nil, types.NewAPIError(types.InvalidFormat, "no schema name in url "+escapedPath)
+		return nil, types.NewAPIError(types.InvalidFormat, "no schema name in url "+escapedPath)
 	}
 
 	escapedPath = escapedPath[len(versionURL)+1:]
@@ -81,7 +72,7 @@ func parseVersionAndResource(schemas *types.Schemas, escapedPath string) (*types
 	}
 
 	if len(paths) == 0 {
-		return version, nil, nil, types.NewAPIError(types.NotFound, "no found schema with url "+escapedPath)
+		return nil, types.NewAPIError(types.NotFound, "no found schema with url "+escapedPath)
 	}
 
 	var obj *types.Resource
@@ -89,19 +80,20 @@ func parseVersionAndResource(schemas *types.Schemas, escapedPath string) (*types
 	for i := 0; i < len(paths); i += 2 {
 		schema = schemas.Schema(version, paths[i])
 		if schema == nil {
-			return version, nil, nil, types.NewAPIError(types.NotFound, "no found schema for "+paths[i])
+			return nil, types.NewAPIError(types.NotFound, "no found schema for "+paths[i])
 		}
 
 		if i == 0 {
 			obj = &types.Resource{
-				ID:   safeIndex(paths, i+1),
-				Type: schema.ID,
+				ID:     safeIndex(paths, i+1),
+				Type:   schema.ID,
+				Schema: schema,
 			}
 			continue
 		}
 
 		if schema.Parent != obj.Type {
-			return version, nil, nil, types.NewAPIError(types.InvalidType,
+			return nil, types.NewAPIError(types.InvalidType,
 				fmt.Sprintf("schema %v parent should not be %s", schema.ID, obj.Type))
 		}
 
@@ -109,10 +101,11 @@ func parseVersionAndResource(schemas *types.Schemas, escapedPath string) (*types
 			ID:     safeIndex(paths, i+1),
 			Type:   schema.ID,
 			Parent: obj,
+			Schema: schema,
 		}
 	}
 
-	return version, obj, schema, nil
+	return obj, nil
 }
 
 func safeIndex(slice []string, index int) string {
@@ -122,7 +115,7 @@ func safeIndex(slice []string, index int) string {
 	return slice[index]
 }
 
-func parseResponseFormat(req *http.Request) string {
+func ParseResponseFormat(req *http.Request) string {
 	format := req.URL.Query().Get("_format")
 
 	if format != "" {
@@ -145,7 +138,7 @@ func isYaml(req *http.Request) bool {
 	return strings.Contains(req.Header.Get("Accept"), "application/yaml")
 }
 
-func parseMethod(req *http.Request) string {
+func ParseMethod(req *http.Request) string {
 	method := req.URL.Query().Get("_method")
 	if method == "" {
 		method = req.Method
@@ -153,6 +146,6 @@ func parseMethod(req *http.Request) string {
 	return method
 }
 
-func parseAction(url *url.URL) string {
+func ParseAction(url *url.URL) string {
 	return url.Query().Get("action")
 }

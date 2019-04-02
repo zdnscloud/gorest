@@ -3,22 +3,13 @@ package types
 import (
 	"context"
 	"net/http"
-	"net/url"
 )
 
 type APIContext struct {
-	Action         string
-	ID             string
-	Type           string
-	Method         string
-	Schema         *Schema
-	Schemas        *Schemas
-	Version        *APIVersion
-	Query          url.Values
-	ResponseFormat string
-	Request        *http.Request
-	Response       http.ResponseWriter
-	Parent         Object
+	Schemas  *Schemas
+	Request  *http.Request
+	Response http.ResponseWriter
+	Obj      Object
 }
 
 type apiContextKey struct{}

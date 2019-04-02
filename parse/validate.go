@@ -17,23 +17,25 @@ var (
 	}
 )
 
-func ValidateMethod(request *types.APIContext) *types.APIError {
-	if !supportedMethods[request.Method] {
-		return types.NewAPIError(types.MethodNotAllowed, fmt.Sprintf("Method %s not supported", request.Method))
+func ValidateMethod(apiContext *types.APIContext) *types.APIError {
+	method := ParseMethod(apiContext.Request)
+	if !supportedMethods[method] {
+		return types.NewAPIError(types.MethodNotAllowed, fmt.Sprintf("Method %s not supported", method))
 	}
 
-	if request.Type == "" || request.Schema == nil {
+	schema := apiContext.Obj.GetSchema()
+	if apiContext.Obj.GetType() == "" || schema == nil {
 		return types.NewAPIError(types.NotFound, "no found schema")
 	}
 
-	allowed := request.Schema.ResourceMethods
-	if request.ID == "" {
-		allowed = request.Schema.CollectionMethods
+	allowed := schema.ResourceMethods
+	if apiContext.Obj.GetID() == "" {
+		allowed = schema.CollectionMethods
 	}
 
-	if util.ContainsString(allowed, request.Method) {
+	if util.ContainsString(allowed, method) {
 		return nil
 	}
 
-	return types.NewAPIError(types.MethodNotAllowed, fmt.Sprintf("Method %s not supported", request.Method))
+	return types.NewAPIError(types.MethodNotAllowed, fmt.Sprintf("Method %s not supported", method))
 }

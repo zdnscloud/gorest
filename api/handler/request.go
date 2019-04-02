@@ -7,11 +7,12 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/zdnscloud/gorest/parse"
 	"github.com/zdnscloud/gorest/types"
 )
 
 func CreateHandler(apiContext *types.APIContext) *types.APIError {
-	handler := apiContext.Schema.Handler
+	handler := apiContext.Obj.GetSchema().Handler
 	if handler == nil {
 		return types.NewAPIError(types.NotFound, "no found schema handler")
 	}
@@ -32,7 +33,7 @@ func CreateHandler(apiContext *types.APIContext) *types.APIError {
 }
 
 func DeleteHandler(apiContext *types.APIContext) *types.APIError {
-	handler := apiContext.Schema.Handler
+	handler := apiContext.Obj.GetSchema().Handler
 	if handler == nil {
 		return types.NewAPIError(types.NotFound, "no found schema handler")
 	}
@@ -42,7 +43,7 @@ func DeleteHandler(apiContext *types.APIContext) *types.APIError {
 		return err
 	}
 
-	obj.SetID(apiContext.ID)
+	obj.SetID(apiContext.Obj.GetID())
 	if err = handler.Delete(obj); err != nil {
 		return err
 	}
@@ -52,7 +53,7 @@ func DeleteHandler(apiContext *types.APIContext) *types.APIError {
 }
 
 func UpdateHandler(apiContext *types.APIContext) *types.APIError {
-	handler := apiContext.Schema.Handler
+	handler := apiContext.Obj.GetSchema().Handler
 	if handler == nil {
 		return types.NewAPIError(types.NotFound, "no found schema handler")
 	}
@@ -67,7 +68,7 @@ func UpdateHandler(apiContext *types.APIContext) *types.APIError {
 		return err
 	}
 
-	object.SetID(apiContext.ID)
+	object.SetID(apiContext.Obj.GetID())
 	result, err := handler.Update(object)
 	if err != nil {
 		return err
@@ -79,7 +80,7 @@ func UpdateHandler(apiContext *types.APIContext) *types.APIError {
 }
 
 func ListHandler(apiContext *types.APIContext) *types.APIError {
-	handler := apiContext.Schema.Handler
+	handler := apiContext.Obj.GetSchema().Handler
 	if handler == nil {
 		return types.NewAPIError(types.NotFound, "no found schema handler")
 	}
@@ -90,7 +91,7 @@ func ListHandler(apiContext *types.APIContext) *types.APIError {
 		return err
 	}
 
-	if apiContext.ID == "" {
+	if apiContext.Obj.GetID() == "" {
 		data := handler.List(obj)
 		if data == nil || reflect.ValueOf(data).IsNil() {
 			data = make([]types.Object, 0)
@@ -98,17 +99,17 @@ func ListHandler(apiContext *types.APIContext) *types.APIError {
 
 		collection := &types.Collection{
 			Type:         "collection",
-			ResourceType: apiContext.Schema.ID,
+			ResourceType: apiContext.Obj.GetType(),
 			Data:         data,
 		}
 		addCollectionLinks(apiContext, collection)
 		result = collection
 	} else {
-		obj.SetID(apiContext.ID)
+		obj.SetID(apiContext.Obj.GetID())
 		result = handler.Get(obj)
 		if result == nil || reflect.ValueOf(result).IsNil() {
 			return types.NewAPIError(types.NotFound,
-				fmt.Sprintf("no found %v with id %v", obj.GetType(), apiContext.ID))
+				fmt.Sprintf("no found %v with id %v", obj.GetType(), apiContext.Obj.GetID()))
 		}
 		addResourceLinks(apiContext, result)
 	}
@@ -118,7 +119,7 @@ func ListHandler(apiContext *types.APIContext) *types.APIError {
 }
 
 func ActionHandler(apiContext *types.APIContext, action *types.Action) *types.APIError {
-	handler := apiContext.Schema.Handler
+	handler := apiContext.Obj.GetSchema().Handler
 	if handler == nil {
 		return types.NewAPIError(types.NotFound, "no found schema handler")
 	}
@@ -133,8 +134,8 @@ func ActionHandler(apiContext *types.APIContext, action *types.Action) *types.AP
 		return err
 	}
 
-	obj.SetID(apiContext.ID)
-	result, err := handler.Action(obj, apiContext.Action, params)
+	obj.SetID(apiContext.Obj.GetID())
+	result, err := handler.Action(obj, parse.ParseAction(apiContext.Request.URL), params)
 	if err != nil {
 		return err
 	}
@@ -144,7 +145,7 @@ func ActionHandler(apiContext *types.APIContext, action *types.Action) *types.AP
 }
 
 func getSchemaStructVal(apiContext *types.APIContext) interface{} {
-	val := apiContext.Schema.StructVal
+	val := apiContext.Obj.GetSchema().StructVal
 	valPtr := reflect.New(val.Type())
 	valPtr.Elem().Set(val)
 	return valPtr.Interface()
@@ -169,8 +170,8 @@ func decodeBody(req *http.Request, params interface{}) *types.APIError {
 
 func getObject(apiContext *types.APIContext, val interface{}) (types.Object, *types.APIError) {
 	if obj, ok := val.(types.Object); ok {
-		obj.SetType(apiContext.Schema.ID)
-		obj.SetParent(apiContext.Parent)
+		obj.SetType(apiContext.Obj.GetType())
+		obj.SetParent(apiContext.Obj.GetParent())
 		return obj, nil
 	} else {
 		return nil, types.NewAPIError(types.NotFound, fmt.Sprintf("no found resource schema"))
