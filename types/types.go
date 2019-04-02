@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path"
 	"reflect"
+	"strings"
 	"time"
 )
 
@@ -24,7 +25,6 @@ func (v *APIVersion) GetVersionURL() string {
 }
 
 type Schema struct {
-	ID                string            `json:"id,omitempty"`
 	Version           APIVersion        `json:"version"`
 	PluralName        string            `json:"pluralName,omitempty"`
 	ResourceMethods   []string          `json:"resourceMethods,omitempty"`
@@ -37,6 +37,10 @@ type Schema struct {
 	StructVal reflect.Value `json:"-"`
 	Handler   Handler       `json:"-"`
 	Parent    string        `json:"-"`
+}
+
+func (s *Schema) GetType() string {
+	return strings.ToLower(s.StructVal.Type().Name())
 }
 
 type Field struct {

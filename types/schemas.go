@@ -57,16 +57,16 @@ func (s *Schemas) AddSchema(schema Schema) *Schemas {
 }
 
 func (s *Schemas) setupDefaults(schema *Schema) {
-	if schema.ID == "" {
-		s.errors = append(s.errors, fmt.Errorf("ID is not set on schema: %v", schema))
+	if schema.GetType() == "" {
+		s.errors = append(s.errors, fmt.Errorf("get type from schema failed: %v", schema))
 		return
 	}
 	if schema.Version.Version == "" {
-		s.errors = append(s.errors, fmt.Errorf("version is not set on schema: %s", schema.ID))
+		s.errors = append(s.errors, fmt.Errorf("version is not set on schema: %s", schema.GetType()))
 		return
 	}
 	if schema.PluralName == "" {
-		schema.PluralName = util.GuessPluralName(schema.ID)
+		schema.PluralName = util.GuessPluralName(schema.GetType())
 	}
 }
 
@@ -90,7 +90,7 @@ func (s *Schemas) Schema(version *APIVersion, name string) *Schema {
 	}
 
 	for _, check := range schemas {
-		if strings.EqualFold(check.ID, name) || strings.EqualFold(check.PluralName, name) {
+		if strings.EqualFold(check.GetType(), name) || strings.EqualFold(check.PluralName, name) {
 			return check
 		}
 	}
@@ -127,7 +127,7 @@ func (s *Schemas) UrlMethods() map[string][]string {
 		}
 
 		if len(schema.ResourceMethods) != 0 {
-			urlMethods[path.Join(url, ":"+schema.ID+"_id")] = schema.ResourceMethods
+			urlMethods[path.Join(url, ":"+schema.GetType()+"_id")] = schema.ResourceMethods
 		}
 	}
 

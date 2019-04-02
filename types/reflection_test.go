@@ -78,7 +78,7 @@ func TestReflection(t *testing.T) {
 	ut.Equal(t, len(clusterChildren), 2)
 
 	schema := schemas.Schema(&version, GetResourceType(Node{}))
-	ut.Equal(t, schema.ID, GetResourceType(Node{}))
+	ut.Equal(t, schema.GetType(), GetResourceType(Node{}))
 	ut.Equal(t, schema.PluralName, "nodes")
 	ut.Equal(t, schema.Version.Group, "testing")
 	ut.Equal(t, schema.Version.Version, "v1")

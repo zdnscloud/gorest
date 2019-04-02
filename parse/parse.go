@@ -86,7 +86,7 @@ func parseVersionAndResource(schemas *types.Schemas, escapedPath string) (types.
 		if i == 0 {
 			obj = &types.Resource{
 				ID:     safeIndex(paths, i+1),
-				Type:   schema.ID,
+				Type:   schema.GetType(),
 				Schema: schema,
 			}
 			continue
@@ -94,12 +94,12 @@ func parseVersionAndResource(schemas *types.Schemas, escapedPath string) (types.
 
 		if schema.Parent != obj.Type {
 			return nil, types.NewAPIError(types.InvalidType,
-				fmt.Sprintf("schema %v parent should not be %s", schema.ID, obj.Type))
+				fmt.Sprintf("schema %v parent should not be %s", schema.GetType(), obj.Type))
 		}
 
 		obj = &types.Resource{
 			ID:     safeIndex(paths, i+1),
-			Type:   schema.ID,
+			Type:   schema.GetType(),
 			Parent: obj,
 			Schema: schema,
 		}
@@ -122,7 +122,6 @@ func ParseResponseFormat(req *http.Request) string {
 		format = strings.TrimSpace(strings.ToLower(format))
 	}
 
-	/* Format specified */
 	if allowedFormats[format] {
 		return format
 	}

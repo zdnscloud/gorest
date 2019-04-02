@@ -21,7 +21,7 @@ var (
 	ctx = &types.APIContext{
 		Schemas: schemas,
 		Obj: &types.Resource{
-			Type:   schema.ID,
+			Type:   schema.GetType(),
 			Schema: schema,
 		},
 	}

@@ -1,7 +1,6 @@
 package handler
 
 import (
-	//	"fmt"
 	"net/http"
 	"testing"
 
@@ -50,7 +49,7 @@ func TestAddResourceLink(t *testing.T) {
 		Request: req,
 		Schemas: schemas,
 		Obj: &types.Resource{
-			Type:   schema.ID,
+			Type:   schema.GetType(),
 			Schema: schema,
 		},
 	}
@@ -58,7 +57,7 @@ func TestAddResourceLink(t *testing.T) {
 	obj := &Testresourceobject{
 		types.Resource{
 			ID:   "1de5f1bb403524c280c220f3a366b538",
-			Type: schema.ID,
+			Type: schema.GetType(),
 		},
 	}
 	addResourceLinks(apiContext, obj)
@@ -90,7 +89,7 @@ func TestAddResourceLink(t *testing.T) {
 	objParent := &Testresourceobjectparent{
 		types.Resource{
 			ID:   "d6db994a406ab41c80dc6e4e31ecf890",
-			Type: schema.ID,
+			Type: schema.GetType(),
 		},
 	}
 
@@ -138,11 +137,13 @@ func TestAddCollectionLinks(t *testing.T) {
 
 	req, _ := http.NewRequest("GET", "/apis/testing/v1/testresourceobjectparents", nil)
 	req.Host = "127.0.0.1:1234"
+	schema := schemas.Schema(&version, types.GetResourceType(Testresourceobjectparent{}))
 	apiContext := &types.APIContext{
 		Request: req,
 		Schemas: schemas,
 		Obj: &types.Resource{
-			Schema: schemas.Schema(&version, types.GetResourceType(Testresourceobjectparent{})),
+			Type:   schema.GetType(),
+			Schema: schema,
 		},
 	}
 
@@ -153,13 +154,13 @@ func TestAddCollectionLinks(t *testing.T) {
 			&Testresourceobjectparent{
 				types.Resource{
 					ID:   "1de5f1bb403524c280c220f3a366b538",
-					Type: "testResourceObject",
+					Type: schema.GetType(),
 				},
 			},
 			&Testresourceobjectparent{
 				types.Resource{
 					ID:   "0ad4bcfd408086438084f774097712d5",
-					Type: "testResourceObject",
+					Type: schema.GetType(),
 				},
 			},
 		},

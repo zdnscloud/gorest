@@ -28,7 +28,7 @@ func addLinks(apiContext *types.APIContext, obj types.Object) {
 		links["collection"] = genCollectionLink(apiContext.Request, obj.GetID())
 	}
 
-	for _, childPluralName := range apiContext.Schemas.GetChildren(schema.ID) {
+	for _, childPluralName := range apiContext.Schemas.GetChildren(obj.GetType()) {
 		links[childPluralName] = genChildLink(apiContext.Request, obj.GetID(), childPluralName)
 	}
 
