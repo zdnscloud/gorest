@@ -60,7 +60,7 @@ func TestAddResourceLink(t *testing.T) {
 			Type: schema.GetType(),
 		},
 	}
-	addResourceLinks(apiContext, schema, obj)
+	addResourceLinks(apiContext, obj)
 	ut.Equal(t, len(obj.Links), 4)
 	ut.Equal(t, obj.Links["self"], expectSelfLink)
 	ut.Equal(t, obj.Links["collection"], expectCollectionLink)
@@ -70,7 +70,7 @@ func TestAddResourceLink(t *testing.T) {
 	req, _ = http.NewRequest("PUT", "/apis/testing/v1/testresourceobjects/1de5f1bb403524c280c220f3a366b538", nil)
 	req.Host = "127.0.0.1:1234"
 	apiContext.Request = req
-	addResourceLinks(apiContext, schema, obj)
+	addResourceLinks(apiContext, obj)
 	ut.Equal(t, len(obj.Links), 4)
 	ut.Equal(t, obj.Links["self"], expectSelfLink)
 	ut.Equal(t, obj.Links["collection"], expectCollectionLink)
@@ -93,7 +93,7 @@ func TestAddResourceLink(t *testing.T) {
 		},
 	}
 
-	addResourceLinks(apiContext, schema, objParent)
+	addResourceLinks(apiContext, objParent)
 	ut.Equal(t, len(objParent.Links), 5)
 	ut.Equal(t, objParent.Links["self"], expectSelfLink)
 	ut.Equal(t, objParent.Links["remove"], expectSelfLink)
@@ -118,7 +118,7 @@ func TestAddLinkFail(t *testing.T) {
 		Type: "testnoresoureobject",
 	}
 
-	addResourceLinks(apiContext, schema, obj)
+	addResourceLinks(apiContext, obj)
 	ut.Equal(t, len(obj.Links), 0)
 	ut.Equal(t, obj.Links["self"], "")
 }
@@ -172,7 +172,7 @@ func TestAddCollectionLinks(t *testing.T) {
 	expectResourceLink2 := "http://127.0.0.1:1234/apis/testing/v1/testresourceobjectparents/0ad4bcfd408086438084f774097712d5"
 	expectChildLink2 := "http://127.0.0.1:1234/apis/testing/v1/testresourceobjectparents/0ad4bcfd408086438084f774097712d5/testresourceobjects"
 
-	addCollectionLinks(apiContext, schema, collection)
+	addCollectionLinks(apiContext, collection)
 	ut.Equal(t, len(collection.Links), 1)
 	ut.Equal(t, collection.Links["self"], expectCollectionLink)
 	ut.Equal(t, len(collection.Data.([]*Testresourceobjectparent)), 2)

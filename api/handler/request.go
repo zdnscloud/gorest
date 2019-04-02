@@ -13,22 +13,20 @@ import (
 func CreateHandler(ctx *types.Context) *types.APIError {
 	handler := ctx.Object.GetSchema().Handler
 	if handler == nil {
-		return types.NewAPIError(types.NotFound, "no found schema handler")
+		return types.NewAPIError(types.NotFound, "no handler for create")
 	}
 
-	content, object, err := parseCreateBody(ctx)
+	content, err := parseCreateBody(ctx)
 	if err != nil {
 		return err
 	}
 
-	schema := ctx.Object.GetSchema()
-	ctx.Object = object
 	result, err := handler.Create(ctx, content)
 	if err != nil {
 		return err
 	}
 
-	addResourceLinks(ctx, schema, result)
+	addResourceLinks(ctx, result)
 	WriteResponse(ctx, http.StatusCreated, result)
 	return nil
 }
@@ -36,17 +34,11 @@ func CreateHandler(ctx *types.Context) *types.APIError {
 func DeleteHandler(ctx *types.Context) *types.APIError {
 	handler := ctx.Object.GetSchema().Handler
 	if handler == nil {
-		return types.NewAPIError(types.NotFound, "no found schema handler")
+		return types.NewAPIError(types.NotFound, "no handler for delete")
 	}
 
-	obj, err := getObject(ctx, getSchemaStructVal(ctx))
-	if err != nil {
-		return err
-	}
-
-	obj.SetID(ctx.Object.GetID())
-	ctx.Object = obj
-	if err = handler.Delete(ctx); err != nil {
+	setRuntimeObject(ctx, createRuntimeObject(ctx))
+	if err := handler.Delete(ctx); err != nil {
 		return err
 	}
 
@@ -57,28 +49,21 @@ func DeleteHandler(ctx *types.Context) *types.APIError {
 func UpdateHandler(ctx *types.Context) *types.APIError {
 	handler := ctx.Object.GetSchema().Handler
 	if handler == nil {
-		return types.NewAPIError(types.NotFound, "no found schema handler")
+		return types.NewAPIError(types.NotFound, "no handler for update")
 	}
 
-	val := getSchemaStructVal(ctx)
+	val := createRuntimeObject(ctx)
 	if err := decodeBody(ctx.Request, val); err != nil {
 		return err
 	}
 
-	object, err := getObject(ctx, val)
-	if err != nil {
-		return err
-	}
-
-	schema := ctx.Object.GetSchema()
-	object.SetID(ctx.Object.GetID())
-	ctx.Object = object
+	setRuntimeObject(ctx, val)
 	result, err := handler.Update(ctx)
 	if err != nil {
 		return err
 	}
 
-	addResourceLinks(ctx, schema, result)
+	addResourceLinks(ctx, result)
 	WriteResponse(ctx, http.StatusOK, result)
 	return nil
 }
@@ -86,18 +71,13 @@ func UpdateHandler(ctx *types.Context) *types.APIError {
 func ListHandler(ctx *types.Context) *types.APIError {
 	handler := ctx.Object.GetSchema().Handler
 	if handler == nil {
-		return types.NewAPIError(types.NotFound, "no found schema handler")
+		return types.NewAPIError(types.NotFound, "no found for list")
 	}
+
+	setRuntimeObject(ctx, createRuntimeObject(ctx))
 
 	var result interface{}
-	obj, err := getObject(ctx, getSchemaStructVal(ctx))
-	if err != nil {
-		return err
-	}
-
-	schema := ctx.Object.GetSchema()
 	if ctx.Object.GetID() == "" {
-		ctx.Object = obj
 		data := handler.List(ctx)
 		if data == nil || reflect.ValueOf(data).IsNil() {
 			data = make([]types.Object, 0)
@@ -108,17 +88,15 @@ func ListHandler(ctx *types.Context) *types.APIError {
 			ResourceType: ctx.Object.GetType(),
 			Data:         data,
 		}
-		addCollectionLinks(ctx, schema, collection)
+		addCollectionLinks(ctx, collection)
 		result = collection
 	} else {
-		obj.SetID(ctx.Object.GetID())
-		ctx.Object = obj
 		result = handler.Get(ctx)
 		if result == nil || reflect.ValueOf(result).IsNil() {
 			return types.NewAPIError(types.NotFound,
-				fmt.Sprintf("no found %v with id %v", obj.GetType(), ctx.Object.GetID()))
+				fmt.Sprintf("%s resource with id %s doesn't exist", ctx.Object.GetType(), ctx.Object.GetID()))
 		}
-		addResourceLinks(ctx, schema, result)
+		addResourceLinks(ctx, result)
 	}
 
 	WriteResponse(ctx, http.StatusOK, result)
@@ -128,7 +106,7 @@ func ListHandler(ctx *types.Context) *types.APIError {
 func ActionHandler(ctx *types.Context) *types.APIError {
 	handler := ctx.Object.GetSchema().Handler
 	if handler == nil {
-		return types.NewAPIError(types.NotFound, "no found schema handler")
+		return types.NewAPIError(types.NotFound, "no handler for action")
 	}
 
 	var params map[string]interface{}
@@ -136,13 +114,7 @@ func ActionHandler(ctx *types.Context) *types.APIError {
 		return err
 	}
 
-	obj, err := getObject(ctx, getSchemaStructVal(ctx))
-	if err != nil {
-		return err
-	}
-
-	obj.SetID(ctx.Object.GetID())
-	ctx.Object = obj
+	setRuntimeObject(ctx, createRuntimeObject(ctx))
 	result, err := handler.Action(ctx, ctx.Action.Name, params)
 	if err != nil {
 		return err
@@ -152,7 +124,7 @@ func ActionHandler(ctx *types.Context) *types.APIError {
 	return nil
 }
 
-func getSchemaStructVal(ctx *types.Context) interface{} {
+func createRuntimeObject(ctx *types.Context) interface{} {
 	val := ctx.Object.GetSchema().StructVal
 	valPtr := reflect.New(val.Type())
 	valPtr.Elem().Set(val)
@@ -176,17 +148,17 @@ func decodeBody(req *http.Request, params interface{}) *types.APIError {
 	return nil
 }
 
-func getObject(ctx *types.Context, val interface{}) (types.Object, *types.APIError) {
-	if obj, ok := val.(types.Object); ok {
-		obj.SetType(ctx.Object.GetType())
-		obj.SetParent(ctx.Object.GetParent())
-		return obj, nil
-	} else {
-		return nil, types.NewAPIError(types.NotFound, fmt.Sprintf("no found resource schema"))
-	}
+func setRuntimeObject(ctx *types.Context, val interface{}) {
+	objFromUrl := ctx.Object
+	obj := val.(types.Object)
+	obj.SetType(objFromUrl.GetType())
+	obj.SetParent(objFromUrl.GetParent())
+	obj.SetSchema(objFromUrl.GetSchema())
+	obj.SetID(objFromUrl.GetID())
+	ctx.Object = obj
 }
 
-func parseCreateBody(ctx *types.Context) ([]byte, types.Object, *types.APIError) {
+func parseCreateBody(ctx *types.Context) ([]byte, *types.APIError) {
 	var params struct {
 		Yaml string `json:"yaml_"`
 	}
@@ -194,25 +166,21 @@ func parseCreateBody(ctx *types.Context) ([]byte, types.Object, *types.APIError)
 	reqBody, err := ioutil.ReadAll(ctx.Request.Body)
 	defer ctx.Request.Body.Close()
 	if err != nil {
-		return nil, nil, types.NewAPIError(types.InvalidBodyContent,
+		return nil, types.NewAPIError(types.InvalidBodyContent,
 			fmt.Sprintf("Failed to read request body: %v", err.Error()))
 	}
 
 	if err := json.Unmarshal(reqBody, &params); err != nil {
-		return nil, nil, types.NewAPIError(types.InvalidBodyContent,
+		return nil, types.NewAPIError(types.InvalidBodyContent,
 			fmt.Sprintf("Failed to parse request body: %v", err.Error()))
 	}
 
-	val := getSchemaStructVal(ctx)
+	val := createRuntimeObject(ctx)
 	if err := json.Unmarshal(reqBody, val); err != nil {
-		return nil, nil, types.NewAPIError(types.InvalidBodyContent,
+		return nil, types.NewAPIError(types.InvalidBodyContent,
 			fmt.Sprintf("Failed to parse request body: %v", err.Error()))
 	}
 
-	obj, apiErr := getObject(ctx, val)
-	if apiErr != nil {
-		return nil, nil, apiErr
-	}
-
-	return []byte(params.Yaml), obj, CheckObjectFields(ctx, obj)
+	setRuntimeObject(ctx, val)
+	return []byte(params.Yaml), CheckObjectFields(ctx)
 }

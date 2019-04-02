@@ -47,8 +47,8 @@ func TestValidate(t *testing.T) {
 	}
 
 	var noerr *types.APIError
-	_, obj, err := parseCreateBody(ctx)
+	_, err := parseCreateBody(ctx)
 	ut.Equal(t, err, noerr)
-	err = CheckObjectFields(ctx, obj)
+	err = CheckObjectFields(ctx)
 	ut.Equal(t, err, noerr)
 }

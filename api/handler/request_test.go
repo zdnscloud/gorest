@@ -18,16 +18,6 @@ var (
 		schema.ResourceMethods = []string{"GET", "POST", "DELETE", "PUT"}
 		schema.Handler = handler
 	})
-
-	schema = schemas.Schema(&version, types.GetResourceType(Foo{}))
-
-	ctx = &types.Context{
-		Schemas: schemas,
-		Object: &types.Resource{
-			Type:   schema.GetType(),
-			Schema: schema,
-		},
-	}
 )
 
 type Foo struct {
@@ -126,7 +116,7 @@ func TestGetOne(t *testing.T) {
 }
 
 func TestGetNonExists(t *testing.T) {
-	expectResult := "{\"code\":\"NotFound\",\"status\":404,\"type\":\"error\",\"message\":\"no found foo with id 23456\"}"
+	expectResult := "{\"code\":\"NotFound\",\"status\":404,\"type\":\"error\",\"message\":\"foo resource with id 23456 doesn't exist\"}"
 	req, _ := http.NewRequest("GET", "/apis/testing/v1/foos/23456", nil)
 	req.Host = "127.0.0.1:1234"
 	w := httptest.NewRecorder()

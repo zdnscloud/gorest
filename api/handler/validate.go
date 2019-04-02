@@ -8,8 +8,8 @@ import (
 	"github.com/zdnscloud/gorest/types"
 )
 
-func CheckObjectFields(ctx *types.Context, obj types.Object) *types.APIError {
-	structVal, ok := reflector.GetStructFromPointer(obj)
+func CheckObjectFields(ctx *types.Context) *types.APIError {
+	structVal, ok := reflector.GetStructFromPointer(ctx.Object)
 	if ok == false {
 		return types.NewAPIError(types.ServerError, "get object structure but return "+structVal.Kind().String())
 	}

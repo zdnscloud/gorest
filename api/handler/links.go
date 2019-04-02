@@ -34,13 +34,13 @@ func addLinks(ctx *types.Context, schema *types.Schema, obj types.Object) {
 	obj.SetLinks(links)
 }
 
-func addResourceLinks(ctx *types.Context, schema *types.Schema, obj interface{}) {
+func addResourceLinks(ctx *types.Context, obj interface{}) {
 	if object, ok := obj.(types.Object); ok {
-		addLinks(ctx, schema, object)
+		addLinks(ctx, ctx.Object.GetSchema(), object)
 	}
 }
 
-func addCollectionLinks(ctx *types.Context, schema *types.Schema, collection *types.Collection) {
+func addCollectionLinks(ctx *types.Context, collection *types.Collection) {
 	collection.Links = map[string]string{
 		"self": getRequestURL(ctx.Request),
 	}
@@ -48,7 +48,7 @@ func addCollectionLinks(ctx *types.Context, schema *types.Schema, collection *ty
 	sliceData := reflect.ValueOf(collection.Data)
 	if sliceData.Kind() == reflect.Slice {
 		for i := 0; i < sliceData.Len(); i++ {
-			addResourceLinks(ctx, schema, sliceData.Index(i).Interface())
+			addResourceLinks(ctx, sliceData.Index(i).Interface())
 		}
 	}
 }
