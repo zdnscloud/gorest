@@ -158,6 +158,6 @@ func (h *Handler) Get(ctx *types.Context) interface{} {
 	return nil
 }
 
-func (h *Handler) Action(ctx *types.Context, action string, params map[string]interface{}) (interface{}, *types.APIError) {
-	return params, nil
+func (h *Handler) Action(ctx *types.Context) (interface{}, *types.APIError) {
+	return nil, nil
 }

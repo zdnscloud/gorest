@@ -109,14 +109,14 @@ func ActionHandler(ctx *types.Context) *types.APIError {
 		return types.NewAPIError(types.NotFound, "no handler for action")
 	}
 
-	var params map[string]interface{}
-	if err := decodeBody(ctx.Request, &params); err != nil {
+	val := createRuntimeActionInput(ctx)
+	if err := decodeBody(ctx.Request, val); err != nil {
 		return err
 	}
 
 	setRuntimeObject(ctx, createRuntimeObject(ctx))
-	setRuntimeActionInput(ctx)
-	result, err := handler.Action(ctx, ctx.Action.Name, params)
+	setRuntimeActionInput(ctx, val)
+	result, err := handler.Action(ctx)
 	if err != nil {
 		return err
 	}
@@ -125,11 +125,15 @@ func ActionHandler(ctx *types.Context) *types.APIError {
 	return nil
 }
 
-func setRuntimeActionInput(ctx *types.Context) {
+func createRuntimeActionInput(ctx *types.Context) interface{} {
 	val := reflect.ValueOf(ctx.Action.Input)
 	valPtr := reflect.New(val.Type())
 	valPtr.Elem().Set(val)
-	ctx.Action.Input = valPtr.Interface()
+	return valPtr.Interface()
+}
+
+func setRuntimeActionInput(ctx *types.Context, val interface{}) {
+	ctx.Action.Input = val
 }
 
 func createRuntimeObject(ctx *types.Context) interface{} {

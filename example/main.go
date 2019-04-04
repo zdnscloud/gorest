@@ -144,7 +144,7 @@ func (h *Handler) Get(ctx *types.Context) interface{} {
 	return h.objects[ctx.Object.GetID()]
 }
 
-func (h *Handler) Action(ctx *types.Context, action string, params map[string]interface{}) (interface{}, *types.APIError) {
+func (h *Handler) Action(ctx *types.Context) (interface{}, *types.APIError) {
 	if err := h.hasObject(ctx.Object); err != nil {
 		return nil, err
 	}
@@ -154,20 +154,20 @@ func (h *Handler) Action(ctx *types.Context, action string, params map[string]in
 		return nil, types.NewAPIError(types.InvalidFormat, "action input type invalid")
 	}
 
-	switch action {
+	switch ctx.Action.Name {
 	case "encrypt":
-		return input.Encrypt(params)
+		return input.Encrypt(ctx)
 	}
 
-	return params, nil
+	return ctx.Object, nil
 }
 
 type Input struct {
-	Data []byte `json:"data,omitempty"`
+	Data string `json:"data,omitempty"`
 }
 
-func (i *Input) Encrypt(params map[string]interface{}) (interface{}, *types.APIError) {
-	return &Input{Data: []byte("testaction")}, nil
+func (i *Input) Encrypt(ctx *types.Context) (interface{}, *types.APIError) {
+	return i.Data, nil
 }
 
 func main() {
