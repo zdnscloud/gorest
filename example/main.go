@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -156,18 +157,14 @@ func (h *Handler) Action(ctx *types.Context) (interface{}, *types.APIError) {
 
 	switch ctx.Action.Name {
 	case "encrypt":
-		return input.Encrypt(ctx)
+		return base64.StdEncoding.EncodeToString([]byte(input.Data)), nil
 	}
 
-	return ctx.Object, nil
+	return nil, types.NewAPIError(types.NotFound, "not found action "+ctx.Action.Name)
 }
 
 type Input struct {
 	Data string `json:"data,omitempty"`
-}
-
-func (i *Input) Encrypt(ctx *types.Context) (interface{}, *types.APIError) {
-	return i.Data, nil
 }
 
 func main() {

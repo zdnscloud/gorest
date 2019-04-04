@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -17,8 +18,16 @@ var (
 		schema.CollectionMethods = []string{"POST", "GET"}
 		schema.ResourceMethods = []string{"GET", "POST", "DELETE", "PUT"}
 		schema.Handler = handler
+		schema.ResourceActions = append(schema.ResourceActions, types.Action{
+			Name:  "encrypt",
+			Input: TestInput{},
+		})
 	})
 )
+
+type TestInput struct {
+	Data string `json:"data"`
+}
 
 type Foo struct {
 	types.Resource
@@ -32,17 +41,21 @@ type testServer struct {
 
 func (t *testServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var err *types.APIError
-	switch req.Method {
-	case http.MethodPost:
-		err = CreateHandler(t.ctx)
-	case http.MethodPut:
-		err = UpdateHandler(t.ctx)
-	case http.MethodDelete:
-		err = DeleteHandler(t.ctx)
-	case http.MethodGet:
-		err = ListHandler(t.ctx)
-	default:
-		panic("unspport method " + req.Method)
+	if t.ctx.Action != nil {
+		err = ActionHandler(t.ctx)
+	} else {
+		switch req.Method {
+		case http.MethodPost:
+			err = CreateHandler(t.ctx)
+		case http.MethodPut:
+			err = UpdateHandler(t.ctx)
+		case http.MethodDelete:
+			err = DeleteHandler(t.ctx)
+		case http.MethodGet:
+			err = ListHandler(t.ctx)
+		default:
+			panic("unspport method " + req.Method)
+		}
 	}
 
 	if err != nil {
@@ -128,6 +141,19 @@ func TestGetNonExists(t *testing.T) {
 	ut.Equal(t, w.Body.String(), expectResult)
 }
 
+func TestActionHandler(t *testing.T) {
+	req, _ := http.NewRequest("POST", "/apis/testing/v1/foos/123?action=encrypt", bytes.NewBufferString("{\"data\":\"testdata\"}"))
+	req.Host = "127.0.0.1:1234"
+	w := httptest.NewRecorder()
+	ctx, _ := parse.Parse(w, req, schemas)
+	server := &testServer{}
+	server.ctx = ctx
+	server.ServeHTTP(w, req)
+	ut.Equal(t, w.Code, 202)
+	expectResult := "\"" + base64.StdEncoding.EncodeToString([]byte("testdata")) + "\""
+	ut.Equal(t, w.Body.String(), expectResult)
+}
+
 type Handler struct{}
 
 func (h *Handler) Create(ctx *types.Context, content []byte) (interface{}, *types.APIError) {
@@ -159,5 +185,15 @@ func (h *Handler) Get(ctx *types.Context) interface{} {
 }
 
 func (h *Handler) Action(ctx *types.Context) (interface{}, *types.APIError) {
-	return nil, nil
+	input, ok := ctx.Action.Input.(*TestInput)
+	if ok == false {
+		return nil, types.NewAPIError(types.InvalidFormat, "action input type invalid")
+	}
+
+	switch ctx.Action.Name {
+	case "encrypt":
+		return base64.StdEncoding.EncodeToString([]byte(input.Data)), nil
+	}
+
+	return nil, types.NewAPIError(types.NotFound, "not found action "+ctx.Action.Name)
 }
