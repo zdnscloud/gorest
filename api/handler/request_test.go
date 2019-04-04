@@ -19,7 +19,10 @@ var (
 		schema.ResourceMethods = []string{"GET", "POST", "DELETE", "PUT"}
 		schema.Handler = handler
 		schema.ResourceActions = append(schema.ResourceActions, types.Action{
-			Name:  "encrypt",
+			Name:  "encode",
+			Input: TestInput{},
+		}, types.Action{
+			Name:  "decode",
 			Input: TestInput{},
 		})
 	})
@@ -142,15 +145,27 @@ func TestGetNonExists(t *testing.T) {
 }
 
 func TestActionHandler(t *testing.T) {
-	req, _ := http.NewRequest("POST", "/apis/testing/v1/foos/123?action=encrypt", bytes.NewBufferString("{\"data\":\"testdata\"}"))
-	req.Host = "127.0.0.1:1234"
+	encodeReq, _ := http.NewRequest("POST", "/apis/testing/v1/foos/123?action=encode", bytes.NewBufferString("{\"data\":\"testdata\"}"))
+	encodeReq.Host = "127.0.0.1:1234"
 	w := httptest.NewRecorder()
-	ctx, _ := parse.Parse(w, req, schemas)
+	ctx, _ := parse.Parse(w, encodeReq, schemas)
 	server := &testServer{}
 	server.ctx = ctx
-	server.ServeHTTP(w, req)
+	server.ServeHTTP(w, encodeReq)
 	ut.Equal(t, w.Code, 202)
-	expectResult := "\"" + base64.StdEncoding.EncodeToString([]byte("testdata")) + "\""
+	base64str := base64.StdEncoding.EncodeToString([]byte("testdata"))
+	expectResult := "\"" + base64str + "\""
+	ut.Equal(t, w.Body.String(), expectResult)
+
+	decodeReq, _ := http.NewRequest("POST", "/apis/testing/v1/foos/123?action=decode", bytes.NewBufferString(fmt.Sprintf("{\"data\":\"%s\"}", base64str)))
+	decodeReq.Host = "127.0.0.1:1234"
+	w = httptest.NewRecorder()
+	ctx, _ = parse.Parse(w, decodeReq, schemas)
+	server = &testServer{}
+	server.ctx = ctx
+	server.ServeHTTP(w, decodeReq)
+	ut.Equal(t, w.Code, 202)
+	expectResult = "\"testdata\""
 	ut.Equal(t, w.Body.String(), expectResult)
 }
 
@@ -190,10 +205,19 @@ func (h *Handler) Action(ctx *types.Context) (interface{}, *types.APIError) {
 		return nil, types.NewAPIError(types.InvalidFormat, "action input type invalid")
 	}
 
+	var err *types.APIError
 	switch ctx.Action.Name {
-	case "encrypt":
+	case "encode":
 		return base64.StdEncoding.EncodeToString([]byte(input.Data)), nil
+	case "decode":
+		if data, e := base64.StdEncoding.DecodeString(input.Data); e != nil {
+			err = types.NewAPIError(types.InvalidFormat, "decode failed: "+e.Error())
+		} else {
+			return string(data), nil
+		}
+	default:
+		err = types.NewAPIError(types.NotFound, "not found action "+ctx.Action.Name)
 	}
 
-	return nil, types.NewAPIError(types.NotFound, "not found action "+ctx.Action.Name)
+	return nil, err
 }

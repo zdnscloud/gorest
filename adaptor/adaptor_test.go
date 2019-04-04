@@ -36,7 +36,7 @@ func TestRegisterHandler(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 	ts := &testStruct{}
-	RegisterHandler(router, gin.WrapH(ts), ts.UrlMethods())
+	RegisterHandler(router, ts, ts.UrlMethods())
 
 	w := doRequest(router, "POST", "/path")
 	ut.Equal(t, w.Code, 201)

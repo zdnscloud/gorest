@@ -146,7 +146,8 @@ func (h *Handler) Get(ctx *types.Context) interface{} {
 }
 
 func (h *Handler) Action(ctx *types.Context) (interface{}, *types.APIError) {
-	if err := h.hasObject(ctx.Object); err != nil {
+	err := h.hasObject(ctx.Object)
+	if err != nil {
 		return nil, err
 	}
 
@@ -156,11 +157,19 @@ func (h *Handler) Action(ctx *types.Context) (interface{}, *types.APIError) {
 	}
 
 	switch ctx.Action.Name {
-	case "encrypt":
+	case "encode":
 		return base64.StdEncoding.EncodeToString([]byte(input.Data)), nil
+	case "decode":
+		if data, e := base64.StdEncoding.DecodeString(input.Data); e != nil {
+			err = types.NewAPIError(types.InvalidFormat, "decode failed: "+e.Error())
+		} else {
+			return string(data), nil
+		}
+	default:
+		err = types.NewAPIError(types.NotFound, "not found action "+ctx.Action.Name)
 	}
 
-	return nil, types.NewAPIError(types.NotFound, "not found action "+ctx.Action.Name)
+	return nil, err
 }
 
 type Input struct {
@@ -170,7 +179,7 @@ type Input struct {
 func main() {
 	router := gin.Default()
 	apiServer := getApiServer()
-	adaptor.RegisterHandler(router, gin.WrapH(apiServer), apiServer.Schemas.UrlMethods())
+	adaptor.RegisterHandler(router, apiServer, apiServer.Schemas.UrlMethods())
 	router.Run("0.0.0.0:1234")
 }
 
@@ -183,7 +192,10 @@ func getApiServer() *api.Server {
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "PUT", "DELETE", "POST"}
 		schema.ResourceActions = append(schema.ResourceActions, types.Action{
-			Name:  "encrypt",
+			Name:  "encode",
+			Input: Input{},
+		}, types.Action{
+			Name:  "decode",
 			Input: Input{},
 		})
 	})
@@ -193,12 +205,11 @@ func getApiServer() *api.Server {
 		schema.Handler = handler
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "PUT", "DELETE", "POST"}
-		schema.CollectionActions = append(schema.CollectionActions, types.Action{
-			Name:  "decrypt",
-			Input: Input{},
-		})
 		schema.ResourceActions = append(schema.ResourceActions, types.Action{
-			Name:  "encrypt",
+			Name:  "encode",
+			Input: Input{},
+		}, types.Action{
+			Name:  "decode",
 			Input: Input{},
 		})
 	})
