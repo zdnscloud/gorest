@@ -205,13 +205,6 @@ func getApiServer() *api.Server {
 		schema.Handler = handler
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "PUT", "DELETE", "POST"}
-		schema.ResourceActions = append(schema.ResourceActions, types.Action{
-			Name:  "encode",
-			Input: Input{},
-		}, types.Action{
-			Name:  "decode",
-			Input: Input{},
-		})
 	})
 
 	if err := server.AddSchemas(schemas); err != nil {
