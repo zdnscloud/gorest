@@ -115,6 +115,7 @@ func ActionHandler(ctx *types.Context) *types.APIError {
 	}
 
 	setRuntimeObject(ctx, createRuntimeObject(ctx))
+	setRuntimeActionInput(ctx)
 	result, err := handler.Action(ctx, ctx.Action.Name, params)
 	if err != nil {
 		return err
@@ -122,6 +123,13 @@ func ActionHandler(ctx *types.Context) *types.APIError {
 
 	WriteResponse(ctx, http.StatusAccepted, result)
 	return nil
+}
+
+func setRuntimeActionInput(ctx *types.Context) {
+	val := reflect.ValueOf(ctx.Action.Input)
+	valPtr := reflect.New(val.Type())
+	valPtr.Elem().Set(val)
+	ctx.Action.Input = valPtr.Interface()
 }
 
 func createRuntimeObject(ctx *types.Context) interface{} {

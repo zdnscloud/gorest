@@ -149,7 +149,25 @@ func (h *Handler) Action(ctx *types.Context, action string, params map[string]in
 		return nil, err
 	}
 
+	input, ok := ctx.Action.Input.(*Input)
+	if ok == false {
+		return nil, types.NewAPIError(types.InvalidFormat, "action input type invalid")
+	}
+
+	switch action {
+	case "encrypt":
+		return input.Encrypt(params)
+	}
+
 	return params, nil
+}
+
+type Input struct {
+	Data []byte `json:"data,omitempty"`
+}
+
+func (i *Input) Encrypt(params map[string]interface{}) (interface{}, *types.APIError) {
+	return &Input{Data: []byte("testaction")}, nil
 }
 
 func main() {
@@ -167,6 +185,10 @@ func getApiServer() *api.Server {
 		schema.Handler = handler
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "PUT", "DELETE", "POST"}
+		schema.ResourceActions = append(schema.ResourceActions, types.Action{
+			Name:  "encrypt",
+			Input: Input{},
+		})
 	})
 
 	schemas.MustImportAndCustomize(&version, Node{}, handler, func(schema *types.Schema, handler types.Handler) {
@@ -174,23 +196,20 @@ func getApiServer() *api.Server {
 		schema.Handler = handler
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "PUT", "DELETE", "POST"}
-		schema.CollectionActions = map[string]types.Action{
-			"decrypt": types.Action{
-				Name:   "decrypt",
-				Input:  "cryptInput",
-				Output: "file",
-			}}
-		schema.ResourceActions = map[string]types.Action{
-			"encrypt": types.Action{
-				Name:   "encrypt",
-				Input:  "cryptInput",
-				Output: "file",
-			}}
+		schema.CollectionActions = append(schema.CollectionActions, types.Action{
+			Name:  "decrypt",
+			Input: Input{},
+		})
+		schema.ResourceActions = append(schema.ResourceActions, types.Action{
+			Name:  "encrypt",
+			Input: Input{},
+		})
 	})
 
 	if err := server.AddSchemas(schemas); err != nil {
 		panic(err.Error())
 	}
 
+	server.Use(api.RestHandler)
 	return server
 }
