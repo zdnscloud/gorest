@@ -11,9 +11,9 @@ import (
 
 type Deployment struct {
 	types.Resource
-	Name       string      `json:"name"singlecloud:"required=true"`
-	Replicas   int         `json:"replicas"singlecloud:"required=true"`
-	Containers []Container `json:"containers"singlecloud:"required=true"`
+	Name       string       `json:"name"singlecloud:"required=true"`
+	Replicas   int          `json:"replicas"singlecloud:"required=true"`
+	Containers []*Container `json:"containers"singlecloud:"required=true"`
 }
 
 type Container struct {
