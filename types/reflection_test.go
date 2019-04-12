@@ -28,7 +28,8 @@ type NameSpace struct {
 
 type Pod struct {
 	Resource
-	Name string
+	Name           string
+	ContainerCount uint64
 }
 
 type Container struct {
