@@ -152,7 +152,7 @@ func TestActionHandler(t *testing.T) {
 	server := &testServer{}
 	server.ctx = ctx
 	server.ServeHTTP(w, encodeReq)
-	ut.Equal(t, w.Code, 202)
+	ut.Equal(t, w.Code, 200)
 	base64str := base64.StdEncoding.EncodeToString([]byte("testdata"))
 	expectResult := "\"" + base64str + "\""
 	ut.Equal(t, w.Body.String(), expectResult)
@@ -164,7 +164,7 @@ func TestActionHandler(t *testing.T) {
 	server = &testServer{}
 	server.ctx = ctx
 	server.ServeHTTP(w, decodeReq)
-	ut.Equal(t, w.Code, 202)
+	ut.Equal(t, w.Code, 200)
 	expectResult = "\"testdata\""
 	ut.Equal(t, w.Body.String(), expectResult)
 }
