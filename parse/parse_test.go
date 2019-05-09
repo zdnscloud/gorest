@@ -45,31 +45,31 @@ func TestParse(t *testing.T) {
 		schema.ResourceMethods = []string{"GET"}
 	})
 	schemas.MustImportAndCustomize(&version, Node{}, nil, func(schema *types.Schema, handler types.Handler) {
-		schema.Parent = types.GetResourceType(Cluster{})
+		schema.Parents = []string{types.GetResourceType(Cluster{})}
 		schema.CollectionMethods = []string{"GET"}
 		schema.ResourceMethods = []string{"GET"}
 	})
 
 	schemas.MustImportAndCustomize(&version, Namespace{}, nil, func(schema *types.Schema, handler types.Handler) {
-		schema.Parent = types.GetResourceType(Cluster{})
+		schema.Parents = []string{types.GetResourceType(Cluster{})}
 		schema.CollectionMethods = []string{"GET"}
 		schema.ResourceMethods = []string{"GET"}
 	})
 
 	schemas.MustImportAndCustomize(&version, Deployment{}, nil, func(schema *types.Schema, handler types.Handler) {
-		schema.Parent = types.GetResourceType(Namespace{})
+		schema.Parents = []string{types.GetResourceType(Namespace{})}
 		schema.CollectionMethods = []string{"GET"}
 		schema.ResourceMethods = []string{"GET"}
 	})
 
 	schemas.MustImportAndCustomize(&version, Pod{}, nil, func(schema *types.Schema, handler types.Handler) {
-		schema.Parent = types.GetResourceType(Deployment{})
+		schema.Parents = []string{types.GetResourceType(Deployment{})}
 		schema.CollectionMethods = []string{"GET"}
 		schema.ResourceMethods = []string{"GET"}
 	})
 
 	schemas.MustImportAndCustomize(&version, Container{}, nil, func(schema *types.Schema, handler types.Handler) {
-		schema.Parent = types.GetResourceType(Pod{})
+		schema.Parents = []string{types.GetResourceType(Pod{})}
 		schema.CollectionMethods = []string{"GET"}
 		schema.ResourceMethods = []string{"GET"}
 	})
@@ -80,7 +80,7 @@ func TestParse(t *testing.T) {
 	ut.Equal(t, err, noErr)
 	ut.Equal(t, ctx.Object.GetType(), "node")
 	ut.Equal(t, ctx.Object.GetID(), "345543")
-	ut.Equal(t, ctx.Object.GetSchema().Parent, "cluster")
+	ut.Equal(t, ctx.Object.GetSchema().Parents, []string{"cluster"})
 	ut.Equal(t, ctx.Object.GetParent().GetID(), "123321")
 	ut.Equal(t, ctx.Object.GetSchema().Version.Group, "testing")
 	ut.Equal(t, ctx.Object.GetSchema().Version.Version, "v1")
@@ -90,7 +90,7 @@ func TestParse(t *testing.T) {
 	ut.Equal(t, err, noErr)
 	ut.Equal(t, ctx.Object.GetType(), "container")
 	ut.Equal(t, ctx.Object.GetID(), "containers123")
-	ut.Equal(t, ctx.Object.GetSchema().Parent, "pod")
+	ut.Equal(t, ctx.Object.GetSchema().Parents, []string{"pod"})
 	ut.Equal(t, ctx.Object.GetParent().GetID(), "pods123")
 	ut.Equal(t, ctx.Object.GetParent().GetType(), "pod")
 	ut.Equal(t, ctx.Object.GetSchema().Version.Group, "testing")
@@ -106,7 +106,7 @@ func TestParse(t *testing.T) {
 	ut.Equal(t, err, noErr)
 	ut.Equal(t, ctx.Object.GetType(), "cluster")
 	ut.Equal(t, ctx.Object.GetID(), "123321")
-	ut.Equal(t, ctx.Object.GetSchema().Parent, "")
+	ut.Equal(t, len(ctx.Object.GetSchema().Parents), 0)
 	ut.Equal(t, ctx.Object.GetSchema().Version.Group, "testing")
 	ut.Equal(t, ctx.Object.GetSchema().Version.Version, "v1")
 

@@ -39,7 +39,7 @@ func TestAddResourceLink(t *testing.T) {
 	})
 
 	schemas.MustImportAndCustomize(&version, Testresourceobject{}, nil, func(schema *types.Schema, handler types.Handler) {
-		schema.Parent = types.GetResourceType(Testresourceobjectparent{})
+		schema.Parents = []string{types.GetResourceType(Testresourceobjectparent{})}
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
 	})
@@ -131,7 +131,7 @@ func TestAddCollectionLinks(t *testing.T) {
 	})
 
 	schemas.MustImportAndCustomize(&version, Testresourceobject{}, nil, func(schema *types.Schema, handler types.Handler) {
-		schema.Parent = types.GetResourceType(Testresourceobjectparent{})
+		schema.Parents = []string{types.GetResourceType(Testresourceobjectparent{})}
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
 	})

@@ -26,18 +26,22 @@ type NameSpace struct {
 	Name string
 }
 
-type Pod struct {
-	Resource
-	Name           string
-	ContainerCount uint64
-}
-
-type Container struct {
+type Deployment struct {
 	Resource
 	Name string
 }
 
-type ConfigMap struct {
+type DaemonSet struct {
+	Resource
+	Name string
+}
+
+type StatefulSet struct {
+	Resource
+	Name string
+}
+
+type Pod struct {
 	Resource
 	Name string
 }
@@ -50,27 +54,35 @@ func TestReflection(t *testing.T) {
 	})
 
 	schemas.MustImportAndCustomize(&version, Node{}, nil, func(schema *Schema, handler Handler) {
-		schema.Parent = GetResourceType(Cluster{})
+		schema.Parents = []string{GetResourceType(Cluster{})}
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
 	})
 	schemas.MustImportAndCustomize(&version, NameSpace{}, nil, func(schema *Schema, handler Handler) {
-		schema.Parent = GetResourceType(Cluster{})
+		schema.Parents = []string{GetResourceType(Cluster{})}
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
 	})
 	schemas.MustImportAndCustomize(&version, Pod{}, nil, func(schema *Schema, handler Handler) {
-		schema.Parent = GetResourceType(NameSpace{})
+		schema.Parents = []string{GetResourceType(Deployment{}), GetResourceType(DaemonSet{}), GetResourceType(StatefulSet{})}
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
 	})
-	schemas.MustImportAndCustomize(&version, Container{}, nil, func(schema *Schema, handler Handler) {
-		schema.Parent = GetResourceType(Pod{})
+
+	schemas.MustImportAndCustomize(&version, Deployment{}, nil, func(schema *Schema, handler Handler) {
+		schema.Parents = []string{GetResourceType(NameSpace{})}
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
 	})
-	schemas.MustImportAndCustomize(&version, ConfigMap{}, nil, func(schema *Schema, handler Handler) {
-		schema.Parent = GetResourceType(NameSpace{})
+
+	schemas.MustImportAndCustomize(&version, StatefulSet{}, nil, func(schema *Schema, handler Handler) {
+		schema.Parents = []string{GetResourceType(NameSpace{})}
+		schema.CollectionMethods = []string{"GET", "POST"}
+		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
+	})
+
+	schemas.MustImportAndCustomize(&version, DaemonSet{}, nil, func(schema *Schema, handler Handler) {
+		schema.Parents = []string{GetResourceType(NameSpace{})}
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
 	})
@@ -83,7 +95,7 @@ func TestReflection(t *testing.T) {
 	ut.Equal(t, schema.PluralName, "nodes")
 	ut.Equal(t, schema.Version.Group, "testing")
 	ut.Equal(t, schema.Version.Version, "v1")
-	ut.Equal(t, schema.Parent, GetResourceType(Cluster{}))
+	ut.Equal(t, schema.Parents, []string{GetResourceType(Cluster{})})
 	ut.Equal(t, schema.CollectionMethods, []string{"GET", "POST"})
 	ut.Equal(t, schema.ResourceMethods, []string{"GET", "DELETE", "PUT"})
 	ut.Equal(t, len(schema.ResourceFields), 3)
@@ -95,12 +107,18 @@ func TestReflection(t *testing.T) {
 		"/apis/testing/v1/clusters/:cluster_id/nodes/:node_id",
 		"/apis/testing/v1/clusters/:cluster_id/namespaces",
 		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id",
-		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/pods",
-		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/pods/:pod_id",
-		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/configmaps",
-		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/configmaps/:configmap_id",
-		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/pods/:pod_id/containers",
-		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/pods/:pod_id/containers/:container_id",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/deployments",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/deployments/:deployment_id",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/daemonsets",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/daemonsets/:daemonset_id",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/statefulsets",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/statefulsets/:statefulset_id",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/deployments/:deployment_id/pods",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/deployments/:deployment_id/pods/:pod_id",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/daemonsets/:daemonset_id/pods",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/daemonsets/:daemonset_id/pods/:pod_id",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/statefulsets/:statefulset_id/pods",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/statefulsets/:statefulset_id/pods/:pod_id",
 	}
 	urlMethods := schemas.UrlMethods()
 	ut.Equal(t, len(urlMethods), len(expectUrl))
