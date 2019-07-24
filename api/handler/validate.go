@@ -76,6 +76,10 @@ func getStructValue(ctx *types.Context, schema *types.Schema, structVal reflect.
 
 		}
 
+		if valueIsNil(value) && schemaField.Default != nil {
+			value = schemaField.Default
+		}
+
 		fieldValues[fieldJsonName] = value
 	}
 
@@ -86,8 +90,6 @@ func checkFieldCriteria(fieldName string, value interface{}, field types.Field) 
 	if valueIsNil(value) {
 		if field.Required {
 			return types.NewAPIError(types.MissingRequired, fmt.Sprintf("field %s must be set when create", fieldName))
-		} else if field.Default != nil {
-			value = field.Default
 		}
 	} else if valueStr, ok := value.(string); ok && len(field.Options) > 0 {
 		valid := false
