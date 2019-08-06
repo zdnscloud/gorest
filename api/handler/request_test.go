@@ -34,8 +34,8 @@ type TestInput struct {
 
 type Foo struct {
 	types.Resource
-	Name string `json:"name"singlecloud:"required=true"`
-	Role string `json:"role"singlecloud:"required=true"`
+	Name string `json:"name" rest:"required=true"`
+	Role string `json:"role" rest:"required=true"`
 }
 
 type testServer struct {

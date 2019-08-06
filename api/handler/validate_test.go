@@ -11,14 +11,14 @@ import (
 
 type Deployment struct {
 	types.Resource
-	Name       string       `json:"name"singlecloud:"required=true"`
-	Replicas   int          `json:"replicas"singlecloud:"required=true"`
-	Containers []*Container `json:"containers"singlecloud:"required=true"`
+	Name       string       `json:"name" rest:"required=true"`
+	Replicas   int          `json:"replicas" rest:"required=true"`
+	Containers []*Container `json:"containers" rest:"required=true"`
 }
 
 type Container struct {
-	Name         string           `json:"name"singlecloud:"required=true"`
-	Image        string           `json:"image"singlecloud:"required=true"`
+	Name         string           `json:"name" rest:"required=true"`
+	Image        string           `json:"image" rest:"required=true"`
 	Command      []string         `json:"command,omitempty"`
 	Args         []string         `json:"args,omitempty"`
 	ConfigName   string           `json:"configName,omitempty"`
