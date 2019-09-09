@@ -129,6 +129,9 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 				schemaField.Default = n
 			case "boolean":
 				schemaField.Default = util.ToBool(schemaField.Default)
+			case "string":
+			default:
+				return fmt.Errorf("only int, bool and string support default value")
 			}
 		}
 

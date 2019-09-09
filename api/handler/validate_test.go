@@ -14,6 +14,8 @@ type Deployment struct {
 	Name       string       `json:"name" rest:"required=true"`
 	Replicas   int          `json:"replicas" rest:"required=true"`
 	Containers []*Container `json:"containers" rest:"required=true"`
+	ShortName  string       `json:"shortName" rest:"default=bug"`
+	IsCritical bool         `json:"isCritical" rest:"default=true"`
 }
 
 type Container struct {
@@ -51,4 +53,8 @@ func TestValidate(t *testing.T) {
 	ut.Equal(t, err, noerr)
 	err = CheckObjectFields(ctx)
 	ut.Equal(t, err, noerr)
+
+	deploy := ctx.Object.(*Deployment)
+	ut.Equal(t, deploy.ShortName, "bug")
+	ut.Equal(t, deploy.IsCritical, true)
 }

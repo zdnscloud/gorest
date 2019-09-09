@@ -69,6 +69,9 @@ func getStructValue(ctx *types.Context, schema *types.Schema, structVal reflect.
 		}
 
 		if valueIsNil(value) && schemaField.Default != nil {
+			if fieldVal.CanSet() {
+				fieldVal.Set(reflect.ValueOf(schemaField.Default))
+			}
 			value = schemaField.Default
 		}
 
