@@ -3,6 +3,8 @@ package types
 import (
 	"fmt"
 	"path"
+	"reflect"
+	"strings"
 	"time"
 )
 
@@ -39,15 +41,17 @@ type Field struct {
 	CodeName     string      `json:"-"`
 }
 
-type Action struct {
-	Name   string
-	Input  interface{} `json:"input,omitempty"`
-	Output string      `json:"output,omitempty"`
+type RequestHandler func(request *Context) *APIError
+
+func GetResourceType(obj interface{}) string {
+	return strings.ToLower(reflect.TypeOf(obj).Name())
 }
 
-type ActionHandler func(request *Context, action *Action) *APIError
-
-type RequestHandler func(request *Context) *APIError
+type ResourceType interface {
+	GetParents() []string
+	GetActions() []Action
+	GetCollectionActions() []Action
+}
 
 type Resource struct {
 	ID                string            `json:"id,omitempty"`
@@ -56,6 +60,18 @@ type Resource struct {
 	CreationTimestamp ISOTime           `json:"creationTimestamp,omitempty"`
 	Parent            Object            `json:"-"`
 	Schema            *Schema           `json:"-"`
+}
+
+func (r Resource) GetActions() []Action {
+	return nil
+}
+
+func (r Resource) GetCollectionActions() []Action {
+	return nil
+}
+
+func (r Resource) GetParents() []string {
+	return nil
 }
 
 func (r *Resource) GetID() string {

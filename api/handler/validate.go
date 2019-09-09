@@ -7,6 +7,7 @@ import (
 
 	"github.com/zdnscloud/cement/reflector"
 	"github.com/zdnscloud/gorest/types"
+	"github.com/zdnscloud/gorest/util"
 )
 
 func CheckObjectFields(ctx *types.Context) *types.APIError {
@@ -17,15 +18,6 @@ func CheckObjectFields(ctx *types.Context) *types.APIError {
 
 	_, err := getStructValue(ctx, ctx.Object.GetSchema(), structVal)
 	return err
-}
-
-func ObjectToMap(ctx *types.Context, objValue interface{}) (map[string]interface{}, *types.APIError) {
-	structVal, ok := reflector.GetStructFromPointer(objValue)
-	if ok == false {
-		return nil, types.NewAPIError(types.ServerError, "get object structure but return "+structVal.Kind().String())
-	}
-
-	return getStructValue(ctx, ctx.Object.GetSchema(), structVal)
 }
 
 func getStructValue(ctx *types.Context, schema *types.Schema, structVal reflect.Value) (map[string]interface{}, *types.APIError) {
@@ -40,7 +32,7 @@ func getStructValue(ctx *types.Context, schema *types.Schema, structVal reflect.
 
 	for i := 0; i < structVal.NumField(); i++ {
 		field := structTyp.Field(i)
-		fieldJsonName, isAnonymous := types.GetFieldJsonName(field)
+		fieldJsonName, isAnonymous := util.GetFieldJsonName(field)
 		fieldVal := structVal.FieldByName(field.Name)
 		if fieldVal.IsValid() == false {
 			continue

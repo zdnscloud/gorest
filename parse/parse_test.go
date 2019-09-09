@@ -22,58 +22,74 @@ type Node struct {
 	types.Resource
 }
 
+func (c Node) GetParents() []string {
+	return []string{types.GetResourceType(Cluster{})}
+}
+
 type Namespace struct {
 	types.Resource
+}
+
+func (c Namespace) GetParents() []string {
+	return []string{types.GetResourceType(Cluster{})}
 }
 
 type Deployment struct {
 	types.Resource
 }
 
+func (c Deployment) GetParents() []string {
+	return []string{types.GetResourceType(Namespace{})}
+}
+
 type Pod struct {
 	types.Resource
+}
+
+func (c Pod) GetParents() []string {
+	return []string{types.GetResourceType(Deployment{})}
 }
 
 type Container struct {
 	types.Resource
 }
 
+func (c Container) GetParents() []string {
+	return []string{types.GetResourceType(Pod{})}
+}
+
+type dumbHandler struct{}
+
+func (h *dumbHandler) Create(ctx *types.Context, content []byte) (interface{}, *types.APIError) {
+	return nil, nil
+}
+
+func (h *dumbHandler) List(ctx *types.Context) interface{} {
+	return nil
+}
+
+func (h *dumbHandler) Get(ctx *types.Context) interface{} {
+	return nil
+}
+
+type getHandler struct{}
+
+func (h *getHandler) List(ctx *types.Context) interface{} {
+	return nil
+}
+
+func (h *getHandler) Get(ctx *types.Context) interface{} {
+	return nil
+}
+
 func TestParse(t *testing.T) {
 	schemas := types.NewSchemas()
-	schemas.MustImportAndCustomize(&version, Cluster{}, nil, func(schema *types.Schema, handler types.Handler) {
-		schema.CollectionMethods = []string{"GET", "POST"}
-		schema.ResourceMethods = []string{"GET"}
-	})
-	schemas.MustImportAndCustomize(&version, Node{}, nil, func(schema *types.Schema, handler types.Handler) {
-		schema.Parents = []string{types.GetResourceType(Cluster{})}
-		schema.CollectionMethods = []string{"GET"}
-		schema.ResourceMethods = []string{"GET"}
-	})
-
-	schemas.MustImportAndCustomize(&version, Namespace{}, nil, func(schema *types.Schema, handler types.Handler) {
-		schema.Parents = []string{types.GetResourceType(Cluster{})}
-		schema.CollectionMethods = []string{"GET"}
-		schema.ResourceMethods = []string{"GET"}
-	})
-
-	schemas.MustImportAndCustomize(&version, Deployment{}, nil, func(schema *types.Schema, handler types.Handler) {
-		schema.Parents = []string{types.GetResourceType(Namespace{})}
-		schema.CollectionMethods = []string{"GET"}
-		schema.ResourceMethods = []string{"GET"}
-	})
-
-	schemas.MustImportAndCustomize(&version, Pod{}, nil, func(schema *types.Schema, handler types.Handler) {
-		schema.Parents = []string{types.GetResourceType(Deployment{})}
-		schema.CollectionMethods = []string{"GET"}
-		schema.ResourceMethods = []string{"GET"}
-	})
-
-	schemas.MustImportAndCustomize(&version, Container{}, nil, func(schema *types.Schema, handler types.Handler) {
-		schema.Parents = []string{types.GetResourceType(Pod{})}
-		schema.CollectionMethods = []string{"GET"}
-		schema.ResourceMethods = []string{"GET"}
-	})
-
+	schemas.MustImport(&version, Cluster{}, &dumbHandler{})
+	schemas.MustImport(&version, Node{}, &getHandler{})
+	schemas.MustImport(&version, Namespace{}, &getHandler{})
+	schemas.MustImport(&version, Deployment{}, &getHandler{})
+	schemas.MustImport(&version, Pod{}, &getHandler{})
+	schemas.MustImport(&version, Container{}, &getHandler{})
 	req, _ := http.NewRequest("GET", "/apis/testing/v1/clusters/123321/nodes/345543", nil)
 	var noErr *types.APIError
 	ctx, err := Parse(nil, req, schemas)

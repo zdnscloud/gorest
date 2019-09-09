@@ -10,18 +10,37 @@ import (
 )
 
 var (
-	schemas = types.NewSchemas().MustImportAndCustomize(&version, Foo{}, nil, func(schema *types.Schema, handler types.Handler) {
-		schema.CollectionMethods = []string{"POST", "GET"}
-	})
-
+	schemas = types.NewSchemas().MustImport(&version, Foo{}, &dumbHandler{})
 	version = types.APIVersion{
 		Group:   "testing",
 		Version: "v1",
 	}
 )
 
+type dumbHandler struct{}
+
+func (h *dumbHandler) Create(ctx *types.Context, content []byte) (interface{}, *types.APIError) {
+	return nil, nil
+}
+
+func (h *dumbHandler) List(ctx *types.Context) interface{} {
+	return nil
+}
+
 type Foo struct {
 	types.Resource
+}
+
+func (c Foo) GetParents() []string {
+	return nil
+}
+
+func (c Foo) GetActions() []types.Action {
+	return nil
+}
+
+func (c Foo) GetCollectionActions() []types.Action {
+	return nil
 }
 
 var gnum int

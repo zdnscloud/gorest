@@ -96,7 +96,7 @@ func parseVersionAndResource(ctx *types.Context) *types.APIError {
 			continue
 		}
 
-		if types.IsElemInArray(obj.Type, schema.Parents) == false {
+		if slice.SliceIndex(schema.Parents, obj.Type) == -1 {
 			return types.NewAPIError(types.InvalidType,
 				fmt.Sprintf("schema %v parent should not be %s", schema.GetType(), obj.Type))
 		}

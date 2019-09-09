@@ -21,9 +21,17 @@ type Node struct {
 	Name string
 }
 
+func (c Node) GetParents() []string {
+	return []string{GetResourceType(Cluster{})}
+}
+
 type NameSpace struct {
 	Resource
 	Name string
+}
+
+func (c NameSpace) GetParents() []string {
+	return []string{GetResourceType(Cluster{})}
 }
 
 type Deployment struct {
@@ -31,9 +39,17 @@ type Deployment struct {
 	Name string
 }
 
+func (c Deployment) GetParents() []string {
+	return []string{GetResourceType(NameSpace{})}
+}
+
 type DaemonSet struct {
 	Resource
 	Name string
+}
+
+func (c DaemonSet) GetParents() []string {
+	return []string{GetResourceType(NameSpace{})}
 }
 
 type StatefulSet struct {
@@ -41,51 +57,50 @@ type StatefulSet struct {
 	Name string
 }
 
+func (c StatefulSet) GetParents() []string {
+	return []string{GetResourceType(NameSpace{})}
+}
+
 type Pod struct {
 	Resource
 	Name string
 }
 
+func (c Pod) GetParents() []string {
+	return []string{GetResourceType(Deployment{}), GetResourceType(DaemonSet{}), GetResourceType(StatefulSet{})}
+}
+
+type handleNoAction struct{}
+
+func (h *handleNoAction) Create(ctx *Context, content []byte) (interface{}, *APIError) {
+	return 10, nil
+}
+
+func (h *handleNoAction) Delete(ctx *Context) *APIError {
+	return nil
+}
+
+func (h *handleNoAction) Update(ctx *Context) (interface{}, *APIError) {
+	return 20, nil
+}
+
+func (h *handleNoAction) List(ctx *Context) interface{} {
+	return []uint{1, 2, 3}
+}
+
+func (h *handleNoAction) Get(ctx *Context) interface{} {
+	return 10
+}
+
 func TestReflection(t *testing.T) {
 	schemas := NewSchemas()
-	schemas.MustImportAndCustomize(&version, Cluster{}, nil, func(schema *Schema, handler Handler) {
-		schema.CollectionMethods = []string{"GET", "POST"}
-		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
-	})
-
-	schemas.MustImportAndCustomize(&version, Node{}, nil, func(schema *Schema, handler Handler) {
-		schema.Parents = []string{GetResourceType(Cluster{})}
-		schema.CollectionMethods = []string{"GET", "POST"}
-		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
-	})
-	schemas.MustImportAndCustomize(&version, NameSpace{}, nil, func(schema *Schema, handler Handler) {
-		schema.Parents = []string{GetResourceType(Cluster{})}
-		schema.CollectionMethods = []string{"GET", "POST"}
-		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
-	})
-	schemas.MustImportAndCustomize(&version, Pod{}, nil, func(schema *Schema, handler Handler) {
-		schema.Parents = []string{GetResourceType(Deployment{}), GetResourceType(DaemonSet{}), GetResourceType(StatefulSet{})}
-		schema.CollectionMethods = []string{"GET", "POST"}
-		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
-	})
-
-	schemas.MustImportAndCustomize(&version, Deployment{}, nil, func(schema *Schema, handler Handler) {
-		schema.Parents = []string{GetResourceType(NameSpace{})}
-		schema.CollectionMethods = []string{"GET", "POST"}
-		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
-	})
-
-	schemas.MustImportAndCustomize(&version, StatefulSet{}, nil, func(schema *Schema, handler Handler) {
-		schema.Parents = []string{GetResourceType(NameSpace{})}
-		schema.CollectionMethods = []string{"GET", "POST"}
-		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
-	})
-
-	schemas.MustImportAndCustomize(&version, DaemonSet{}, nil, func(schema *Schema, handler Handler) {
-		schema.Parents = []string{GetResourceType(NameSpace{})}
-		schema.CollectionMethods = []string{"GET", "POST"}
-		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
-	})
+	schemas.MustImport(&version, Cluster{}, &handleNoAction{})
+	schemas.MustImport(&version, Node{}, &handleNoAction{})
+	schemas.MustImport(&version, NameSpace{}, &handleNoAction{})
+	schemas.MustImport(&version, Pod{}, &handleNoAction{})
+	schemas.MustImport(&version, Deployment{}, &handleNoAction{})
+	schemas.MustImport(&version, StatefulSet{}, &handleNoAction{})
+	schemas.MustImport(&version, DaemonSet{}, &handleNoAction{})
 
 	clusterChildren := schemas.GetChildren(GetResourceType(Cluster{}))
 	ut.Equal(t, len(clusterChildren), 2)

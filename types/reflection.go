@@ -9,46 +9,53 @@ import (
 	"github.com/zdnscloud/gorest/util"
 )
 
-var (
-	blacklistNames = map[string]bool{
-		"actions":           true,
-		"links":             true,
-		"creationTimestamp": true,
-	}
-)
-
-func GetResourceType(obj interface{}) string {
-	return strings.ToLower(reflect.TypeOf(obj).Name())
-}
-
-func (s *Schemas) getTypeName(t reflect.Type) string {
-	if name, ok := s.typeNames[t]; ok {
-		return name
-	}
-
-	name := strings.ToLower(t.Name())
-	s.typeNames[t] = name
-	return name
-}
-
-func (s *Schemas) MustImport(version *APIVersion, obj interface{}) *Schemas {
+func (s *Schemas) MustImport(version *APIVersion, obj ResourceType, objHandler interface{}) *Schemas {
 	if reflect.ValueOf(obj).Kind() == reflect.Ptr {
 		panic(fmt.Errorf("obj cannot be a pointer"))
 	}
 
-	if _, err := s.Import(version, obj); err != nil {
+	objType := reflect.TypeOf(obj)
+	if _, ok := reflect.New(objType).Interface().(Object); ok == false {
+		panic("resource type doesn't implement object interface")
+	}
+
+	schema, err := s.importType(version, objType)
+	if err != nil {
 		panic(err)
 	}
+
+	handler, err := NewHandler(objHandler)
+	if err != nil {
+		panic(err)
+	}
+
+	schema.Handler = handler
+	schema.ResourceMethods = GetResourceMethods(handler)
+	schema.CollectionMethods = GetCollectionMethods(handler)
+	schema.ResourceActions = obj.GetActions()
+	schema.CollectionActions = obj.GetCollectionActions()
+	schema.Parents = obj.GetParents()
+
 	return s
 }
 
-func (s *Schemas) MustImportAndCustomize(version *APIVersion, obj interface{}, handler Handler, f func(*Schema, Handler)) *Schemas {
-	return s.MustImport(version, obj).
-		MustCustomizeType(version, obj, handler, f)
-}
+func (s *Schemas) importType(version *APIVersion, t reflect.Type) (*Schema, error) {
+	typeName := s.getTypeName(t)
+	existing := s.Schema(version, typeName)
+	if existing != nil {
+		return existing, nil
+	}
 
-func (s *Schemas) Import(version *APIVersion, obj interface{}) (*Schema, error) {
-	return s.importType(version, reflect.TypeOf(obj))
+	schema, err := s.newSchemaFromType(version, t)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := s.AddSchema(schema); err != nil {
+		return nil, err
+	}
+
+	return s.Schema(&schema.Version, schema.GetType()), nil
 }
 
 func (s *Schemas) newSchemaFromType(version *APIVersion, t reflect.Type) (*Schema, error) {
@@ -65,88 +72,11 @@ func (s *Schemas) newSchemaFromType(version *APIVersion, t reflect.Type) (*Schem
 	return schema, nil
 }
 
-func (s *Schemas) MustCustomizeType(version *APIVersion, obj interface{}, handler Handler, f func(*Schema, Handler)) *Schemas {
-	name := s.getTypeName(reflect.TypeOf(obj))
-	schema := s.Schema(version, name)
-	if schema == nil {
-		panic("Failed to find schema " + name)
-	}
-
-	f(schema, handler)
-
-	return s
-}
-
-func (s *Schemas) importType(version *APIVersion, t reflect.Type, overrides ...reflect.Type) (*Schema, error) {
-	typeName := s.getTypeName(t)
-	existing := s.Schema(version, typeName)
-	if existing != nil {
-		return existing, nil
-	}
-
-	schema, err := s.newSchemaFromType(version, t)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, override := range overrides {
-		if err := s.readFields(schema, override); err != nil {
-			return nil, err
-		}
-	}
-
-	if _, err := s.AddSchema(schema); err != nil {
-		return nil, err
-	}
-
-	return s.Schema(&schema.Version, schema.GetType()), nil
-}
-
-func getJsonName(f reflect.StructField) string {
-	return strings.SplitN(f.Tag.Get("json"), ",", 2)[0]
-}
-
-func GetFieldJsonName(field reflect.StructField) (string, bool) {
-	if field.PkgPath != "" {
-		return "", false
-	}
-
-	jsonName := getJsonName(field)
-	if jsonName == "-" {
-		return "", false
-	}
-
-	if field.Anonymous && jsonName == "" {
-		t := field.Type
-		if t.Kind() == reflect.Ptr {
-			t = t.Elem()
-		}
-		if t.Kind() == reflect.Struct {
-			return "", true
-		}
-		return "", false
-	}
-
-	fieldJsonName := jsonName
-	if fieldJsonName == "" {
-		fieldJsonName = strings.ToLower(field.Name)
-		if strings.HasSuffix(fieldJsonName, "ID") {
-			fieldJsonName = strings.TrimSuffix(fieldJsonName, "ID") + "Id"
-		}
-	}
-
-	if blacklistNames[fieldJsonName] {
-		return "", false
-	}
-
-	return fieldJsonName, false
-}
-
 func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 
-		fieldJsonName, isAnonymous := GetFieldJsonName(field)
+		fieldJsonName, isAnonymous := util.GetFieldJsonName(field)
 		if isAnonymous {
 			if err := s.readFields(schema, field.Type); err != nil {
 				return err
@@ -161,7 +91,7 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 		schemaField := Field{
 			Create:   true,
 			Update:   true,
-			Nullable: true,
+			Nullable: false,
 			CodeName: field.Name,
 		}
 
@@ -170,12 +100,10 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 			schemaField.Nullable = true
 			fieldType = fieldType.Elem()
 		} else if fieldType.Kind() == reflect.Bool {
-			schemaField.Nullable = false
 			schemaField.Default = false
 		} else if fieldType.Kind() == reflect.Int ||
 			fieldType.Kind() == reflect.Int32 ||
 			fieldType.Kind() == reflect.Int64 {
-			schemaField.Nullable = false
 			schemaField.Default = 0
 		}
 
@@ -349,5 +277,14 @@ func (s *Schemas) determineSchemaType(version *APIVersion, t reflect.Type) (stri
 	default:
 		return "", fmt.Errorf("unknown type kind %s", t.Kind())
 	}
+}
 
+func (s *Schemas) getTypeName(t reflect.Type) string {
+	if name, ok := s.typeNames[t]; ok {
+		return name
+	}
+
+	name := strings.ToLower(t.Name())
+	s.typeNames[t] = name
+	return name
 }

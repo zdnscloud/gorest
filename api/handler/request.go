@@ -11,7 +11,7 @@ import (
 )
 
 func CreateHandler(ctx *types.Context) *types.APIError {
-	handler := ctx.Object.GetSchema().Handler
+	handler := ctx.Object.GetSchema().Handler.GetCreateHandler()
 	if handler == nil {
 		return types.NewAPIError(types.NotFound, "no handler for create")
 	}
@@ -21,7 +21,7 @@ func CreateHandler(ctx *types.Context) *types.APIError {
 		return err
 	}
 
-	result, err := handler.Create(ctx, content)
+	result, err := handler(ctx, content)
 	if err != nil {
 		return err
 	}
@@ -32,13 +32,13 @@ func CreateHandler(ctx *types.Context) *types.APIError {
 }
 
 func DeleteHandler(ctx *types.Context) *types.APIError {
-	handler := ctx.Object.GetSchema().Handler
+	handler := ctx.Object.GetSchema().Handler.GetDeleteHandler()
 	if handler == nil {
 		return types.NewAPIError(types.NotFound, "no handler for delete")
 	}
 
 	setRuntimeObject(ctx, createRuntimeObject(ctx))
-	if err := handler.Delete(ctx); err != nil {
+	if err := handler(ctx); err != nil {
 		return err
 	}
 
@@ -47,7 +47,7 @@ func DeleteHandler(ctx *types.Context) *types.APIError {
 }
 
 func UpdateHandler(ctx *types.Context) *types.APIError {
-	handler := ctx.Object.GetSchema().Handler
+	handler := ctx.Object.GetSchema().Handler.GetUpdateHandler()
 	if handler == nil {
 		return types.NewAPIError(types.NotFound, "no handler for update")
 	}
@@ -58,7 +58,7 @@ func UpdateHandler(ctx *types.Context) *types.APIError {
 	}
 
 	setRuntimeObject(ctx, val)
-	result, err := handler.Update(ctx)
+	result, err := handler(ctx)
 	if err != nil {
 		return err
 	}
@@ -69,16 +69,16 @@ func UpdateHandler(ctx *types.Context) *types.APIError {
 }
 
 func ListHandler(ctx *types.Context) *types.APIError {
-	handler := ctx.Object.GetSchema().Handler
-	if handler == nil {
-		return types.NewAPIError(types.NotFound, "no found for list")
-	}
 
 	setRuntimeObject(ctx, createRuntimeObject(ctx))
 
 	var result interface{}
 	if ctx.Object.GetID() == "" {
-		data := handler.List(ctx)
+		handler := ctx.Object.GetSchema().Handler.GetListHandler()
+		if handler == nil {
+			return types.NewAPIError(types.NotFound, "no found for list")
+		}
+		data := handler(ctx)
 		if data == nil {
 			data = make([]types.Object, 0)
 		} else if reflect.ValueOf(data).Kind() != reflect.Slice {
@@ -94,7 +94,11 @@ func ListHandler(ctx *types.Context) *types.APIError {
 		addCollectionLinks(ctx, collection)
 		result = collection
 	} else {
-		result = handler.Get(ctx)
+		handler := ctx.Object.GetSchema().Handler.GetGetHandler()
+		if handler == nil {
+			return types.NewAPIError(types.NotFound, "no found for list")
+		}
+		result = handler(ctx)
 		if result == nil {
 			return types.NewAPIError(types.NotFound,
 				fmt.Sprintf("%s resource with id %s doesn't exist", ctx.Object.GetType(), ctx.Object.GetID()))
@@ -110,7 +114,7 @@ func ListHandler(ctx *types.Context) *types.APIError {
 }
 
 func ActionHandler(ctx *types.Context) *types.APIError {
-	handler := ctx.Object.GetSchema().Handler
+	handler := ctx.Object.GetSchema().Handler.GetActionHandler()
 	if handler == nil {
 		return types.NewAPIError(types.NotFound, "no handler for action")
 	}
@@ -124,7 +128,7 @@ func ActionHandler(ctx *types.Context) *types.APIError {
 		setRuntimeActionInput(ctx, val)
 	}
 	setRuntimeObject(ctx, createRuntimeObject(ctx))
-	result, err := handler.Action(ctx)
+	result, err := handler(ctx)
 	if err != nil {
 		return err
 	}

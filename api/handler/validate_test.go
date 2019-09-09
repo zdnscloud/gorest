@@ -33,7 +33,7 @@ type DeploymentPort struct {
 
 func TestValidate(t *testing.T) {
 	schemas := types.NewSchemas()
-	schemas.MustImport(&version, Deployment{})
+	schemas.MustImport(&version, Deployment{}, &dumbHandler{})
 	schema := schemas.Schema(&version, types.GetResourceType(Deployment{}))
 	reqbody := bytes.NewBufferString("{\"name\":\"dm1\", \"replicas\": 1, \"containers\": [{\"name\": \"c1\", \"image\": \"testimage\", \"comamnd\": [\"ifconfig\", \"|\", \"grep\"], \"exposedPorts\": [{\"port\": 8080, \"protocol\": \"tcp\"}]}]}")
 	req, _ := http.NewRequest("POST", "/apis/testing/v1/deployments", reqbody)

@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/zdnscloud/cement/slice"
 	"github.com/zdnscloud/gorest/util"
 )
 
@@ -19,12 +20,16 @@ type Schema struct {
 	ResourceFields    map[string]Field `json:"resourceFields"`
 	ResourceActions   []Action         `json:"resourceActions,omitempty"`
 	CollectionMethods []string         `json:"collectionMethods,omitempty"`
-	CollectionFields  map[string]Field `json:"collectionFields,omitempty"`
 	CollectionActions []Action         `json:"collectionActions,omitempty"`
 
 	StructVal reflect.Value `json:"-"`
 	Handler   Handler       `json:"-"`
 	Parents   []string      `json:"-"`
+}
+
+type Action struct {
+	Name  string
+	Input interface{} `json:"input,omitempty"`
 }
 
 func (s *Schema) GetType() string {
@@ -172,20 +177,10 @@ func (s *Schemas) GetChildren(parent string) []string {
 
 	var children []string
 	for _, schema := range s.schemas {
-		if IsElemInArray(parent, schema.Parents) {
+		if slice.SliceIndex(schema.Parents, parent) != -1 {
 			children = append(children, schema.PluralName)
 		}
 	}
 
 	return children
-}
-
-func IsElemInArray(elem string, elems []string) bool {
-	for _, e := range elems {
-		if e == elem {
-			return true
-		}
-	}
-
-	return false
 }

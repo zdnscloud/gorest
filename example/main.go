@@ -23,9 +23,26 @@ type Cluster struct {
 	Name           string `json:"name,omitempty"`
 }
 
+func (c Cluster) GetActions() []types.Action {
+	return []types.Action{
+		types.Action{
+			Name:  "encode",
+			Input: Input{},
+		},
+		types.Action{
+			Name:  "decode",
+			Input: Input{},
+		},
+	}
+}
+
 type Node struct {
 	types.Resource `json:",inline"`
 	Name           string `json:"name,omitempty"`
+}
+
+func (n Node) GetParents() []string {
+	return []string{types.GetResourceType(Cluster{})}
 }
 
 type Handler struct {
@@ -187,26 +204,8 @@ func getApiServer() *api.Server {
 	server := api.NewAPIServer()
 	schemas := types.NewSchemas()
 	handler := newHandler()
-	schemas.MustImportAndCustomize(&version, Cluster{}, handler, func(schema *types.Schema, handler types.Handler) {
-		schema.Handler = handler
-		schema.CollectionMethods = []string{"GET", "POST"}
-		schema.ResourceMethods = []string{"GET", "PUT", "DELETE", "POST"}
-		schema.ResourceActions = append(schema.ResourceActions, types.Action{
-			Name:  "encode",
-			Input: Input{},
-		}, types.Action{
-			Name:  "decode",
-			Input: Input{},
-		})
-	})
-
-	schemas.MustImportAndCustomize(&version, Node{}, handler, func(schema *types.Schema, handler types.Handler) {
-		schema.Parents = []string{types.GetResourceType(Cluster{})}
-		schema.Handler = handler
-		schema.CollectionMethods = []string{"GET", "POST"}
-		schema.ResourceMethods = []string{"GET", "PUT", "DELETE", "POST"}
-	})
-
+	schemas.MustImport(&version, Cluster{}, handler)
+	schemas.MustImport(&version, Node{}, handler)
 	if err := server.AddSchemas(schemas); err != nil {
 		panic(err.Error())
 	}

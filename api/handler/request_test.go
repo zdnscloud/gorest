@@ -14,18 +14,7 @@ import (
 )
 
 var (
-	schemas = types.NewSchemas().MustImportAndCustomize(&version, Foo{}, &Handler{}, func(schema *types.Schema, handler types.Handler) {
-		schema.CollectionMethods = []string{"POST", "GET"}
-		schema.ResourceMethods = []string{"GET", "POST", "DELETE", "PUT"}
-		schema.Handler = handler
-		schema.ResourceActions = append(schema.ResourceActions, types.Action{
-			Name:  "encode",
-			Input: TestInput{},
-		}, types.Action{
-			Name:  "decode",
-			Input: TestInput{},
-		})
-	})
+	schemas = types.NewSchemas().MustImport(&version, Foo{}, &fullHandler{})
 )
 
 type TestInput struct {
@@ -36,6 +25,19 @@ type Foo struct {
 	types.Resource
 	Name string `json:"name" rest:"required=true"`
 	Role string `json:"role" rest:"required=true"`
+}
+
+func (f Foo) GetActions() []types.Action {
+	return []types.Action{
+		types.Action{
+			Name:  "encode",
+			Input: TestInput{},
+		},
+		types.Action{
+			Name:  "decode",
+			Input: TestInput{},
+		},
+	}
 }
 
 type testServer struct {
@@ -169,27 +171,27 @@ func TestActionHandler(t *testing.T) {
 	ut.Equal(t, w.Body.String(), expectResult)
 }
 
-type Handler struct{}
+type fullHandler struct{}
 
-func (h *Handler) Create(ctx *types.Context, content []byte) (interface{}, *types.APIError) {
+func (h *fullHandler) Create(ctx *types.Context, content []byte) (interface{}, *types.APIError) {
 	ctx.Object.SetID("12138")
 	return ctx.Object, nil
 }
 
-func (h *Handler) Delete(ctx *types.Context) *types.APIError {
+func (h *fullHandler) Delete(ctx *types.Context) *types.APIError {
 	return nil
 }
 
-func (h *Handler) Update(ctx *types.Context) (interface{}, *types.APIError) {
+func (h *fullHandler) Update(ctx *types.Context) (interface{}, *types.APIError) {
 	ctx.Object.SetID("12138")
 	return ctx.Object, nil
 }
 
-func (h *Handler) List(ctx *types.Context) interface{} {
+func (h *fullHandler) List(ctx *types.Context) interface{} {
 	return []types.Object{}
 }
 
-func (h *Handler) Get(ctx *types.Context) interface{} {
+func (h *fullHandler) Get(ctx *types.Context) interface{} {
 	if ctx.Object.GetID() == "12138" {
 		foo := ctx.Object.(*Foo)
 		foo.Name = "bar"
@@ -199,7 +201,7 @@ func (h *Handler) Get(ctx *types.Context) interface{} {
 	return nil
 }
 
-func (h *Handler) Action(ctx *types.Context) (interface{}, *types.APIError) {
+func (h *fullHandler) Action(ctx *types.Context) (interface{}, *types.APIError) {
 	input, ok := ctx.Action.Input.(*TestInput)
 	if ok == false {
 		return nil, types.NewAPIError(types.InvalidFormat, "action input type invalid")

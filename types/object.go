@@ -42,12 +42,3 @@ type ObjectSchema interface {
 	GetSchema() *Schema
 	SetSchema(*Schema)
 }
-
-type Handler interface {
-	Create(*Context, []byte) (interface{}, *APIError)
-	Delete(*Context) *APIError
-	Update(*Context) (interface{}, *APIError)
-	List(*Context) interface{}
-	Get(*Context) interface{}
-	Action(*Context) (interface{}, *APIError)
-}

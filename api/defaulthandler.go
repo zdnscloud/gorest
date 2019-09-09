@@ -4,30 +4,37 @@ import (
 	"github.com/zdnscloud/gorest/types"
 )
 
-var _ types.Handler = DefaultHandler{}
+var _ types.Handler = &DefaultHandler{}
 
-type DefaultHandler struct{}
-
-func (m DefaultHandler) Create(ctx *types.Context, yamlConf []byte) (interface{}, *types.APIError) {
-	return nil, nil
+type DefaultHandler struct {
+	CreateHandler types.CreateHandler
+	DeleteHandler types.DeleteHandler
+	UpdateHandler types.UpdateHandler
+	ListHandler   types.ListHandler
+	GetHandler    types.GetHandler
+	ActionHandler types.ActionHandler
 }
 
-func (m DefaultHandler) List(ctx *types.Context) interface{} {
-	return nil
+func (h *DefaultHandler) GetCreateHandler() types.CreateHandler {
+	return h.CreateHandler
 }
 
-func (m DefaultHandler) Get(ctx *types.Context) interface{} {
-	return nil
+func (h *DefaultHandler) GetDeleteHandler() types.DeleteHandler {
+	return h.DeleteHandler
 }
 
-func (m DefaultHandler) Delete(ctx *types.Context) *types.APIError {
-	return nil
+func (h *DefaultHandler) GetUpdateHandler() types.UpdateHandler {
+	return h.UpdateHandler
 }
 
-func (m DefaultHandler) Update(ctx *types.Context) (interface{}, *types.APIError) {
-	return nil, nil
+func (h *DefaultHandler) GetListHandler() types.ListHandler {
+	return h.ListHandler
 }
 
-func (m DefaultHandler) Action(ctx *types.Context) (interface{}, *types.APIError) {
-	return nil, nil
+func (h *DefaultHandler) GetGetHandler() types.GetHandler {
+	return h.GetHandler
+}
+
+func (h *DefaultHandler) GetActionHandler() types.ActionHandler {
+	return h.ActionHandler
 }

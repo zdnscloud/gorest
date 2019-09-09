@@ -21,10 +21,36 @@ type Testresourceobject struct {
 	types.Resource
 }
 
+func (c Testresourceobject) GetParents() []string {
+	return []string{types.GetResourceType(Testresourceobjectparent{})}
+}
+
 type Testnoresourceobject struct {
 	ID    string
 	Type  string
 	Links map[string]string
+}
+
+type dumbHandler struct{}
+
+func (h *dumbHandler) Create(ctx *types.Context, content []byte) (interface{}, *types.APIError) {
+	return nil, nil
+}
+
+func (h *dumbHandler) Delete(ctx *types.Context) *types.APIError {
+	return nil
+}
+
+func (h *dumbHandler) Update(ctx *types.Context) (interface{}, *types.APIError) {
+	return nil, nil
+}
+
+func (h *dumbHandler) List(ctx *types.Context) interface{} {
+	return nil
+}
+
+func (h *dumbHandler) Get(ctx *types.Context) interface{} {
+	return nil
 }
 
 func TestAddResourceLink(t *testing.T) {
@@ -33,16 +59,8 @@ func TestAddResourceLink(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/apis/testing/v1/testresourceobjects", nil)
 	req.Host = "127.0.0.1:1234"
 	schemas := types.NewSchemas()
-	schemas.MustImportAndCustomize(&version, Testresourceobjectparent{}, nil, func(schema *types.Schema, handler types.Handler) {
-		schema.CollectionMethods = []string{"GET", "POST"}
-		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
-	})
-
-	schemas.MustImportAndCustomize(&version, Testresourceobject{}, nil, func(schema *types.Schema, handler types.Handler) {
-		schema.Parents = []string{types.GetResourceType(Testresourceobjectparent{})}
-		schema.CollectionMethods = []string{"GET", "POST"}
-		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
-	})
+	schemas.MustImport(&version, Testresourceobjectparent{}, &dumbHandler{})
+	schemas.MustImport(&version, Testresourceobject{}, &dumbHandler{})
 
 	schema := schemas.Schema(&version, types.GetResourceType(Testresourceobject{}))
 	apiContext := &types.Context{
@@ -125,16 +143,8 @@ func TestAddLinkFail(t *testing.T) {
 
 func TestAddCollectionLinks(t *testing.T) {
 	schemas := types.NewSchemas()
-	schemas.MustImportAndCustomize(&version, Testresourceobjectparent{}, nil, func(schema *types.Schema, handler types.Handler) {
-		schema.CollectionMethods = []string{"GET", "POST"}
-		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
-	})
-
-	schemas.MustImportAndCustomize(&version, Testresourceobject{}, nil, func(schema *types.Schema, handler types.Handler) {
-		schema.Parents = []string{types.GetResourceType(Testresourceobjectparent{})}
-		schema.CollectionMethods = []string{"GET", "POST"}
-		schema.ResourceMethods = []string{"GET", "DELETE", "PUT"}
-	})
+	schemas.MustImport(&version, Testresourceobjectparent{}, &dumbHandler{})
+	schemas.MustImport(&version, Testresourceobject{}, &dumbHandler{})
 
 	req, _ := http.NewRequest("GET", "/apis/testing/v1/testresourceobjectparents", nil)
 	req.Host = "127.0.0.1:1234"
