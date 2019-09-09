@@ -25,15 +25,13 @@ func NewAPIServer() *Server {
 }
 
 func (s *Server) AddSchemas(schemas *types.Schemas) error {
-	if err := schemas.Err(); err != nil {
-		return err
-	}
-
 	for _, schema := range schemas.Schemas() {
-		s.Schemas.AddSchema(*schema)
+		if _, err := s.Schemas.AddSchema(schema); err != nil {
+			return err
+		}
 	}
 
-	return s.Schemas.Err()
+	return nil
 }
 
 func (s *Server) ServeHTTP(rw http.ResponseWriter, req *http.Request) {

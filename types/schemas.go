@@ -12,12 +12,30 @@ import (
 
 const GroupPrefix = "/apis"
 
+type Schema struct {
+	Version           APIVersion       `json:"version"`
+	PluralName        string           `json:"pluralName,omitempty"`
+	ResourceMethods   []string         `json:"resourceMethods,omitempty"`
+	ResourceFields    map[string]Field `json:"resourceFields"`
+	ResourceActions   []Action         `json:"resourceActions,omitempty"`
+	CollectionMethods []string         `json:"collectionMethods,omitempty"`
+	CollectionFields  map[string]Field `json:"collectionFields,omitempty"`
+	CollectionActions []Action         `json:"collectionActions,omitempty"`
+
+	StructVal reflect.Value `json:"-"`
+	Handler   Handler       `json:"-"`
+	Parents   []string      `json:"-"`
+}
+
+func (s *Schema) GetType() string {
+	return strings.ToLower(s.StructVal.Type().Name())
+}
+
 type Schemas struct {
 	typeNames        map[reflect.Type]string
 	schemasByVersion map[string]map[string]*Schema
 	versions         []APIVersion
 	schemas          []*Schema
-	errors           []error
 }
 
 func NewSchemas() *Schemas {
@@ -27,19 +45,25 @@ func NewSchemas() *Schemas {
 	}
 }
 
-func (s *Schemas) Err() error {
-	return NewErrors(s.errors...)
-}
-
-func (s *Schemas) AddSchemas(schema *Schemas) *Schemas {
-	for _, schema := range schema.Schemas() {
-		s.AddSchema(*schema)
+func (s *Schema) Complete() error {
+	if s.GetType() == "" {
+		return fmt.Errorf("get type from schema failed: %v", s)
 	}
-	return s
+
+	if s.Version.Version == "" {
+		return fmt.Errorf("version is not set on schema: %s", s.GetType())
+	}
+
+	if s.PluralName == "" {
+		s.PluralName = util.GuessPluralName(s.GetType())
+	}
+	return nil
 }
 
-func (s *Schemas) AddSchema(schema Schema) *Schemas {
-	s.setupDefaults(&schema)
+func (s *Schemas) AddSchema(schema *Schema) (*Schemas, error) {
+	if err := schema.Complete(); err != nil {
+		return nil, err
+	}
 
 	schemas, ok := s.schemasByVersion[schema.Version.Version]
 	if !ok {
@@ -49,25 +73,11 @@ func (s *Schemas) AddSchema(schema Schema) *Schemas {
 	}
 
 	if _, ok := schemas[schema.PluralName]; !ok {
-		schemas[schema.PluralName] = &schema
-		s.schemas = append(s.schemas, &schema)
+		schemas[schema.PluralName] = schema
+		s.schemas = append(s.schemas, schema)
 	}
 
-	return s
-}
-
-func (s *Schemas) setupDefaults(schema *Schema) {
-	if schema.GetType() == "" {
-		s.errors = append(s.errors, fmt.Errorf("get type from schema failed: %v", schema))
-		return
-	}
-	if schema.Version.Version == "" {
-		s.errors = append(s.errors, fmt.Errorf("version is not set on schema: %s", schema.GetType()))
-		return
-	}
-	if schema.PluralName == "" {
-		schema.PluralName = util.GuessPluralName(schema.GetType())
-	}
+	return s, nil
 }
 
 func (s *Schemas) Versions() []APIVersion {
@@ -178,38 +188,4 @@ func IsElemInArray(elem string, elems []string) bool {
 	}
 
 	return false
-}
-
-type MultiErrors struct {
-	Errors []error
-}
-
-func NewErrors(inErrors ...error) error {
-	var errors []error
-	for _, err := range inErrors {
-		if err != nil {
-			errors = append(errors, err)
-		}
-	}
-
-	if len(errors) == 0 {
-		return nil
-	} else if len(errors) == 1 {
-		return errors[0]
-	}
-	return &MultiErrors{
-		Errors: errors,
-	}
-}
-
-func (m *MultiErrors) Error() string {
-	buf := bytes.NewBuffer(nil)
-	for _, err := range m.Errors {
-		if buf.Len() > 0 {
-			buf.WriteString(", ")
-		}
-		buf.WriteString(err.Error())
-	}
-
-	return buf.String()
 }

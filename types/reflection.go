@@ -31,29 +31,24 @@ func (s *Schemas) getTypeName(t reflect.Type) string {
 	return name
 }
 
-func (s *Schemas) MustImport(version *APIVersion, obj interface{}, externalOverrides ...interface{}) *Schemas {
+func (s *Schemas) MustImport(version *APIVersion, obj interface{}) *Schemas {
 	if reflect.ValueOf(obj).Kind() == reflect.Ptr {
 		panic(fmt.Errorf("obj cannot be a pointer"))
 	}
 
-	if _, err := s.Import(version, obj, externalOverrides...); err != nil {
+	if _, err := s.Import(version, obj); err != nil {
 		panic(err)
 	}
 	return s
 }
 
-func (s *Schemas) MustImportAndCustomize(version *APIVersion, obj interface{}, handler Handler, f func(*Schema, Handler), externalOverrides ...interface{}) *Schemas {
-	return s.MustImport(version, obj, externalOverrides...).
+func (s *Schemas) MustImportAndCustomize(version *APIVersion, obj interface{}, handler Handler, f func(*Schema, Handler)) *Schemas {
+	return s.MustImport(version, obj).
 		MustCustomizeType(version, obj, handler, f)
 }
 
-func (s *Schemas) Import(version *APIVersion, obj interface{}, externalOverrides ...interface{}) (*Schema, error) {
-	var types []reflect.Type
-	for _, override := range externalOverrides {
-		types = append(types, reflect.TypeOf(override))
-	}
-
-	return s.importType(version, reflect.TypeOf(obj), types...)
+func (s *Schemas) Import(version *APIVersion, obj interface{}) (*Schema, error) {
+	return s.importType(version, reflect.TypeOf(obj))
 }
 
 func (s *Schemas) newSchemaFromType(version *APIVersion, t reflect.Type) (*Schema, error) {
@@ -100,9 +95,11 @@ func (s *Schemas) importType(version *APIVersion, t reflect.Type, overrides ...r
 		}
 	}
 
-	s.AddSchema(*schema)
+	if _, err := s.AddSchema(schema); err != nil {
+		return nil, err
+	}
 
-	return s.Schema(&schema.Version, schema.GetType()), s.Err()
+	return s.Schema(&schema.Version, schema.GetType()), nil
 }
 
 func getJsonName(f reflect.StructField) string {

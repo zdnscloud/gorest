@@ -3,8 +3,6 @@ package types
 import (
 	"fmt"
 	"path"
-	"reflect"
-	"strings"
 	"time"
 )
 
@@ -22,25 +20,6 @@ type APIVersion struct {
 
 func (v *APIVersion) GetVersionURL() string {
 	return path.Join(GroupPrefix, v.Group, v.Version)
-}
-
-type Schema struct {
-	Version           APIVersion       `json:"version"`
-	PluralName        string           `json:"pluralName,omitempty"`
-	ResourceMethods   []string         `json:"resourceMethods,omitempty"`
-	ResourceFields    map[string]Field `json:"resourceFields"`
-	ResourceActions   []Action         `json:"resourceActions,omitempty"`
-	CollectionMethods []string         `json:"collectionMethods,omitempty"`
-	CollectionFields  map[string]Field `json:"collectionFields,omitempty"`
-	CollectionActions []Action         `json:"collectionActions,omitempty"`
-
-	StructVal reflect.Value `json:"-"`
-	Handler   Handler       `json:"-"`
-	Parents   []string      `json:"-"`
-}
-
-func (s *Schema) GetType() string {
-	return strings.ToLower(s.StructVal.Type().Name())
 }
 
 type Field struct {
