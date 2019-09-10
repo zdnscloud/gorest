@@ -51,8 +51,6 @@ func TestValidate(t *testing.T) {
 	var noerr *types.APIError
 	_, err := parseCreateBody(ctx)
 	ut.Equal(t, err, noerr)
-	err = CheckObjectFields(ctx)
-	ut.Equal(t, err, noerr)
 
 	deploy := ctx.Object.(*Deployment)
 	ut.Equal(t, deploy.ShortName, "bug")

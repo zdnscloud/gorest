@@ -199,12 +199,32 @@ func parseCreateBody(ctx *types.Context) ([]byte, *types.APIError) {
 			fmt.Sprintf("Failed to parse request body: %v", err.Error()))
 	}
 
+	fmt.Printf("original body %s\n", string(reqBody))
+
+	raw := make(map[string]interface{})
+	if err := json.Unmarshal(reqBody, &raw); err != nil {
+		return nil, types.NewAPIError(types.InvalidBodyContent,
+			fmt.Sprintf("Failed to parse request body: %v as a map", err.Error()))
+	}
+	schema := ctx.Object.GetSchema()
+	if err := schema.ResourceFields.CheckRequired(raw); err != nil {
+		return nil, types.NewAPIError(types.InvalidBodyContent, err.Error())
+	}
+	schema.ResourceFields.FillDefault(raw)
+	reqBody, _ = json.Marshal(raw)
+
+	fmt.Printf("after fill default: %s\n", string(reqBody))
+
 	val := createRuntimeObject(ctx)
 	if err := json.Unmarshal(reqBody, val); err != nil {
 		return nil, types.NewAPIError(types.InvalidBodyContent,
 			fmt.Sprintf("Failed to parse request body: %v", err.Error()))
 	}
 
+	if err := schema.ResourceFields.Validate(val); err != nil {
+		return nil, types.NewAPIError(types.InvalidBodyContent, err.Error())
+	}
+
 	setRuntimeObject(ctx, val)
-	return []byte(params.Yaml), CheckObjectFields(ctx)
+	return []byte(params.Yaml), nil
 }

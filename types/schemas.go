@@ -8,19 +8,20 @@ import (
 	"strings"
 
 	"github.com/zdnscloud/cement/slice"
+	"github.com/zdnscloud/gorest/types/field"
 	"github.com/zdnscloud/gorest/util"
 )
 
 const GroupPrefix = "/apis"
 
 type Schema struct {
-	Version           APIVersion       `json:"version"`
-	PluralName        string           `json:"pluralName,omitempty"`
-	ResourceMethods   []string         `json:"resourceMethods,omitempty"`
-	ResourceFields    map[string]Field `json:"resourceFields"`
-	ResourceActions   []Action         `json:"resourceActions,omitempty"`
-	CollectionMethods []string         `json:"collectionMethods,omitempty"`
-	CollectionActions []Action         `json:"collectionActions,omitempty"`
+	Version           APIVersion         `json:"version"`
+	PluralName        string             `json:"pluralName,omitempty"`
+	ResourceMethods   []string           `json:"resourceMethods,omitempty"`
+	ResourceFields    *field.StructField `json:"resourceFields"`
+	ResourceActions   []Action           `json:"resourceActions,omitempty"`
+	CollectionMethods []string           `json:"collectionMethods,omitempty"`
+	CollectionActions []Action           `json:"collectionActions,omitempty"`
 
 	StructVal reflect.Value `json:"-"`
 	Handler   Handler       `json:"-"`

@@ -24,23 +24,6 @@ func (v *APIVersion) GetVersionURL() string {
 	return path.Join(GroupPrefix, v.Group, v.Version)
 }
 
-type Field struct {
-	Type         string      `json:"type,omitempty"`
-	Default      interface{} `json:"default,omitempty"`
-	Nullable     bool        `json:"nullable,omitempty"`
-	Create       bool        `json:"create"`
-	Required     bool        `json:"required,omitempty"`
-	Update       bool        `json:"update"`
-	MinLength    *int64      `json:"minLength,omitempty"`
-	MaxLength    *int64      `json:"maxLength,omitempty"`
-	Min          *int64      `json:"min,omitempty"`
-	Max          *int64      `json:"max,omitempty"`
-	Options      []string    `json:"options,omitempty"`
-	ValidChars   string      `json:"validChars,omitempty"`
-	InvalidChars string      `json:"invalidChars,omitempty"`
-	CodeName     string      `json:"-"`
-}
-
 type RequestHandler func(request *Context) *APIError
 
 func GetResourceType(obj interface{}) string {
@@ -58,8 +41,9 @@ type Resource struct {
 	Type              string            `json:"type,omitempty"`
 	Links             map[string]string `json:"links,omitempty"`
 	CreationTimestamp ISOTime           `json:"creationTimestamp,omitempty"`
-	Parent            Object            `json:"-"`
-	Schema            *Schema           `json:"-"`
+
+	Parent Object  `json:"-"`
+	Schema *Schema `json:"-"`
 }
 
 func (r Resource) GetActions() []Action {
