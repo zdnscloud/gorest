@@ -62,50 +62,43 @@ func GetCollectionMethods(handler Handler) []string {
 func NewHandler(obj interface{}) (Handler, error) {
 	handler := &DefaultHandler{}
 	val := reflect.ValueOf(obj)
-	hasAnyHandler := false
 	if mv := val.MethodByName(ListMethod); mv.IsValid() {
 		if method, ok := mv.Interface().(func(*Context) interface{}); ok {
 			handler.listHandler = method
-			hasAnyHandler = true
 		}
 	}
 
 	if mv := val.MethodByName(GetMethod); mv.IsValid() {
 		if method, ok := mv.Interface().(func(*Context) interface{}); ok {
 			handler.getHandler = method
-			hasAnyHandler = true
 		}
 	}
 
 	if mv := val.MethodByName(DeleteMethod); mv.IsValid() {
 		if method, ok := mv.Interface().(func(*Context) *APIError); ok {
 			handler.deleteHandler = method
-			hasAnyHandler = true
 		}
 	}
 
 	if mv := val.MethodByName(UpdateMethod); mv.IsValid() {
 		if method, ok := mv.Interface().(func(*Context) (interface{}, *APIError)); ok {
 			handler.updateHandler = method
-			hasAnyHandler = true
 		}
 	}
 
 	if mv := val.MethodByName(CreateMethod); mv.IsValid() {
 		if method, ok := mv.Interface().(func(*Context, []byte) (interface{}, *APIError)); ok {
 			handler.createHandler = method
-			hasAnyHandler = true
 		}
 	}
 
 	if mv := val.MethodByName(ActionMethod); mv.IsValid() {
 		if method, ok := mv.Interface().(func(*Context) (interface{}, *APIError)); ok {
 			handler.actionHandler = method
-			hasAnyHandler = true
 		}
 	}
 
-	if hasAnyHandler == false {
+	if len(GetResourceMethods(handler)) == 0 && len(GetCollectionMethods(handler)) == 0 {
 		return nil, fmt.Errorf("handler doesn't have any handle method")
 	} else {
 		return handler, nil

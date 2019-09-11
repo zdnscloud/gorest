@@ -85,7 +85,6 @@ func ListHandler(ctx *types.Context) *types.APIError {
 			return types.NewAPIError(types.ServerError,
 				fmt.Sprintf("list handler doesn't return slice but %v", reflect.ValueOf(data).Kind()))
 		}
-
 		collection := &types.Collection{
 			Type:         "collection",
 			ResourceType: ctx.Object.GetType(),

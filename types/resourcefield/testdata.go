@@ -1,4 +1,4 @@
-package field
+package resourcefield
 
 type Embed struct {
 	Id  string `rest:"default=xxxx"`

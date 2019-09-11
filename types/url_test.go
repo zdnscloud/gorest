@@ -141,24 +141,3 @@ func TestReflection(t *testing.T) {
 		ut.Equal(t, len(urlMethods[url]) != 0, true)
 	}
 }
-
-type Outer struct {
-	Resource
-	Name    Inner `json:"inner"`
-	Hobbies map[string]int
-}
-
-type Inner struct {
-	Name   string
-	Number int
-	Inner  InnerInInner
-}
-
-type InnerInInner struct {
-	Numbers []int
-}
-
-func TestNestedStruct(t *testing.T) {
-	schemas := NewSchemas()
-	schemas.MustImport(&version, Outer{}, &handleNoAction{})
-}

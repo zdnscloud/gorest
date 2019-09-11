@@ -1,4 +1,4 @@
-package field
+package resourcefield
 
 import (
 	"reflect"

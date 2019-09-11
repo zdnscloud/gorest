@@ -1,86 +1,10 @@
-package field
+package resourcefield
 
 import (
 	"fmt"
 	"reflect"
 	"strings"
 )
-
-type StructField struct {
-	fields map[string]Field
-}
-
-func (f *StructField) SetFields(fields []Field) {
-	m := make(map[string]Field)
-	for _, field := range fields {
-		m[field.Name()] = field
-	}
-	f.fields = m
-}
-
-func (f *StructField) DefaultValue() interface{} {
-	def := make(map[string]interface{})
-	for _, field := range f.fields {
-		def[field.JsonName()] = field.DefaultValue()
-	}
-	return def
-}
-
-func (f *StructField) Validate(value interface{}) error {
-	fieldValue := reflect.ValueOf(value)
-	switch fieldValue.Kind() {
-	case reflect.Ptr:
-		if fieldValue.IsNil() {
-			return nil
-		}
-
-		if fieldValue.Elem().Kind() == reflect.Struct {
-			return f.validateStruct(fieldValue.Elem())
-		}
-	case reflect.Struct:
-		return f.validateStruct(fieldValue)
-	}
-	return fmt.Errorf("struct field doesn't support type %v", fieldValue.Kind())
-}
-
-func (f *StructField) validateStruct(value reflect.Value) error {
-	st := value.Type()
-	for i := 0; i < st.NumField(); i++ {
-		sf := st.Field(i)
-		if sf.PkgPath != "" {
-			continue
-		}
-
-		if sf.Anonymous {
-			if err := f.validateStruct(value.Field(i)); err != nil {
-				return err
-			}
-			continue
-		}
-
-		if field, ok := f.fields[sf.Name]; ok {
-			if err := field.Validate(value.Field(i).Interface()); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (f *StructField) FillDefault(raw map[string]interface{}) {
-	for _, field := range f.fields {
-		field.FillDefault(raw)
-	}
-}
-
-func (f *StructField) CheckRequired(raw map[string]interface{}) error {
-	for _, field := range f.fields {
-		if err := field.CheckRequired(raw); err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
 type FieldBuilder struct {
 	fields []Field
@@ -90,7 +14,7 @@ func NewBuilder() *FieldBuilder {
 	return &FieldBuilder{}
 }
 
-func (b *FieldBuilder) Build(typ reflect.Type) (*StructField, error) {
+func (b *FieldBuilder) Build(typ reflect.Type) (*ResourceField, error) {
 	if err := b.buildFields(typ); err != nil {
 		return nil, err
 	}
@@ -99,9 +23,7 @@ func (b *FieldBuilder) Build(typ reflect.Type) (*StructField, error) {
 		return nil, nil
 	}
 
-	sf := &StructField{}
-	sf.SetFields(b.fields)
-	return sf, nil
+	return newResourceField(b.fields), nil
 }
 
 func (b *FieldBuilder) buildFields(typ reflect.Type) error {
@@ -211,7 +133,7 @@ func (b *FieldBuilder) buildLeafField(name string, kind reflect.Kind, json strin
 	return field, nil
 }
 
-func (b *FieldBuilder) buildCompositeField(name string, kind reflect.Kind, json string, sf *StructField, restTags []string) (Field, error) {
+func (b *FieldBuilder) buildCompositeField(name string, kind reflect.Kind, json string, sf *ResourceField, restTags []string) (Field, error) {
 	field := newCompositeField(name, fieldJsonName(name, json), sf)
 	if err := fieldParseOptional(field, kind, restTags); err != nil {
 		return nil, err

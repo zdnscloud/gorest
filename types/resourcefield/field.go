@@ -1,4 +1,4 @@
-package field
+package resourcefield
 
 import (
 	"encoding/json"
@@ -100,10 +100,10 @@ type compositeField struct {
 	jsonName  string
 	required  bool
 	ownerKind OwnerKind
-	field     *StructField
+	field     *ResourceField
 }
 
-func newCompositeField(name, jsonName string, inner *StructField) *compositeField {
+func newCompositeField(name, jsonName string, inner *ResourceField) *compositeField {
 	return &compositeField{
 		name:      name,
 		jsonName:  jsonName,
