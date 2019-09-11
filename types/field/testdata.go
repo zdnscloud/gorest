@@ -21,7 +21,11 @@ type TestStruct struct {
 	IntWithRange       uint32 `json:"intWithRange" rest:"min=1,max=1000"`
 	BoolWithDefault    bool   `json:"boolWithDefault,omitempty" rest:"default=true"`
 
-	Composition         []IncludeStruct          `json:"composition" rest:"required=true"`
+	SliceComposition    []IncludeStruct          `json:"sliceComposition" rest:"required=true"`
 	StringMapCompostion map[string]IncludeStruct `json:"stringMapComposition" rest:"required=true"`
 	IntMapCompostion    map[int32]IncludeStruct  `json:"intMapComposition" rest:"required=true"`
+
+	PtrComposition      *IncludeStruct           `json:"ptrComposition" rest:"required=true"`
+	SlicePtrComposition []*IncludeStruct         `json:"slicePtrComposition" rest:"required=true"`
+	IntPtrMapCompostion map[uint8]*IncludeStruct `json:"intPtrMapComposition" rest:"required=true"`
 }

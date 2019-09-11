@@ -2,7 +2,6 @@ package field
 
 import (
 	"encoding/json"
-	"fmt"
 	ut "github.com/zdnscloud/cement/unittest"
 	"reflect"
 	"testing"
@@ -13,7 +12,7 @@ func TestFieldBuild(t *testing.T) {
 	sf, err := builder.Build(reflect.TypeOf(TestStruct{}))
 	ut.Assert(t, err == nil, "")
 
-	ut.Equal(t, len(sf.fields), 12)
+	ut.Equal(t, len(sf.fields), 15)
 	fieldNames := []string{
 		"Id",
 		"Age",
@@ -24,7 +23,14 @@ func TestFieldBuild(t *testing.T) {
 		"IntWithDefault",
 		"IntWithRange",
 		"BoolWithDefault",
-		"Composition",
+
+		"SliceComposition",
+		"StringMapCompostion",
+		"IntMapCompostion",
+
+		"PtrComposition",
+		"SlicePtrComposition",
+		"IntPtrMapCompostion",
 	}
 	for _, name := range fieldNames {
 		_, ok := sf.fields[name]
@@ -78,20 +84,34 @@ func TestFieldFillDefault(t *testing.T) {
 		StringWithOption:   "ceph",
 		StringWithLenLimit: "aaa",
 		IntWithRange:       100,
-		Composition: []IncludeStruct{
+		SliceComposition: []IncludeStruct{
 			IncludeStruct{
+				Int8WithRange: 7,
+			},
+		},
+		StringMapCompostion: map[string]IncludeStruct{
+			"a": IncludeStruct{
+				Int8WithRange: 6,
+			},
+		},
+		IntMapCompostion: map[int32]IncludeStruct{
+			10: IncludeStruct{
+				Int8WithRange: 6,
+			},
+		},
+		PtrComposition: &IncludeStruct{
+			Int8WithRange: 7,
+		},
+		SlicePtrComposition: []*IncludeStruct{
+			&IncludeStruct{
 				Int8WithRange: 5,
 			},
 		},
-	}
-	ts.StringMapCompostion = make(map[string]IncludeStruct)
-	ts.StringMapCompostion["a"] = IncludeStruct{
-		Int8WithRange: 10,
-	}
-
-	ts.IntMapCompostion = make(map[int32]IncludeStruct)
-	ts.IntMapCompostion[20] = IncludeStruct{
-		Int8WithRange: 20,
+		IntPtrMapCompostion: map[uint8]*IncludeStruct{
+			8: &IncludeStruct{
+				Int8WithRange: 5,
+			},
+		},
 	}
 
 	raw := make(map[string]interface{})
@@ -112,8 +132,12 @@ func TestFieldFillDefault(t *testing.T) {
 	ut.Equal(t, ts.StringWithDefault, "boy")
 	ut.Equal(t, ts.IntWithDefault, 11)
 	ut.Equal(t, ts.BoolWithDefault, true)
-	ut.Equal(t, ts.IntMapCompostion[20].Uint16WithDefault, uint16(11))
+	ut.Equal(t, ts.IntMapCompostion[10].Uint16WithDefault, uint16(11))
 	ut.Equal(t, ts.StringMapCompostion["a"].Uint16WithDefault, uint16(11))
+	ut.Equal(t, ts.SliceComposition[0].Uint16WithDefault, uint16(11))
+	ut.Equal(t, ts.SlicePtrComposition[0].Uint16WithDefault, uint16(11))
+	ut.Equal(t, ts.PtrComposition.Uint16WithDefault, uint16(11))
+	ut.Equal(t, ts.IntPtrMapCompostion[8].Uint16WithDefault, uint16(11))
 }
 
 func TestCheckRequired(t *testing.T) {
@@ -124,8 +148,31 @@ func TestCheckRequired(t *testing.T) {
 		StringWithOption:   "ceph",
 		StringWithLenLimit: "aaa",
 		IntWithRange:       100,
-		Composition: []IncludeStruct{
+		SliceComposition: []IncludeStruct{
 			IncludeStruct{
+				Int8WithRange: 5,
+			},
+		},
+		StringMapCompostion: map[string]IncludeStruct{
+			"a": IncludeStruct{
+				Int8WithRange: 6,
+			},
+		},
+		IntMapCompostion: map[int32]IncludeStruct{
+			10: IncludeStruct{
+				Int8WithRange: 6,
+			},
+		},
+		PtrComposition: &IncludeStruct{
+			Int8WithRange: 7,
+		},
+		SlicePtrComposition: []*IncludeStruct{
+			&IncludeStruct{
+				Int8WithRange: 5,
+			},
+		},
+		IntPtrMapCompostion: map[uint8]*IncludeStruct{
+			8: &IncludeStruct{
 				Int8WithRange: 5,
 			},
 		},
@@ -133,12 +180,10 @@ func TestCheckRequired(t *testing.T) {
 
 	raw := make(map[string]interface{})
 	rawByte, _ := json.Marshal(ts)
-
-	fmt.Printf("--> rawByte:%s\n", string(rawByte))
 	json.Unmarshal(rawByte, &raw)
 	ut.Assert(t, sf.CheckRequired(raw) == nil, "")
 
-	for _, name := range []string{"name", "stringWithOption", "stringMapComposition", "intMapComposition"} {
+	for _, name := range []string{"name", "stringWithOption", "stringMapComposition", "intMapComposition", "ptrComposition", "slicePtrComposition", "intPtrMapComposition"} {
 		json.Unmarshal(rawByte, &raw)
 		delete(raw, name)
 		ut.Assert(t, sf.CheckRequired(raw) != nil, "")
@@ -148,46 +193,81 @@ func TestCheckRequired(t *testing.T) {
 func TestValidate(t *testing.T) {
 	builder := NewBuilder()
 	sf, _ := builder.Build(reflect.TypeOf(TestStruct{}))
+
 	ts := TestStruct{
 		Name:               "dd",
 		StringWithOption:   "ceph",
 		StringWithLenLimit: "aaa",
 		IntWithRange:       100,
-		Composition: []IncludeStruct{
+		SliceComposition: []IncludeStruct{
 			IncludeStruct{
 				Int8WithRange: 5,
 			},
 		},
-	}
-	ts.StringMapCompostion = make(map[string]IncludeStruct)
-	ts.StringMapCompostion["a"] = IncludeStruct{
-		Int8WithRange: 10,
-	}
-
-	ts.IntMapCompostion = make(map[int32]IncludeStruct)
-	ts.IntMapCompostion[20] = IncludeStruct{
-		Int8WithRange: 19,
+		StringMapCompostion: map[string]IncludeStruct{
+			"a": IncludeStruct{
+				Int8WithRange: 6,
+			},
+		},
+		IntMapCompostion: map[int32]IncludeStruct{
+			10: IncludeStruct{
+				Int8WithRange: 6,
+			},
+		},
+		PtrComposition: &IncludeStruct{
+			Int8WithRange: 7,
+		},
+		SlicePtrComposition: []*IncludeStruct{
+			nil,
+			&IncludeStruct{
+				Int8WithRange: 5,
+			},
+		},
+		IntPtrMapCompostion: map[uint8]*IncludeStruct{
+			8: &IncludeStruct{
+				Int8WithRange: 5,
+			},
+		},
 	}
 
 	ut.Assert(t, sf.Validate(ts) == nil, "")
 
-	ts2 := ts
-	ts2.StringWithOption = "oo"
-	ut.Assert(t, sf.Validate(ts2) != nil, "")
+	rawByte, _ := json.Marshal(ts)
 
-	ts3 := ts
-	ts3.IntWithRange = 10000
-	ut.Assert(t, sf.Validate(ts3) != nil, "")
+	ts.StringWithOption = "oo"
+	ut.Assert(t, sf.Validate(ts) != nil, "")
 
-	ts4 := ts
-	ss := ts4.StringMapCompostion["a"]
+	ts = TestStruct{}
+	json.Unmarshal(rawByte, &ts)
+	ts.IntWithRange = 10000
+	ut.Assert(t, sf.Validate(ts) != nil, "")
+
+	ts = TestStruct{}
+	json.Unmarshal(rawByte, &ts)
+	ss := ts.StringMapCompostion["a"]
 	ss.Int8WithRange = 22
-	ts4.StringMapCompostion["a"] = ss
-	ut.Assert(t, sf.Validate(ts4) != nil, "")
+	ts.StringMapCompostion["a"] = ss
+	ut.Assert(t, sf.Validate(ts) != nil, "")
 
-	ts5 := ts
-	ss = ts5.IntMapCompostion[20]
+	ts = TestStruct{}
+	json.Unmarshal(rawByte, &ts)
+	ss = ts.IntMapCompostion[20]
 	ss.Int8WithRange = -1
-	ts5.IntMapCompostion[20] = ss
-	ut.Assert(t, sf.Validate(ts5) != nil, "")
+	ts.IntMapCompostion[20] = ss
+	ut.Assert(t, sf.Validate(ts) != nil, "")
+
+	ts = TestStruct{}
+	json.Unmarshal(rawByte, &ts)
+	ts.PtrComposition.Int8WithRange = 22
+	ut.Assert(t, sf.Validate(ts) != nil, "")
+
+	ts = TestStruct{}
+	json.Unmarshal(rawByte, &ts)
+	ts.SliceComposition[0].Int8WithRange = 22
+	ut.Assert(t, sf.Validate(ts) != nil, "")
+
+	ts = TestStruct{}
+	json.Unmarshal(rawByte, &ts)
+	ts.IntPtrMapCompostion[8].Int8WithRange = 22
+	ut.Assert(t, sf.Validate(ts) != nil, "")
 }

@@ -13,16 +13,9 @@ const (
 )
 
 func fieldParseOptional(f Field, kind reflect.Kind, restTags []string) error {
-	hasRequired := false
-	hasDefault := false
 	for _, tag := range restTags {
 		if strings.HasPrefix(tag, requiredTag) {
 			requiredVal := strings.TrimPrefix(tag, requiredTag)
-			hasRequired = true
-			if hasDefault {
-				return fmt.Errorf("require field cann't have default value")
-			}
-
 			if requiredVal == "no" || requiredVal == "false" {
 				f.SetRequired(false)
 			} else if requiredVal == "yes" || requiredVal == "true" {
@@ -31,13 +24,6 @@ func fieldParseOptional(f Field, kind reflect.Kind, restTags []string) error {
 				return fmt.Errorf("invalid require value %s", requiredVal)
 			}
 		} else if strings.HasPrefix(tag, defaultTag) {
-			if hasDefault {
-				return fmt.Errorf("can only have one default value")
-			}
-			hasDefault = true
-			if hasRequired {
-				return fmt.Errorf("require field cann't have default value")
-			}
 			defaultValue := strings.TrimPrefix(tag, defaultTag)
 			switch kind {
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -67,5 +53,10 @@ func fieldParseOptional(f Field, kind reflect.Kind, restTags []string) error {
 			}
 		}
 	}
+
+	if f.IsRequired() && f.DefaultValue() != nil {
+		return fmt.Errorf("required and default value cann't be set simultanously")
+	}
+
 	return nil
 }

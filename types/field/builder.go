@@ -6,6 +6,82 @@ import (
 	"strings"
 )
 
+type StructField struct {
+	fields map[string]Field
+}
+
+func (f *StructField) SetFields(fields []Field) {
+	m := make(map[string]Field)
+	for _, field := range fields {
+		m[field.Name()] = field
+	}
+	f.fields = m
+}
+
+func (f *StructField) DefaultValue() interface{} {
+	def := make(map[string]interface{})
+	for _, field := range f.fields {
+		def[field.JsonName()] = field.DefaultValue()
+	}
+	return def
+}
+
+func (f *StructField) Validate(value interface{}) error {
+	fieldValue := reflect.ValueOf(value)
+	switch fieldValue.Kind() {
+	case reflect.Ptr:
+		if fieldValue.IsNil() {
+			return nil
+		}
+
+		if fieldValue.Elem().Kind() == reflect.Struct {
+			return f.validateStruct(fieldValue.Elem())
+		}
+	case reflect.Struct:
+		return f.validateStruct(fieldValue)
+	}
+	return fmt.Errorf("struct field doesn't support type %v", fieldValue.Kind())
+}
+
+func (f *StructField) validateStruct(value reflect.Value) error {
+	st := value.Type()
+	for i := 0; i < st.NumField(); i++ {
+		sf := st.Field(i)
+		if sf.PkgPath != "" {
+			continue
+		}
+
+		if sf.Anonymous {
+			if err := f.validateStruct(value.Field(i)); err != nil {
+				return err
+			}
+			continue
+		}
+
+		if field, ok := f.fields[sf.Name]; ok {
+			if err := field.Validate(value.Field(i).Interface()); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (f *StructField) FillDefault(raw map[string]interface{}) {
+	for _, field := range f.fields {
+		field.FillDefault(raw)
+	}
+}
+
+func (f *StructField) CheckRequired(raw map[string]interface{}) error {
+	for _, field := range f.fields {
+		if err := field.CheckRequired(raw); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type FieldBuilder struct {
 	fields []Field
 }
@@ -82,6 +158,12 @@ func (b *FieldBuilder) createField(name string, typ reflect.Type, json, rest str
 	case reflect.Map, reflect.Slice:
 		nestType := typ.Elem()
 		nestKind := nestType.Kind()
+		//only support one level pointer
+		if nestKind == reflect.Ptr {
+			nestType = nestType.Elem()
+			nestKind = nestType.Kind()
+		}
+
 		if nestKind == reflect.Struct {
 			field, err := b.createField(name, nestType, json, rest)
 			if err == nil && field != nil {

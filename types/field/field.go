@@ -83,98 +83,9 @@ func (f *leafField) Validate(val interface{}) error {
 	return nil
 }
 
-type StructField struct {
-	fields map[string]Field
-}
-
-func (f *StructField) SetFields(fields []Field) {
-	m := make(map[string]Field)
-	for _, field := range fields {
-		m[field.Name()] = field
-	}
-	f.fields = m
-}
-
-func (f *StructField) DefaultValue() interface{} {
-	def := make(map[string]interface{})
-	for _, field := range f.fields {
-		def[field.JsonName()] = field.DefaultValue()
-	}
-	return def
-}
-
-func (f *StructField) Validate(val interface{}) error {
-	value := reflect.ValueOf(val)
-	switch value.Kind() {
-	case reflect.Ptr:
-		if value.Elem().Kind() == reflect.Struct {
-			return f.validateStruct(value.Elem())
-		}
-	case reflect.Struct:
-		return f.validateStruct(value)
-	}
-	return fmt.Errorf("struct field doesn't support type %v", value.Kind())
-}
-
-func (f *StructField) validateStruct(value reflect.Value) error {
-	st := value.Type()
-	for i := 0; i < st.NumField(); i++ {
-		sf := st.Field(i)
-		if sf.PkgPath != "" {
-			continue
-		}
-
-		if sf.Anonymous {
-			if err := f.validateStruct(value.Field(i)); err != nil {
-				return err
-			}
-			continue
-		}
-
-		if field, ok := f.fields[sf.Name]; ok {
-			fieldValue := value.Field(i)
-			switch sf.Type.Kind() {
-			case reflect.Map:
-				iter := fieldValue.MapRange()
-				for iter.Next() {
-					if err := field.Validate(iter.Value().Interface()); err != nil {
-						return err
-					}
-				}
-			case reflect.Slice:
-				for i := 0; i < fieldValue.Cap(); i++ {
-					if err := field.Validate(fieldValue.Index(i).Interface()); err != nil {
-						return err
-					}
-				}
-			default:
-				if err := field.Validate(fieldValue.Interface()); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
-}
-
-func (f *StructField) FillDefault(raw map[string]interface{}) {
-	for _, field := range f.fields {
-		field.FillDefault(raw)
-	}
-}
-
-func (f *StructField) CheckRequired(raw map[string]interface{}) error {
-	for _, field := range f.fields {
-		if err := field.CheckRequired(raw); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-//filed like map with struct value type
+//filed like map with struct as value type
 //struct slice
-//struct
+//struct ptr or just struct
 type OwnerKind string
 
 const (
@@ -229,14 +140,53 @@ func (f *compositeField) SetOwner(kind OwnerKind) {
 func (f *compositeField) SetDefault(_ interface{}) {
 }
 
-func (f *compositeField) Validate(val interface{}) error {
-	return f.field.Validate(val)
+func (f *compositeField) Validate(value interface{}) error {
+	kind := reflect.TypeOf(value).Kind()
+	if kind == reflect.Ptr {
+		value := reflect.ValueOf(value)
+		if !value.IsNil() {
+			return f.Validate(value.Elem().Interface())
+		} else {
+			return nil
+		}
+	}
+
+	switch f.ownerKind {
+	case OwnerIntMap, OwnerStringMap:
+		if kind != reflect.Map {
+			return fmt.Errorf("use map field to validate %v", kind)
+		}
+		iter := reflect.ValueOf(value).MapRange()
+		for iter.Next() {
+			if err := f.field.Validate(iter.Value().Interface()); err != nil {
+				return err
+			}
+		}
+	case OwnerSlice:
+		if kind != reflect.Slice {
+			return fmt.Errorf("use slice field to validate %v", kind)
+		}
+		fieldValue := reflect.ValueOf(value)
+		for i := 0; i < fieldValue.Len(); i++ {
+			//todo, is nil element valid?
+			if err := f.field.Validate(fieldValue.Index(i).Interface()); err != nil {
+				return err
+			}
+		}
+	case OwnerNone:
+		if kind != reflect.Struct {
+			return fmt.Errorf("use struct field to validate %v", kind)
+		}
+		return f.field.Validate(value)
+	}
+
+	return nil
 }
 
 func (f *compositeField) CheckRequired(json map[string]interface{}) error {
 	jsonName := f.JsonName()
 	if f.IsRequired() {
-		if _, ok := json[jsonName]; ok == false {
+		if val, ok := json[jsonName]; ok == false || val == nil {
 			return fmt.Errorf("field %s is missing", jsonName)
 		}
 	}
@@ -245,7 +195,7 @@ func (f *compositeField) CheckRequired(json map[string]interface{}) error {
 
 func (f *compositeField) FillDefault(raw map[string]interface{}) {
 	jsonName := f.JsonName()
-	if val, ok := raw[jsonName]; ok {
+	if val, ok := raw[jsonName]; ok && val != nil {
 		nestRaw, _ := json.Marshal(val)
 		switch f.ownerKind {
 		case OwnerIntMap:
