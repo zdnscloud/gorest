@@ -126,20 +126,10 @@ func TestParse(t *testing.T) {
 	ut.Equal(t, ctx.Object.GetSchema().Version.Group, "testing")
 	ut.Equal(t, ctx.Object.GetSchema().Version.Version, "v1")
 
-	req, _ = http.NewRequest("DELETE", "/apis/testing/v1/clusters/123321", nil)
-	deleteNotAllowedErr := types.NewAPIError(types.MethodNotAllowed, fmt.Sprintf("Method %s not supported", req.Method))
-	_, err = Parse(nil, req, schemas)
-	ut.Equal(t, err, deleteNotAllowedErr)
-
 	req, _ = http.NewRequest("POST", "/apis/testing/v1/clusters", nil)
 	var nilErr *types.APIError
 	_, err = Parse(nil, req, schemas)
 	ut.Equal(t, err, nilErr)
-
-	req, _ = http.NewRequest("POST", "/apis/testing/v1/clusters/123123/nodes", nil)
-	postNotAllowedErr := types.NewAPIError(types.MethodNotAllowed, fmt.Sprintf("Method %s not supported", req.Method))
-	_, err = Parse(nil, req, schemas)
-	ut.Equal(t, err, postNotAllowedErr)
 
 	req, _ = http.NewRequest("GET", "/apis/testing/v1/noshemas", nil)
 	schemaNoFoundErr := types.NewAPIError(types.NotFound, fmt.Sprintf("no found schema for noshemas"))

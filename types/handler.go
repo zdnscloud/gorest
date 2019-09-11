@@ -48,6 +48,21 @@ func GetResourceMethods(handler Handler) []string {
 	return resourceMethods
 }
 
+func SupportResourceMethod(handler Handler, method string) bool {
+	switch method {
+	case http.MethodGet:
+		return handler.GetGetHandler() != nil
+	case http.MethodDelete:
+		return handler.GetDeleteHandler() != nil
+	case http.MethodPut:
+		return handler.GetUpdateHandler() != nil
+	case http.MethodPost:
+		return handler.GetActionHandler() != nil
+	default:
+		return false
+	}
+}
+
 func GetCollectionMethods(handler Handler) []string {
 	var collectionMethods []string
 	if handler.GetListHandler() != nil {
@@ -57,6 +72,17 @@ func GetCollectionMethods(handler Handler) []string {
 		collectionMethods = append(collectionMethods, http.MethodPost)
 	}
 	return collectionMethods
+}
+
+func SupportCollectionMethod(handler Handler, method string) bool {
+	switch method {
+	case http.MethodGet:
+		return handler.GetListHandler() != nil
+	case http.MethodPost:
+		return handler.GetCreateHandler() != nil
+	default:
+		return false
+	}
 }
 
 func NewHandler(obj interface{}) (Handler, error) {

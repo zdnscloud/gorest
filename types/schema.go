@@ -12,15 +12,13 @@ import (
 type Schema struct {
 	Version           APIVersion                   `json:"version"`
 	PluralName        string                       `json:"pluralName,omitempty"`
-	ResourceMethods   []string                     `json:"resourceMethods,omitempty"`
 	ResourceFields    *resourcefield.ResourceField `json:"resourceFields"`
 	ResourceActions   []Action                     `json:"resourceActions,omitempty"`
-	CollectionMethods []string                     `json:"collectionMethods,omitempty"`
 	CollectionActions []Action                     `json:"collectionActions,omitempty"`
 
-	StructVal reflect.Value `json:"-"`
-	Handler   Handler       `json:"-"`
-	Parents   []string      `json:"-"`
+	resourceType reflect.Type `json:"-"`
+	Handler      Handler      `json:"-"`
+	Parents      []string     `json:"-"`
 }
 
 type Action struct {
@@ -29,7 +27,27 @@ type Action struct {
 }
 
 func (s *Schema) GetType() string {
-	return strings.ToLower(s.StructVal.Type().Name())
+	return strings.ToLower(s.resourceType.Name())
+}
+
+func (s *Schema) resourceMethods() []string {
+	return GetResourceMethods(s.Handler)
+}
+
+func (s *Schema) SupportResourceMethod(method string) bool {
+	return SupportResourceMethod(s.Handler, method)
+}
+
+func (s *Schema) collectionMethods() []string {
+	return GetCollectionMethods(s.Handler)
+}
+
+func (s *Schema) SupportCollectionMethod(method string) bool {
+	return SupportCollectionMethod(s.Handler, method)
+}
+
+func (s *Schema) NewResource() interface{} {
+	return reflect.New(s.resourceType).Interface()
 }
 
 func newSchema(version *APIVersion, obj ResourceType, objHandler interface{}) (*Schema, error) {
@@ -52,16 +70,12 @@ func newSchema(version *APIVersion, obj ResourceType, objHandler interface{}) (*
 		return nil, err
 	}
 
-	objectValue := reflect.New(objType).Elem()
-	pluralName := util.GuessPluralName(strings.ToLower(objectValue.Type().Name()))
-
+	pluralName := util.GuessPluralName(strings.ToLower(objType.Name()))
 	return &Schema{
 		Version:           *version,
-		StructVal:         objectValue,
+		resourceType:      objType,
 		ResourceFields:    fields,
 		Handler:           handler,
-		ResourceMethods:   GetResourceMethods(handler),
-		CollectionMethods: GetCollectionMethods(handler),
 		ResourceActions:   obj.GetActions(),
 		CollectionActions: obj.GetCollectionActions(),
 		Parents:           obj.GetParents(),

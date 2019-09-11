@@ -2,31 +2,12 @@ package types
 
 import (
 	"fmt"
-	"path"
 	"reflect"
 	"strings"
 	"time"
 )
 
-type Collection struct {
-	Type         string            `json:"type,omitempty"`
-	ResourceType string            `json:"resourceType,omitempty"`
-	Links        map[string]string `json:"links,omitempty"`
-	Data         interface{}       `json:"data"`
-}
-
-type APIVersion struct {
-	Group   string `json:"group,omitempty"`
-	Version string `json:"version,omitempty"`
-}
-
-func (v *APIVersion) GetVersionURL() string {
-	return path.Join(GroupPrefix, v.Group, v.Version)
-}
-
-type RequestHandler func(request *Context) *APIError
-
-func GetResourceType(obj interface{}) string {
+func GetResourceType(obj ResourceType) string {
 	return strings.ToLower(reflect.TypeOf(obj).Name())
 }
 

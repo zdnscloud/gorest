@@ -12,7 +12,7 @@ func RestHandler(ctx *types.Context) *types.APIError {
 		return handler.ActionHandler(ctx)
 	}
 
-	var reqHandler types.RequestHandler
+	var reqHandler func(request *types.Context) *types.APIError
 	switch ctx.Method {
 	case http.MethodGet:
 		reqHandler = handler.ListHandler

@@ -27,6 +27,7 @@ func NewContext(req *http.Request, resp http.ResponseWriter, schemas *Schemas) *
 		Request:  req,
 		Response: resp,
 		Schemas:  schemas,
+		Method:   req.Method,
 		params:   make(map[string]interface{}),
 	}
 }

@@ -125,12 +125,12 @@ func (s *Schemas) UrlMethods() map[string][]string {
 
 			parentUrl := buffer.String()
 			url := path.Join(schema.Version.GetVersionURL(), parentUrl, schema.PluralName)
-			if len(schema.CollectionMethods) != 0 {
-				urlMethods[url] = schema.CollectionMethods
+			if ms := schema.collectionMethods(); len(ms) != 0 {
+				urlMethods[url] = ms
 			}
 
-			if len(schema.ResourceMethods) != 0 {
-				urlMethods[path.Join(url, ":"+schema.GetType()+"_id")] = schema.ResourceMethods
+			if ms := schema.resourceMethods(); len(ms) != 0 {
+				urlMethods[path.Join(url, ":"+schema.GetType()+"_id")] = ms
 			}
 		}
 	}

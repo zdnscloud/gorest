@@ -7,25 +7,31 @@ import (
 	"strings"
 
 	"github.com/zdnscloud/gorest/types"
-	"github.com/zdnscloud/gorest/util"
 )
+
+type Collection struct {
+	Type         string            `json:"type,omitempty"`
+	ResourceType string            `json:"resourceType,omitempty"`
+	Links        map[string]string `json:"links,omitempty"`
+	Data         interface{}       `json:"data"`
+}
 
 func addLinks(ctx *types.Context, schema *types.Schema, obj types.Object) {
 	links := make(map[string]string)
 	self := genResourceLink(ctx.Request, obj.GetID())
-	if util.ContainsString(schema.ResourceMethods, http.MethodGet) {
+	if schema.SupportResourceMethod(http.MethodGet) {
 		links["self"] = self
 	}
 
-	if util.ContainsString(schema.ResourceMethods, http.MethodPut) {
+	if schema.SupportResourceMethod(http.MethodPut) {
 		links["update"] = self
 	}
 
-	if util.ContainsString(schema.ResourceMethods, http.MethodDelete) {
+	if schema.SupportResourceMethod(http.MethodDelete) {
 		links["remove"] = self
 	}
 
-	if util.ContainsString(schema.CollectionMethods, http.MethodGet) {
+	if schema.SupportCollectionMethod(http.MethodGet) {
 		links["collection"] = genCollectionLink(ctx.Request, obj.GetID())
 	}
 
@@ -42,7 +48,7 @@ func addResourceLinks(ctx *types.Context, obj interface{}) {
 	}
 }
 
-func addCollectionLinks(ctx *types.Context, collection *types.Collection) {
+func addCollectionLinks(ctx *types.Context, collection *Collection) {
 	collection.Links = map[string]string{
 		"self": getRequestURL(ctx.Request),
 	}

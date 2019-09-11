@@ -85,7 +85,7 @@ func ListHandler(ctx *types.Context) *types.APIError {
 			return types.NewAPIError(types.ServerError,
 				fmt.Sprintf("list handler doesn't return slice but %v", reflect.ValueOf(data).Kind()))
 		}
-		collection := &types.Collection{
+		collection := &Collection{
 			Type:         "collection",
 			ResourceType: ctx.Object.GetType(),
 			Data:         data,
@@ -148,10 +148,7 @@ func setRuntimeActionInput(ctx *types.Context, val interface{}) {
 }
 
 func createRuntimeObject(ctx *types.Context) interface{} {
-	val := ctx.Object.GetSchema().StructVal
-	valPtr := reflect.New(val.Type())
-	valPtr.Elem().Set(val)
-	return valPtr.Interface()
+	return ctx.Object.GetSchema().NewResource()
 }
 
 func decodeBody(req *http.Request, params interface{}) *types.APIError {
@@ -198,8 +195,6 @@ func parseCreateBody(ctx *types.Context) ([]byte, *types.APIError) {
 			fmt.Sprintf("Failed to parse request body: %v", err.Error()))
 	}
 
-	fmt.Printf("original body %s\n", string(reqBody))
-
 	raw := make(map[string]interface{})
 	if err := json.Unmarshal(reqBody, &raw); err != nil {
 		return nil, types.NewAPIError(types.InvalidBodyContent,
@@ -211,8 +206,6 @@ func parseCreateBody(ctx *types.Context) ([]byte, *types.APIError) {
 	}
 	schema.ResourceFields.FillDefault(raw)
 	reqBody, _ = json.Marshal(raw)
-
-	fmt.Printf("after fill default: %s\n", string(reqBody))
 
 	val := createRuntimeObject(ctx)
 	if err := json.Unmarshal(reqBody, val); err != nil {

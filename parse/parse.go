@@ -26,10 +26,6 @@ func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas) (*
 		return ctx, err
 	}
 
-	if err := parseMethod(ctx); err != nil {
-		return ctx, err
-	}
-
 	if err := parseAction(ctx); err != nil {
 		return ctx, err
 	}
@@ -134,22 +130,6 @@ func parseResponseFormat(ctx *types.Context) *types.APIError {
 	} else {
 		ctx.ResponseFormat = types.ResponseJSON
 	}
-	return nil
-}
-
-func parseMethod(ctx *types.Context) *types.APIError {
-	method := ctx.Request.Method
-	schema := ctx.Object.GetSchema()
-	allowed := schema.ResourceMethods
-	if ctx.Object.GetID() == "" {
-		allowed = schema.CollectionMethods
-	}
-
-	if slice.SliceIndex(allowed, method) == -1 {
-		return types.NewAPIError(types.MethodNotAllowed, fmt.Sprintf("Method %s not supported", method))
-	}
-
-	ctx.Method = method
 	return nil
 }
 

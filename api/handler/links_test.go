@@ -158,7 +158,7 @@ func TestAddCollectionLinks(t *testing.T) {
 		},
 	}
 
-	collection := &types.Collection{
+	collection := &Collection{
 		Type:         "collection",
 		ResourceType: "testresourceobject",
 		Data: []*Testresourceobjectparent{
