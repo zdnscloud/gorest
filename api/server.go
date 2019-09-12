@@ -16,22 +16,12 @@ type Server struct {
 	handlers HandlersChain
 }
 
-func NewAPIServer() *Server {
+func NewAPIServer(schemas *types.Schemas) *Server {
 	s := &Server{
-		Schemas: types.NewSchemas(),
+		Schemas: schemas,
 	}
 
 	return s
-}
-
-func (s *Server) AddSchemas(schemas *types.Schemas) error {
-	for _, schema := range schemas.Schemas() {
-		if _, err := s.Schemas.AddSchema(schema); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (s *Server) ServeHTTP(rw http.ResponseWriter, req *http.Request) {

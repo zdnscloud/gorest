@@ -9,7 +9,7 @@ type APIVersion struct {
 	Version string `json:"version,omitempty"`
 }
 
-func (v *APIVersion) GetVersionURL() string {
+func (v *APIVersion) GetUrl() string {
 	return path.Join(GroupPrefix, v.Group, v.Version)
 }
 

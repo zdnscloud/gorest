@@ -3,11 +3,9 @@ package parse
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strings"
 
-	"github.com/zdnscloud/cement/slice"
 	"github.com/zdnscloud/gorest/types"
 )
 
@@ -39,13 +37,19 @@ func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas) (*
 
 func parseVersionAndResource(ctx *types.Context) *types.APIError {
 	path := multiSlashRegexp.ReplaceAllString(ctx.Request.URL.EscapedPath(), "/")
+	return ctx.ParseRequestPath(path)
+}
+
+/*
 	var version *types.APIVersion
 	for _, v := range ctx.Schemas.Versions() {
 		if strings.HasPrefix(path, v.GetVersionURL()) {
+			path = strings.TrimPrefix(path, v.GetVersionURL())
 			version = &v
 			break
 		}
 	}
+
 	if version == nil {
 		return types.NewAPIError(types.NotFound, "no found version with "+path)
 	}
@@ -54,12 +58,13 @@ func parseVersionAndResource(ctx *types.Context) *types.APIError {
 		path = path[:len(path)-1]
 	}
 
-	versionURL := version.GetVersionURL()
-	if len(path) <= len(versionURL) {
-		return types.NewAPIError(types.InvalidFormat, "no schema name in url "+path)
+	if len(path) == 0 {
+		return types.NewAPIError(types.InvalidFormat, "no schema name in url")
+	} else {
+		//get rid of last '/'
+		path = path[1:]
 	}
 
-	path = path[len(versionURL)+1:]
 	pp := strings.Split(path, "/")
 	var paths []string
 	for _, p := range pp {
@@ -108,6 +113,7 @@ func parseVersionAndResource(ctx *types.Context) *types.APIError {
 	ctx.Object = obj
 	return nil
 }
+*/
 
 func safeIndex(slice []string, index int) string {
 	if index >= len(slice) {

@@ -37,7 +37,6 @@ func DeleteHandler(ctx *types.Context) *types.APIError {
 		return types.NewAPIError(types.NotFound, "no handler for delete")
 	}
 
-	setRuntimeObject(ctx, createRuntimeObject(ctx))
 	if err := handler(ctx); err != nil {
 		return err
 	}
@@ -52,12 +51,10 @@ func UpdateHandler(ctx *types.Context) *types.APIError {
 		return types.NewAPIError(types.NotFound, "no handler for update")
 	}
 
-	val := createRuntimeObject(ctx)
-	if err := decodeBody(ctx.Request, val); err != nil {
+	if err := decodeBody(ctx.Request, ctx.Object); err != nil {
 		return err
 	}
 
-	setRuntimeObject(ctx, val)
 	result, err := handler(ctx)
 	if err != nil {
 		return err
@@ -69,9 +66,6 @@ func UpdateHandler(ctx *types.Context) *types.APIError {
 }
 
 func ListHandler(ctx *types.Context) *types.APIError {
-
-	setRuntimeObject(ctx, createRuntimeObject(ctx))
-
 	var result interface{}
 	if ctx.Object.GetID() == "" {
 		handler := ctx.Object.GetSchema().Handler.GetListHandler()
@@ -123,10 +117,8 @@ func ActionHandler(ctx *types.Context) *types.APIError {
 		if err := decodeBody(ctx.Request, val); err != nil {
 			return err
 		}
-
-		setRuntimeActionInput(ctx, val)
+		ctx.Action.Input = val
 	}
-	setRuntimeObject(ctx, createRuntimeObject(ctx))
 	result, err := handler(ctx)
 	if err != nil {
 		return err
@@ -141,14 +133,6 @@ func createRuntimeActionInput(ctx *types.Context) interface{} {
 	valPtr := reflect.New(val.Type())
 	valPtr.Elem().Set(val)
 	return valPtr.Interface()
-}
-
-func setRuntimeActionInput(ctx *types.Context, val interface{}) {
-	ctx.Action.Input = val
-}
-
-func createRuntimeObject(ctx *types.Context) interface{} {
-	return ctx.Object.GetSchema().NewResource()
 }
 
 func decodeBody(req *http.Request, params interface{}) *types.APIError {
@@ -166,16 +150,6 @@ func decodeBody(req *http.Request, params interface{}) *types.APIError {
 	}
 
 	return nil
-}
-
-func setRuntimeObject(ctx *types.Context, val interface{}) {
-	objFromUrl := ctx.Object
-	obj := val.(types.Object)
-	obj.SetType(objFromUrl.GetType())
-	obj.SetParent(objFromUrl.GetParent())
-	obj.SetSchema(objFromUrl.GetSchema())
-	obj.SetID(objFromUrl.GetID())
-	ctx.Object = obj
 }
 
 func parseCreateBody(ctx *types.Context) ([]byte, *types.APIError) {
@@ -207,16 +181,14 @@ func parseCreateBody(ctx *types.Context) ([]byte, *types.APIError) {
 	schema.ResourceFields.FillDefault(raw)
 	reqBody, _ = json.Marshal(raw)
 
-	val := createRuntimeObject(ctx)
-	if err := json.Unmarshal(reqBody, val); err != nil {
+	if err := json.Unmarshal(reqBody, ctx.Object); err != nil {
 		return nil, types.NewAPIError(types.InvalidBodyContent,
 			fmt.Sprintf("Failed to parse request body: %v", err.Error()))
 	}
 
-	if err := schema.ResourceFields.Validate(val); err != nil {
+	if err := schema.ResourceFields.Validate(ctx.Object); err != nil {
 		return nil, types.NewAPIError(types.InvalidBodyContent, err.Error())
 	}
 
-	setRuntimeObject(ctx, val)
 	return []byte(params.Yaml), nil
 }

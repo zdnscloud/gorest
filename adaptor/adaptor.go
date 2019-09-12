@@ -8,16 +8,22 @@ import (
 
 func RegisterHandler(router gin.IRoutes, handler http.Handler, urlMethods map[string][]string) {
 	handlerFunc := gin.WrapH(handler)
-	for url, methods := range urlMethods {
-		for _, method := range methods {
-			switch method {
-			case http.MethodPost:
+	for method, urls := range urlMethods {
+		switch method {
+		case http.MethodPost:
+			for _, url := range urls {
 				router.POST(url, handlerFunc)
-			case http.MethodDelete:
+			}
+		case http.MethodDelete:
+			for _, url := range urls {
 				router.DELETE(url, handlerFunc)
-			case http.MethodPut:
+			}
+		case http.MethodPut:
+			for _, url := range urls {
 				router.PUT(url, handlerFunc)
-			case http.MethodGet:
+			}
+		case http.MethodGet:
+			for _, url := range urls {
 				router.GET(url, handlerFunc)
 			}
 		}

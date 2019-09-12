@@ -3,16 +3,15 @@ package types
 import (
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
 )
 
-func GetResourceType(obj ResourceType) string {
-	return strings.ToLower(reflect.TypeOf(obj).Name())
+func resourceTypeDebugName(obj ResourceType) string {
+	return reflect.TypeOf(obj).Name()
 }
 
 type ResourceType interface {
-	GetParents() []string
+	GetParents() []ResourceType
 	GetActions() []Action
 	GetCollectionActions() []Action
 }
@@ -35,7 +34,7 @@ func (r Resource) GetCollectionActions() []Action {
 	return nil
 }
 
-func (r Resource) GetParents() []string {
+func (r Resource) GetParents() []ResourceType {
 	return nil
 }
 

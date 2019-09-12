@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"strings"
 
 	"github.com/zdnscloud/gorest/types"
 )
@@ -16,9 +15,13 @@ type Collection struct {
 	Data         interface{}       `json:"data"`
 }
 
-func addLinks(ctx *types.Context, schema *types.Schema, obj types.Object) {
+func addLinks(ctx *types.Context, obj types.Object) {
+	urlPrefix := getUrlPrefix(ctx.Request)
+
 	links := make(map[string]string)
-	self := genResourceLink(ctx.Request, obj.GetID())
+	ctx.Object.SetID(obj.GetID())
+	self := types.GenerateResourceUrl(urlPrefix, ctx.Object)
+	schema := ctx.Object.GetSchema()
 	if schema.SupportResourceMethod(http.MethodGet) {
 		links["self"] = self
 	}
@@ -32,11 +35,11 @@ func addLinks(ctx *types.Context, schema *types.Schema, obj types.Object) {
 	}
 
 	if schema.SupportCollectionMethod(http.MethodGet) {
-		links["collection"] = genCollectionLink(ctx.Request, obj.GetID())
+		links["collection"] = types.GenerateResourceCollectionUrl(urlPrefix, ctx.Object)
 	}
 
-	for _, childPluralName := range ctx.Schemas.GetChildren(obj.GetType()) {
-		links[childPluralName] = genChildLink(ctx.Request, obj.GetID(), childPluralName)
+	for childCollection, url := range types.GenerateChildrenUrl(urlPrefix, ctx.Object) {
+		links[childCollection] = url
 	}
 
 	obj.SetLinks(links)
@@ -44,13 +47,15 @@ func addLinks(ctx *types.Context, schema *types.Schema, obj types.Object) {
 
 func addResourceLinks(ctx *types.Context, obj interface{}) {
 	if object, ok := obj.(types.Object); ok {
-		addLinks(ctx, ctx.Object.GetSchema(), object)
+		addLinks(ctx, object)
 	}
 }
 
 func addCollectionLinks(ctx *types.Context, collection *Collection) {
+	urlPrefix := getUrlPrefix(ctx.Request)
+
 	collection.Links = map[string]string{
-		"self": getRequestURL(ctx.Request),
+		"self": types.GenerateResourceCollectionUrl(urlPrefix, ctx.Object),
 	}
 
 	sliceData := reflect.ValueOf(collection.Data)
@@ -61,41 +66,10 @@ func addCollectionLinks(ctx *types.Context, collection *Collection) {
 	}
 }
 
-func genResourceLink(req *http.Request, id string) string {
-	if id == "" {
-		return ""
-	}
-
-	requestURL := getRequestURL(req)
-	if strings.HasSuffix(requestURL, "/"+id) {
-		return requestURL
-	} else {
-		return requestURL + "/" + id
-	}
-}
-
-func genCollectionLink(req *http.Request, id string) string {
-	requestURL := getRequestURL(req)
-	if id != "" && strings.HasSuffix(requestURL, "/"+id) {
-		index := strings.LastIndex(requestURL, id)
-		return requestURL[:index-1]
-	}
-
-	return requestURL
-}
-
-func genChildLink(req *http.Request, id, childPluralName string) string {
-	if id == "" {
-		return ""
-	}
-
-	return genResourceLink(req, id) + "/" + childPluralName
-}
-
-func getRequestURL(req *http.Request) string {
+func getUrlPrefix(req *http.Request) string {
 	scheme := "http"
 	if req.TLS != nil {
 		scheme = "https"
 	}
-	return fmt.Sprintf("%s://%s%s", scheme, req.Host, req.URL.Path)
+	return fmt.Sprintf("%s://%s", scheme, req.Host)
 }

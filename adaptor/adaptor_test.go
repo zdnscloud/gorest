@@ -22,7 +22,7 @@ func (t *testStruct) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func (t *testStruct) UrlMethods() map[string][]string {
-	return map[string][]string{"/path": []string{"POST"}}
+	return map[string][]string{http.MethodPost: []string{"/path"}}
 }
 
 func doRequest(r http.Handler, method, path string) *httptest.ResponseRecorder {

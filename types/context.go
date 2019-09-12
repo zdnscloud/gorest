@@ -40,3 +40,11 @@ func (ctx *Context) Get(key string) (interface{}, bool) {
 	v, ok := ctx.params[key]
 	return v, ok
 }
+
+func (ctx *Context) ParseRequestPath(url string) *APIError {
+	obj, err := ctx.Schemas.CreateResourceFromUrl(url)
+	if err == nil {
+		ctx.Object = obj
+	}
+	return err
+}

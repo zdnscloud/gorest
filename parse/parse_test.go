@@ -22,40 +22,40 @@ type Node struct {
 	types.Resource
 }
 
-func (c Node) GetParents() []string {
-	return []string{types.GetResourceType(Cluster{})}
+func (c Node) GetParents() []types.ResourceType {
+	return []types.ResourceType{Cluster{}}
 }
 
-type Namespace struct {
+type NameSpace struct {
 	types.Resource
 }
 
-func (c Namespace) GetParents() []string {
-	return []string{types.GetResourceType(Cluster{})}
+func (c NameSpace) GetParents() []types.ResourceType {
+	return []types.ResourceType{Cluster{}}
 }
 
 type Deployment struct {
 	types.Resource
 }
 
-func (c Deployment) GetParents() []string {
-	return []string{types.GetResourceType(Namespace{})}
+func (c Deployment) GetParents() []types.ResourceType {
+	return []types.ResourceType{NameSpace{}}
 }
 
 type Pod struct {
 	types.Resource
 }
 
-func (c Pod) GetParents() []string {
-	return []string{types.GetResourceType(Deployment{})}
+func (c Pod) GetParents() []types.ResourceType {
+	return []types.ResourceType{Deployment{}}
 }
 
 type Container struct {
 	types.Resource
 }
 
-func (c Container) GetParents() []string {
-	return []string{types.GetResourceType(Pod{})}
+func (c Container) GetParents() []types.ResourceType {
+	return []types.ResourceType{Pod{}}
 }
 
 type dumbHandler struct{}
@@ -86,7 +86,7 @@ func TestParse(t *testing.T) {
 	schemas := types.NewSchemas()
 	schemas.MustImport(&version, Cluster{}, &dumbHandler{})
 	schemas.MustImport(&version, Node{}, &getHandler{})
-	schemas.MustImport(&version, Namespace{}, &getHandler{})
+	schemas.MustImport(&version, NameSpace{}, &getHandler{})
 	schemas.MustImport(&version, Deployment{}, &getHandler{})
 	schemas.MustImport(&version, Pod{}, &getHandler{})
 	schemas.MustImport(&version, Container{}, &getHandler{})
@@ -96,7 +96,6 @@ func TestParse(t *testing.T) {
 	ut.Equal(t, err, noErr)
 	ut.Equal(t, ctx.Object.GetType(), "node")
 	ut.Equal(t, ctx.Object.GetID(), "345543")
-	ut.Equal(t, ctx.Object.GetSchema().Parents, []string{"cluster"})
 	ut.Equal(t, ctx.Object.GetParent().GetID(), "123321")
 	ut.Equal(t, ctx.Object.GetSchema().Version.Group, "testing")
 	ut.Equal(t, ctx.Object.GetSchema().Version.Version, "v1")
@@ -106,7 +105,6 @@ func TestParse(t *testing.T) {
 	ut.Equal(t, err, noErr)
 	ut.Equal(t, ctx.Object.GetType(), "container")
 	ut.Equal(t, ctx.Object.GetID(), "containers123")
-	ut.Equal(t, ctx.Object.GetSchema().Parents, []string{"pod"})
 	ut.Equal(t, ctx.Object.GetParent().GetID(), "pods123")
 	ut.Equal(t, ctx.Object.GetParent().GetType(), "pod")
 	ut.Equal(t, ctx.Object.GetSchema().Version.Group, "testing")
@@ -122,7 +120,6 @@ func TestParse(t *testing.T) {
 	ut.Equal(t, err, noErr)
 	ut.Equal(t, ctx.Object.GetType(), "cluster")
 	ut.Equal(t, ctx.Object.GetID(), "123321")
-	ut.Equal(t, len(ctx.Object.GetSchema().Parents), 0)
 	ut.Equal(t, ctx.Object.GetSchema().Version.Group, "testing")
 	ut.Equal(t, ctx.Object.GetSchema().Version.Version, "v1")
 
@@ -132,17 +129,17 @@ func TestParse(t *testing.T) {
 	ut.Equal(t, err, nilErr)
 
 	req, _ = http.NewRequest("GET", "/apis/testing/v1/noshemas", nil)
-	schemaNoFoundErr := types.NewAPIError(types.NotFound, fmt.Sprintf("no found schema for noshemas"))
+	schemaNoFoundErr := types.NewAPIError(types.NotFound, fmt.Sprintf("no resource with collection name noshemas"))
 	_, err = Parse(nil, req, schemas)
 	ut.Equal(t, err, schemaNoFoundErr)
 
 	req, _ = http.NewRequest("GET", "/apis/testing/v2/clusters", nil)
-	versionNoFoundErr := types.NewAPIError(types.NotFound, fmt.Sprintf("no found version with /apis/testing/v2/clusters"))
+	versionNoFoundErr := types.NewAPIError(types.NotFound, fmt.Sprintf("/apis/testing/v2/clusters has unknown api version"))
 	_, err = Parse(nil, req, schemas)
 	ut.Equal(t, err, versionNoFoundErr)
 
 	req, _ = http.NewRequest("GET", "/apis/testing/v1", nil)
-	noSchemaErr := types.NewAPIError(types.InvalidFormat, fmt.Sprintf("no schema name in url /apis/testing/v1"))
+	noSchemaErr := types.NewAPIError(types.InvalidFormat, fmt.Sprintf("no schema name in url"))
 	_, err = Parse(nil, req, schemas)
 	ut.Equal(t, err, noSchemaErr)
 }

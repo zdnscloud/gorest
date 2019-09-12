@@ -31,18 +31,6 @@ type Foo struct {
 	types.Resource
 }
 
-func (c Foo) GetParents() []string {
-	return nil
-}
-
-func (c Foo) GetActions() []types.Action {
-	return nil
-}
-
-func (c Foo) GetCollectionActions() []types.Action {
-	return nil
-}
-
 var gnum int
 
 var dumbHandler1 = func(ctx *types.Context) *types.APIError {
@@ -60,8 +48,7 @@ func TestContextPassChain(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/apis/testing/v1/foos", nil)
 	req.Host = "127.0.0.1:1234"
 	w := httptest.NewRecorder()
-	s := NewAPIServer()
-	s.AddSchemas(schemas)
+	s := NewAPIServer(schemas)
 	s.Use(dumbHandler1)
 	s.Use(dumbHandler2)
 

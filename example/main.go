@@ -41,8 +41,8 @@ type Node struct {
 	Name           string `json:"name,omitempty"`
 }
 
-func (n Node) GetParents() []string {
-	return []string{types.GetResourceType(Cluster{})}
+func (n Node) GetParents() []types.ResourceType {
+	return []types.ResourceType{Cluster{}}
 }
 
 type Handler struct {
@@ -201,15 +201,11 @@ func main() {
 }
 
 func getApiServer() *api.Server {
-	server := api.NewAPIServer()
 	schemas := types.NewSchemas()
 	handler := newHandler()
 	schemas.MustImport(&version, Cluster{}, handler)
 	schemas.MustImport(&version, Node{}, handler)
-	if err := server.AddSchemas(schemas); err != nil {
-		panic(err.Error())
-	}
-
+	server := api.NewAPIServer(schemas)
 	server.Use(api.RestHandler)
 	return server
 }

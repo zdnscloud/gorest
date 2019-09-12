@@ -1,6 +1,9 @@
 package types
 
 import (
+	//"fmt"
+	"net/http"
+	"sort"
 	"testing"
 
 	ut "github.com/zdnscloud/cement/unittest"
@@ -21,8 +24,8 @@ type Node struct {
 	Name string
 }
 
-func (c Node) GetParents() []string {
-	return []string{GetResourceType(Cluster{})}
+func (c Node) GetParents() []ResourceType {
+	return []ResourceType{Cluster{}}
 }
 
 type NameSpace struct {
@@ -30,8 +33,8 @@ type NameSpace struct {
 	Name string
 }
 
-func (c NameSpace) GetParents() []string {
-	return []string{GetResourceType(Cluster{})}
+func (c NameSpace) GetParents() []ResourceType {
+	return []ResourceType{Cluster{}}
 }
 
 type Deployment struct {
@@ -39,8 +42,8 @@ type Deployment struct {
 	Name string
 }
 
-func (c Deployment) GetParents() []string {
-	return []string{GetResourceType(NameSpace{})}
+func (c Deployment) GetParents() []ResourceType {
+	return []ResourceType{NameSpace{}}
 }
 
 type DaemonSet struct {
@@ -48,8 +51,8 @@ type DaemonSet struct {
 	Name string
 }
 
-func (c DaemonSet) GetParents() []string {
-	return []string{GetResourceType(NameSpace{})}
+func (c DaemonSet) GetParents() []ResourceType {
+	return []ResourceType{NameSpace{}}
 }
 
 type StatefulSet struct {
@@ -57,8 +60,8 @@ type StatefulSet struct {
 	Name string
 }
 
-func (c StatefulSet) GetParents() []string {
-	return []string{GetResourceType(NameSpace{})}
+func (c StatefulSet) GetParents() []ResourceType {
+	return []ResourceType{NameSpace{}}
 }
 
 type Pod struct {
@@ -66,56 +69,21 @@ type Pod struct {
 	Name string
 }
 
-func (c Pod) GetParents() []string {
-	return []string{GetResourceType(Deployment{}), GetResourceType(DaemonSet{}), GetResourceType(StatefulSet{})}
-}
-
-type handleNoAction struct{}
-
-func (h *handleNoAction) Create(ctx *Context, content []byte) (interface{}, *APIError) {
-	return 10, nil
-}
-
-func (h *handleNoAction) Delete(ctx *Context) *APIError {
-	return nil
-}
-
-func (h *handleNoAction) Update(ctx *Context) (interface{}, *APIError) {
-	return 20, nil
-}
-
-func (h *handleNoAction) List(ctx *Context) interface{} {
-	return []uint{1, 2, 3}
-}
-
-func (h *handleNoAction) Get(ctx *Context) interface{} {
-	return 10
+func (c Pod) GetParents() []ResourceType {
+	return []ResourceType{Deployment{}, DaemonSet{}, StatefulSet{}}
 }
 
 func TestReflection(t *testing.T) {
 	schemas := NewSchemas()
-	schemas.MustImport(&version, Cluster{}, &handleNoAction{})
-	schemas.MustImport(&version, Node{}, &handleNoAction{})
-	schemas.MustImport(&version, NameSpace{}, &handleNoAction{})
-	schemas.MustImport(&version, Pod{}, &handleNoAction{})
-	schemas.MustImport(&version, Deployment{}, &handleNoAction{})
-	schemas.MustImport(&version, StatefulSet{}, &handleNoAction{})
-	schemas.MustImport(&version, DaemonSet{}, &handleNoAction{})
+	schemas.MustImport(&version, Cluster{}, &dumbHandler{})
+	schemas.MustImport(&version, Node{}, &dumbHandler{})
+	schemas.MustImport(&version, NameSpace{}, &dumbHandler{})
+	schemas.MustImport(&version, Deployment{}, &dumbHandler{})
+	schemas.MustImport(&version, StatefulSet{}, &dumbHandler{})
+	schemas.MustImport(&version, DaemonSet{}, &dumbHandler{})
+	schemas.MustImport(&version, Pod{}, &dumbHandler{})
 
-	clusterChildren := schemas.GetChildren(GetResourceType(Cluster{}))
-	ut.Equal(t, len(clusterChildren), 2)
-
-	schema := schemas.Schema(&version, GetResourceType(Node{}))
-	ut.Equal(t, schema.GetType(), GetResourceType(Node{}))
-	ut.Equal(t, schema.PluralName, "nodes")
-	ut.Equal(t, schema.Version.Group, "testing")
-	ut.Equal(t, schema.Version.Version, "v1")
-	ut.Equal(t, schema.Parents, []string{GetResourceType(Cluster{})})
-	//ut.Equal(t, schema.CollectionMethods, []string{"GET", "POST"})
-	//ut.Equal(t, schema.ResourceMethods, []string{"GET", "DELETE", "PUT"})
-	//ut.Equal(t, len(schema.ResourceFields), 3)
-
-	expectUrl := []string{
+	expectGetAndPostUrls := []string{
 		"/apis/testing/v1/clusters",
 		"/apis/testing/v1/clusters/:cluster_id",
 		"/apis/testing/v1/clusters/:cluster_id/nodes",
@@ -135,9 +103,27 @@ func TestReflection(t *testing.T) {
 		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/statefulsets/:statefulset_id/pods",
 		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/statefulsets/:statefulset_id/pods/:pod_id",
 	}
+
+	expectDeleteAndPutUrls := []string{
+		"/apis/testing/v1/clusters/:cluster_id",
+		"/apis/testing/v1/clusters/:cluster_id/nodes/:node_id",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/deployments/:deployment_id",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/daemonsets/:daemonset_id",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/statefulsets/:statefulset_id",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/deployments/:deployment_id/pods/:pod_id",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/statefulsets/:statefulset_id/pods/:pod_id",
+		"/apis/testing/v1/clusters/:cluster_id/namespaces/:namespace_id/daemonsets/:daemonset_id/pods/:pod_id",
+	}
 	urlMethods := schemas.UrlMethods()
-	ut.Equal(t, len(urlMethods), len(expectUrl))
-	for _, url := range expectUrl {
-		ut.Equal(t, len(urlMethods[url]) != 0, true)
+	sort.StringSlice(expectGetAndPostUrls).Sort()
+	sort.StringSlice(expectDeleteAndPutUrls).Sort()
+	for method, urls := range urlMethods {
+		sort.StringSlice(urls).Sort()
+		if method == http.MethodGet || method == http.MethodPost {
+			ut.Equal(t, urls, expectGetAndPostUrls)
+		} else {
+			ut.Equal(t, urls, expectDeleteAndPutUrls)
+		}
 	}
 }
