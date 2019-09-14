@@ -42,7 +42,12 @@ func handleCreate(ctx *resource.Context) *goresterr.APIError {
 		return err
 	}
 
-	resource := result.(resource.Resource)
+	resource, ok := result.(resource.Resource)
+	if ok == false {
+		return goresterr.NewAPIError(goresterr.ServerError,
+			fmt.Sprintf("create handler doesn't return resource but %v", reflect.TypeOf(result).Kind()))
+	}
+
 	ctx.Resource.SetID(resource.GetID())
 	httpSchemeAndHost := path.Join(ctx.Request.URL.Scheme, ctx.Request.URL.Host)
 	if links, err := schema.GenerateLinks(ctx.Resource, httpSchemeAndHost); err != nil {
@@ -81,7 +86,12 @@ func handleUpdate(ctx *resource.Context) *goresterr.APIError {
 		return err
 	}
 
-	resource := result.(resource.Resource)
+	resource, ok := result.(resource.Resource)
+	if ok == false {
+		return goresterr.NewAPIError(goresterr.ServerError,
+			fmt.Sprintf("update handler doesn't return resource but %v", reflect.TypeOf(result).Kind()))
+	}
+
 	httpSchemeAndHost := path.Join(ctx.Request.URL.Scheme, ctx.Request.URL.Host)
 	if links, err := schema.GenerateLinks(ctx.Resource, httpSchemeAndHost); err != nil {
 		return goresterr.NewAPIError(goresterr.ServerError, fmt.Sprintf("generate links failed:%s", err.Error()))
@@ -153,7 +163,7 @@ func handleList(ctx *resource.Context) *goresterr.APIError {
 			resource, ok := result.(resource.Resource)
 			if ok == false {
 				return goresterr.NewAPIError(goresterr.ServerError,
-					fmt.Sprintf("get handler doesn't return %v isn't valid resource", reflect.ValueOf(result).Kind()))
+					fmt.Sprintf("get handler doesn't return resource but %v", reflect.ValueOf(result).Kind()))
 			}
 			httpSchemeAndHost := path.Join(ctx.Request.URL.Scheme, ctx.Request.URL.Host)
 			if links, err := schema.GenerateLinks(ctx.Resource, httpSchemeAndHost); err != nil {
