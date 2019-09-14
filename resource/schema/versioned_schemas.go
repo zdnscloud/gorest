@@ -86,7 +86,7 @@ func (s *VersionedSchemas) CreateResourceFromRequest(method, path string, body [
 	}
 
 	for _, schema := range s.toplevelSchemas {
-		if r, err := schema.CreateResourceFromPathSegments(nil, segments, action, body); err != nil {
+		if r, err := schema.CreateResourceFromPathSegments(nil, segments, method, action, body); err != nil {
 			return nil, err
 		} else if r != nil {
 			return r, nil

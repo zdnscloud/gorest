@@ -9,6 +9,11 @@ import (
 	"github.com/zdnscloud/cement/slice"
 )
 
+type Validator interface {
+	//validate each field is valid
+	Validate(interface{}) error
+}
+
 type optionValidator struct {
 	options []string
 }

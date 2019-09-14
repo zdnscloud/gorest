@@ -45,7 +45,7 @@ func (m *SchemaManager) CreateResourceFromRequest(req *http.Request) (resource.R
 	}
 
 	var body []byte
-	if req.Method == http.MethodPost || req.Method == http.MethodPut {
+	if (req.Method == http.MethodPost || req.Method == http.MethodPut) && req.Body != nil {
 		var err error
 		body, err = ioutil.ReadAll(req.Body)
 		if err != nil {

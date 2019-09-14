@@ -1,10 +1,24 @@
 package resourcefield
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 )
+
+type Field interface {
+	JsonName() string
+
+	Name() string
+
+	IsRequired() bool
+	SetRequired(bool)
+
+	//validate fields of go struct
+	Validate(interface{}) error
+
+	//work on json format string
+	CheckRequired(json map[string]interface{}) error
+}
 
 var _ Field = &leafField{}
 var _ Field = &compositeField{}
@@ -52,24 +66,6 @@ func (f *leafField) CheckRequired(raw map[string]interface{}) error {
 	return nil
 }
 
-func (f *leafField) FillDefault(raw map[string]interface{}) {
-	defaultVal := f.DefaultValue()
-	jsonName := f.JsonName()
-	if defaultVal != nil {
-		if _, ok := raw[jsonName]; ok == false {
-			raw[jsonName] = defaultVal
-		}
-	}
-}
-
-func (f *leafField) DefaultValue() interface{} {
-	return f.defaultVal
-}
-
-func (f *leafField) SetDefault(val interface{}) {
-	f.defaultVal = val
-}
-
 func (f *leafField) SetValidators(validators []Validator) {
 	f.validators = validators
 }
@@ -100,10 +96,10 @@ type compositeField struct {
 	jsonName  string
 	required  bool
 	ownerKind OwnerKind
-	field     *ResourceField
+	field     *resourceField
 }
 
-func newCompositeField(name, jsonName string, inner *ResourceField) *compositeField {
+func newCompositeField(name, jsonName string, inner *resourceField) *compositeField {
 	return &compositeField{
 		name:      name,
 		jsonName:  jsonName,
@@ -129,15 +125,8 @@ func (f *compositeField) SetRequired(required bool) {
 	f.required = required
 }
 
-func (f *compositeField) DefaultValue() interface{} {
-	return nil
-}
-
 func (f *compositeField) SetOwner(kind OwnerKind) {
 	f.ownerKind = kind
-}
-
-func (f *compositeField) SetDefault(_ interface{}) {
 }
 
 func (f *compositeField) Validate(value interface{}) error {
@@ -191,78 +180,4 @@ func (f *compositeField) CheckRequired(json map[string]interface{}) error {
 		}
 	}
 	return nil
-}
-
-func (f *compositeField) FillDefault(raw map[string]interface{}) {
-	jsonName := f.JsonName()
-	if val, ok := raw[jsonName]; ok && val != nil {
-		nestRaw, _ := json.Marshal(val)
-		switch f.ownerKind {
-		case OwnerIntMap:
-			nest := make(map[int64]json.RawMessage)
-			err := json.Unmarshal(nestRaw, &nest)
-			if err != nil {
-				return
-			}
-			for k, v := range nest {
-				structRaw := make(map[string]interface{})
-				err := json.Unmarshal(v, &structRaw)
-				if err != nil {
-					return
-				}
-				f.field.FillDefault(structRaw)
-				bytes, err := json.Marshal(structRaw)
-				if err == nil {
-					nest[k] = bytes
-				}
-			}
-			raw[jsonName] = nest
-		case OwnerStringMap:
-			nest := make(map[string]json.RawMessage)
-			err := json.Unmarshal(nestRaw, &nest)
-			if err != nil {
-				return
-			}
-			for k, v := range nest {
-				structRaw := make(map[string]interface{})
-				err := json.Unmarshal(v, &structRaw)
-				if err != nil {
-					return
-				}
-				f.field.FillDefault(structRaw)
-				bytes, err := json.Marshal(structRaw)
-				if err == nil {
-					nest[k] = bytes
-				}
-			}
-			raw[jsonName] = nest
-		case OwnerSlice:
-			nest := make([]json.RawMessage, 0)
-			err := json.Unmarshal(nestRaw, &nest)
-			if err != nil {
-				return
-			}
-			for i, v := range nest {
-				structRaw := make(map[string]interface{})
-				err := json.Unmarshal(v, &structRaw)
-				if err != nil {
-					return
-				}
-				f.field.FillDefault(structRaw)
-				bytes, err := json.Marshal(structRaw)
-				if err == nil {
-					nest[i] = bytes
-				}
-			}
-			raw[jsonName] = nest
-		case OwnerNone:
-			structRaw := make(map[string]interface{})
-			err := json.Unmarshal(nestRaw, &structRaw)
-			if err != nil {
-				return
-			}
-			f.field.FillDefault(structRaw)
-			raw[jsonName] = structRaw
-		}
-	}
 }

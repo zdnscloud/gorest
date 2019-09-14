@@ -5,12 +5,28 @@ import (
 	"reflect"
 )
 
-type ResourceField struct {
+type ResourceField interface {
+	Validate(interface{}) error
+	CheckRequired(raw map[string]interface{}) error
+}
+
+func New(typ reflect.Type) (ResourceField, error) {
+	builder := NewBuilder()
+	if rf, err := builder.Build(typ); err != nil {
+		return nil, err
+	} else if rf == nil {
+		return nil, nil
+	} else {
+		return rf, nil
+	}
+}
+
+type resourceField struct {
 	fields map[string]Field
 }
 
 //validate the resource go struct
-func (f *ResourceField) Validate(value interface{}) error {
+func (f *resourceField) Validate(value interface{}) error {
 	fieldValue := reflect.ValueOf(value)
 	switch fieldValue.Kind() {
 	case reflect.Ptr:
@@ -27,7 +43,7 @@ func (f *ResourceField) Validate(value interface{}) error {
 	return fmt.Errorf("struct field doesn't support type %v", fieldValue.Kind())
 }
 
-func (f *ResourceField) validateStruct(value reflect.Value) error {
+func (f *resourceField) validateStruct(value reflect.Value) error {
 	st := value.Type()
 	for i := 0; i < st.NumField(); i++ {
 		sf := st.Field(i)
@@ -51,15 +67,8 @@ func (f *ResourceField) validateStruct(value reflect.Value) error {
 	return nil
 }
 
-//fill the default value to json string before unmarshall to resource go object
-func (f *ResourceField) FillDefault(raw map[string]interface{}) {
-	for _, field := range f.fields {
-		field.FillDefault(raw)
-	}
-}
-
 //check the json string whether the required field is specified
-func (f *ResourceField) CheckRequired(raw map[string]interface{}) error {
+func (f *resourceField) CheckRequired(raw map[string]interface{}) error {
 	for _, field := range f.fields {
 		if err := field.CheckRequired(raw); err != nil {
 			return err
@@ -68,13 +77,13 @@ func (f *ResourceField) CheckRequired(raw map[string]interface{}) error {
 	return nil
 }
 
-func newResourceField(fields []Field) *ResourceField {
+func newResourceField(fields []Field) *resourceField {
 	fields_ := make(map[string]Field)
 	for _, field := range fields {
 		fields_[field.Name()] = field
 	}
 
-	return &ResourceField{
+	return &resourceField{
 		fields: fields_,
 	}
 }

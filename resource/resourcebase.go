@@ -20,7 +20,7 @@ func (r ResourceBase) GetParents() []ResourceKind {
 	return nil
 }
 
-func (r ResourceBase) CreateResource() Resource {
+func (r ResourceBase) CreateDefaultResource() Resource {
 	return nil
 }
 

@@ -46,7 +46,13 @@ type Resource interface {
 //struct pointer should implement Resource
 type ResourceKind interface {
 	GetParents() []ResourceKind
-	CreateResource() Resource
+	//return the default resource if the related field
+	//isn't speicified in json data
+	//NOTE: default field shouldn't include map
+	//json unmarshal will merge map, in this case
+	//when real data is provided, it will merge with
+	//default value
+	CreateDefaultResource() Resource
 	CreateAction(name string) *Action
 }
 

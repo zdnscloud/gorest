@@ -60,6 +60,5 @@ func TestContextPassChain(t *testing.T) {
 	s.ServeHTTP(w, req)
 	ut.Equal(t, gnum, 100)
 
-	s.Use(RestHandler)
 	s.ServeHTTP(w, req)
 }

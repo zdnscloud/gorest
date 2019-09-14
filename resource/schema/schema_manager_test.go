@@ -9,91 +9,8 @@ import (
 	"github.com/zdnscloud/gorest/resource"
 )
 
-var version = resource.APIVersion{
-	Group:   "testing",
-	Version: "v1",
-}
-
-type Cluster struct {
-	resource.ResourceBase
-	Name string
-}
-
-type Node struct {
-	resource.ResourceBase
-	Name string
-}
-
-func (c Node) GetParents() []resource.ResourceKind {
-	return []resource.ResourceKind{Cluster{}}
-}
-
-type NameSpace struct {
-	resource.ResourceBase
-	Name string
-}
-
-func (c NameSpace) GetParents() []resource.ResourceKind {
-	return []resource.ResourceKind{Cluster{}}
-}
-
-type Deployment struct {
-	resource.ResourceBase
-	Name string
-}
-
-func (c Deployment) GetParents() []resource.ResourceKind {
-	return []resource.ResourceKind{NameSpace{}}
-}
-
-type DaemonSet struct {
-	resource.ResourceBase
-	Name string
-}
-
-func (c DaemonSet) GetParents() []resource.ResourceKind {
-	return []resource.ResourceKind{NameSpace{}}
-}
-
-type StatefulSet struct {
-	resource.ResourceBase
-	Name string
-}
-
-func (c StatefulSet) GetParents() []resource.ResourceKind {
-	return []resource.ResourceKind{NameSpace{}}
-}
-
-type Pod struct {
-	resource.ResourceBase
-	Name string
-}
-
-func (c Pod) GetParents() []resource.ResourceKind {
-	return []resource.ResourceKind{Deployment{}, DaemonSet{}, StatefulSet{}}
-}
-
-func createSchemaManager(t *testing.T) *SchemaManager {
-	mgr := NewSchemaManager()
-	handler, _ := resource.HandlerAdaptor(&resource.DumbHandler{})
-	resourceKinds := []resource.ResourceKind{
-		Cluster{},
-		Node{},
-		NameSpace{},
-		Deployment{},
-		StatefulSet{},
-		DaemonSet{},
-		Pod{},
-	}
-	for _, kind := range resourceKinds {
-		err := mgr.Import(&version, kind, handler)
-		ut.Assert(t, err == nil, "import get err %v", err)
-	}
-	return mgr
-}
-
 func TestGenerateResourceRoute(t *testing.T) {
-	mgr := createSchemaManager(t)
+	mgr := createSchemaManager()
 	expectGetAndPostPaths := []string{
 		"/apis/testing/v1/clusters",
 		"/apis/testing/v1/clusters/:cluster_id",
@@ -139,7 +56,7 @@ func TestGenerateResourceRoute(t *testing.T) {
 }
 
 func TestCreateResourceFromRequest(t *testing.T) {
-	mgr := createSchemaManager(t)
+	mgr := createSchemaManager()
 
 	invalidUrls := []string{
 		"/apis/testings/v1/clusters/c1/namespaces/n1/deployments/d1/pods/p1",
@@ -220,7 +137,7 @@ func TestGenerateLink(t *testing.T) {
 			},
 		},
 	}
-	mgr := createSchemaManager(t)
+	mgr := createSchemaManager()
 	for _, tc := range cases {
 		req, _ := http.NewRequest(http.MethodGet, tc.url, nil)
 		r, _ := mgr.CreateResourceFromRequest(req)

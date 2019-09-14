@@ -14,7 +14,7 @@ func NewBuilder() *FieldBuilder {
 	return &FieldBuilder{}
 }
 
-func (b *FieldBuilder) Build(typ reflect.Type) (*ResourceField, error) {
+func (b *FieldBuilder) Build(typ reflect.Type) (*resourceField, error) {
 	if err := b.buildFields(typ); err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (b *FieldBuilder) buildLeafField(name string, kind reflect.Kind, json strin
 	return field, nil
 }
 
-func (b *FieldBuilder) buildCompositeField(name string, kind reflect.Kind, json string, sf *ResourceField, restTags []string) (Field, error) {
+func (b *FieldBuilder) buildCompositeField(name string, kind reflect.Kind, json string, sf *resourceField, restTags []string) (Field, error) {
 	field := newCompositeField(name, fieldJsonName(name, json), sf)
 	if err := fieldParseOptional(field, kind, restTags); err != nil {
 		return nil, err

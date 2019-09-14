@@ -7,7 +7,7 @@ type Embed struct {
 
 type IncludeStruct struct {
 	Int8WithRange     int8   `json:"int8WithRange" rest:"min=1,max=20"`
-	Uint16WithDefault uint16 `json:"uint16WithDefault,omitempty" rest:"default=11"`
+	Uint16WithDefault uint16 `json:"uint16WithDefault,omitempty"`
 }
 
 type TestStruct struct {
@@ -15,11 +15,11 @@ type TestStruct struct {
 
 	Name               string `json:"name" rest:"required=true"`
 	StringWithOption   string `json:"stringWithOption,omitempty" rest:"required=true,options=lvm|ceph"`
-	StringWithDefault  string `json:"stringWithDefault,omitempty" rest:"default=boy"`
+	StringWithDefault  string `json:"stringWithDefault,omitempty"`
 	StringWithLenLimit string `json:"stringWithLenLimit" rest:"minLen=2,maxLen=10"`
-	IntWithDefault     int    `json:"intWithDefault,omitempty" rest:"default=11"`
+	IntWithDefault     int    `json:"intWithDefault,omitempty"`
 	IntWithRange       uint32 `json:"intWithRange" rest:"min=1,max=1000"`
-	BoolWithDefault    bool   `json:"boolWithDefault,omitempty" rest:"default=true"`
+	BoolWithDefault    bool   `json:"boolWithDefault,omitempty"`
 
 	SliceComposition    []IncludeStruct          `json:"sliceComposition" rest:"required=true"`
 	StringMapCompostion map[string]IncludeStruct `json:"stringMapComposition" rest:"required=true"`
