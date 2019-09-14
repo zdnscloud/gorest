@@ -51,7 +51,7 @@ func handleCreate(ctx *resource.Context) *goresterr.APIError {
 		resource.SetLinks(links)
 	}
 	resource.SetType(ctx.Resource.GetType())
-	writeResponse(ctx, http.StatusCreated, result)
+	writeResponse(ctx.Response, http.StatusCreated, result)
 	return nil
 }
 
@@ -65,7 +65,7 @@ func handleDelete(ctx *resource.Context) *goresterr.APIError {
 		return err
 	}
 
-	writeResponse(ctx, http.StatusNoContent, nil)
+	writeResponse(ctx.Response, http.StatusNoContent, nil)
 	return nil
 }
 
@@ -89,7 +89,7 @@ func handleUpdate(ctx *resource.Context) *goresterr.APIError {
 		resource.SetLinks(links)
 	}
 	resource.SetType(ctx.Resource.GetType())
-	writeResponse(ctx, http.StatusOK, result)
+	writeResponse(ctx.Response, http.StatusOK, result)
 	return nil
 }
 
@@ -164,7 +164,7 @@ func handleList(ctx *resource.Context) *goresterr.APIError {
 		}
 	}
 
-	writeResponse(ctx, http.StatusOK, result)
+	writeResponse(ctx.Response, http.StatusOK, result)
 	return nil
 }
 
@@ -179,40 +179,13 @@ func handleAction(ctx *resource.Context) *goresterr.APIError {
 		return err
 	}
 
-	writeResponse(ctx, http.StatusOK, result)
+	writeResponse(ctx.Response, http.StatusOK, result)
 	return nil
 }
 
-/*
-	raw := make(map[string]interface{})
-	if err := json.Unmarshal(reqBody, &raw); err != nil {
-		return nil, types.goresterr.NewAPIError(types.InvalidBodyContent,
-			fmt.Sprintf("Failed to parse request body: %v as a map", goresterr.Error()))
-	}
-	schema := ctx.Object.GetSchema()
-	if err := schema.ResourceFields.CheckRequired(raw); err != nil {
-		return nil, types.goresterr.NewAPIError(types.InvalidBodyContent, goresterr.Error())
-	}
-	schema.ResourceFields.FillDefault(raw)
-	reqBody, _ = json.Marshal(raw)
-
-	if err := json.Unmarshal(reqBody, ctx.Object); err != nil {
-		return nil, types.goresterr.NewAPIError(types.InvalidBodyContent,
-			fmt.Sprintf("Failed to parse request body: %v", goresterr.Error()))
-	}
-
-	if err := schema.ResourceFields.Validate(ctx.Object); err != nil {
-		return nil, types.goresterr.NewAPIError(types.InvalidBodyContent, goresterr.Error())
-	}
-
-	return []byte(params.Yaml), nil
-}
-*/
-
 const ContentTypeKey = "Content-Type"
 
-func writeResponse(ctx *resource.Context, status int, result interface{}) {
-	resp := ctx.Response
+func writeResponse(resp http.ResponseWriter, status int, result interface{}) {
 	var body []byte
 	resp.Header().Set(ContentTypeKey, "application/json")
 	body, _ = json.Marshal(result)

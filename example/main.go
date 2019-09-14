@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/base64"
+	"fmt"
+	"net"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -24,177 +26,227 @@ var (
 
 type Cluster struct {
 	resource.ResourceBase `json:",inline"`
-	Name                  string `json:"name,omitempty"`
+	Name                  string `json:"name" rest:"required=true,minLen=1,maxLen=10"`
+	NodeCount             int    `json:"nodeCount" rest:"required=true,min=1,max=1000"`
 }
 
 func (c Cluster) CreateActions(name string) *resource.Action {
-	if name == "encode" {
+	switch name {
+	case "encode":
 		return &resource.Action{
 			Name:  "encode",
 			Input: &Input{},
 		}
-	} else if name == "decode" {
+	case "decode":
 		return &resource.Action{
 			Name:  "decode",
 			Input: &Input{},
 		}
-	} else {
+	default:
 		return nil
+	}
+}
+
+type clusterHandler struct {
+	clusters []*Cluster
+}
+
+func newClusterHandler() *clusterHandler {
+	return &clusterHandler{}
+}
+
+func (h *clusterHandler) Create(ctx *resource.Context) (interface{}, *goresterr.APIError) {
+	cluster := ctx.Resource.(*Cluster)
+	for _, c := range h.clusters {
+		if c.Name == cluster.Name {
+			return nil, goresterr.NewAPIError(goresterr.DuplicateResource, fmt.Sprintf("cluster %s already exist", cluster.Name))
+		}
+	}
+	cluster.SetID(cluster.Name)
+	cluster.SetCreationTimestamp(time.Now())
+	h.clusters = append(h.clusters, cluster)
+	return cluster, nil
+}
+
+func (h *clusterHandler) List(ctx *resource.Context) interface{} {
+	return h.clusters
+}
+
+func (h *clusterHandler) Get(ctx *resource.Context) interface{} {
+	return h.getCluster(ctx.Resource.GetID())
+}
+
+func (h *clusterHandler) getCluster(name string) *Cluster {
+	for _, c := range h.clusters {
+		if c.Name == name {
+			return c
+		}
+	}
+	return nil
+}
+
+func (h *clusterHandler) Action(ctx *resource.Context) (interface{}, *goresterr.APIError) {
+	r := ctx.Resource
+	input, _ := r.GetAction().Input.(*Input)
+	switch r.GetAction().Name {
+	case "encode":
+		return base64.StdEncoding.EncodeToString([]byte(input.Data)), nil
+	case "decode":
+		if data, e := base64.StdEncoding.DecodeString(input.Data); e != nil {
+			return nil, goresterr.NewAPIError(goresterr.InvalidFormat, e.Error())
+		} else {
+			return string(data), nil
+		}
+	default:
+		panic("it should never come here")
 	}
 }
 
 type Node struct {
 	resource.ResourceBase `json:",inline"`
-	Name                  string `json:"name,omitempty"`
+	Address               string `json:"address,omitempty" rest:"required=true,minLen=7,maxLen=13"`
+	IsWorker              bool   `json:"isWorker"`
 }
 
 func (n Node) GetParents() []resource.ResourceKind {
 	return []resource.ResourceKind{Cluster{}}
 }
 
-type Handler struct {
-	objects map[string]resource.Resource
-}
-
-func newHandler() *Handler {
-	return &Handler{
-		objects: make(map[string]resource.Resource),
+func (n Node) CreateDefaultResource() resource.Resource {
+	return &Node{
+		IsWorker: true,
 	}
 }
 
-func (h *Handler) Create(ctx *resource.Context) (interface{}, *goresterr.APIError) {
+type nodeHandler struct {
+	clusters *clusterHandler
+	nodes    map[string][]*Node
+}
+
+func newNodeHandler(h *clusterHandler) *nodeHandler {
+	return &nodeHandler{
+		clusters: h,
+		nodes:    make(map[string][]*Node),
+	}
+}
+
+func (h *nodeHandler) Create(ctx *resource.Context) (interface{}, *goresterr.APIError) {
+	node := ctx.Resource.(*Node)
 	id, _ := uuid.Gen()
-	switch ctx.Resource.GetType() {
-	case clusterKind:
-		cluster := ctx.Resource.(*Cluster)
-		for _, object := range h.objects {
-			if object.GetType() == clusterKind && object.(*Cluster).Name == cluster.Name {
-				return nil, goresterr.NewAPIError(goresterr.DuplicateResource, "cluster "+cluster.Name+" already exists")
-			}
-		}
+	node.SetID(id)
+	return h.addNode(node)
+}
 
-		cluster.SetID(id)
-		cluster.SetCreationTimestamp(time.Now())
-		h.objects[id] = cluster
-		return cluster, nil
-	case nodeKind:
-		if parent := ctx.Resource.GetParent(); parent != nil {
-			if h.hasID(parent.GetID()) == false {
-				return nil, goresterr.NewAPIError(goresterr.NotFound, "cluster "+parent.GetID()+" is non-exists")
-			}
-		}
+func (h *nodeHandler) addNode(node *Node) (interface{}, *goresterr.APIError) {
+	cn := node.GetParent().GetID()
+	nodes, ok := h.getNodesInCluster(cn)
+	if !ok {
+		return nil, goresterr.NewAPIError(goresterr.NotFound, fmt.Sprintf("unknown cluster %s ", cn))
+	}
 
-		node := ctx.Resource.(*Node)
-		for _, object := range h.objects {
-			if object.GetType() == nodeKind && object.(*Node).Name == node.Name {
-				return nil, goresterr.NewAPIError(goresterr.DuplicateResource, "node "+node.Name+" already exists")
-			}
-		}
+	if ip := net.ParseIP(node.Address); ip == nil {
+		return nil, goresterr.NewAPIError(goresterr.InvalidFormat, "address isn't valid ipv4 address")
+	}
 
-		node.SetID(id)
-		node.SetCreationTimestamp(time.Now())
-		h.objects[id] = node
-		return node, nil
-	default:
-		return nil, goresterr.NewAPIError(goresterr.NotFound, "no found resource type "+ctx.Resource.GetType())
+	if h.getNode(nodes, node.Address) != nil {
+		return nil, goresterr.NewAPIError(goresterr.DuplicateResource, fmt.Sprintf("node %s already exist", node.Address))
+	}
+
+	h.nodes[cn] = append(nodes, node)
+	return node, nil
+}
+
+func (h *nodeHandler) getNodesInCluster(name string) ([]*Node, bool) {
+	if h.clusters.getCluster(name) == nil {
+		return nil, false
+	}
+	nodes, ok := h.nodes[name]
+	if ok == false {
+		return nil, true
+	} else {
+		return nodes, true
 	}
 }
 
-func (h *Handler) hasObject(obj resource.Resource) *goresterr.APIError {
-	if parent := obj.GetParent(); parent != nil {
-		if h.hasID(parent.GetID()) == false {
-			return goresterr.NewAPIError(goresterr.NotFound, "cluster "+parent.GetID()+" is non-exists")
+func (h *nodeHandler) getNode(nodes []*Node, address string) *Node {
+	for _, n := range nodes {
+		if n.Address == address {
+			return n
 		}
 	}
-
-	if h.hasID(obj.GetID()) == false {
-		return goresterr.NewAPIError(goresterr.NotFound, "no found resource "+obj.GetType()+" with id "+obj.GetID())
-	}
-
 	return nil
 }
 
-func (h *Handler) hasID(id string) bool {
-	_, ok := h.objects[id]
-	return ok
+func (h *nodeHandler) Delete(ctx *resource.Context) *goresterr.APIError {
+	node := ctx.Resource.(*Node)
+	return h.deleteNode(node)
 }
 
-func (h *Handler) hasChild(id string) bool {
-	for _, obj := range h.objects {
-		if parent := obj.GetParent(); parent != nil && parent.GetID() == id {
-			return true
+func (h *nodeHandler) deleteNode(node *Node) *goresterr.APIError {
+	cn := node.GetParent().GetID()
+	nodes, ok := h.getNodesInCluster(cn)
+	if !ok {
+		return goresterr.NewAPIError(goresterr.NotFound, fmt.Sprintf("unknown cluster %s ", cn))
+	}
+
+	id := node.GetID()
+	for i, n := range nodes {
+		if n.GetID() == id {
+			h.nodes[cn] = append(nodes[:i], nodes[i+1:]...)
+			return nil
 		}
 	}
-
-	return false
+	return goresterr.NewAPIError(goresterr.NotFound, fmt.Sprintf("node %s not found", id))
 }
 
-func (h *Handler) Delete(ctx *resource.Context) *goresterr.APIError {
-	if err := h.hasObject(ctx.Resource); err != nil {
-		return err
+func (h *nodeHandler) Update(ctx *resource.Context) (interface{}, *goresterr.APIError) {
+	node := ctx.Resource.(*Node)
+	cn := node.GetParent().GetID()
+	nodes, ok := h.getNodesInCluster(cn)
+	if !ok {
+		return nil, goresterr.NewAPIError(goresterr.NotFound, fmt.Sprintf("unknown cluster %s ", cn))
 	}
 
-	if h.hasChild(ctx.Resource.GetID()) {
-		return goresterr.NewAPIError(goresterr.DeleteParent, "resource has child resource")
-	}
-
-	delete(h.objects, ctx.Resource.GetID())
-	return nil
-}
-
-func (h *Handler) Update(ctx *resource.Context) (interface{}, *goresterr.APIError) {
-	if err := h.hasObject(ctx.Resource); err != nil {
-		return nil, err
-	}
-
-	h.objects[ctx.Resource.GetID()] = ctx.Resource
-	return ctx.Resource, nil
-}
-
-func (h *Handler) List(ctx *resource.Context) interface{} {
-	var result []resource.Resource
-	for _, object := range h.objects {
-		if object.GetType() == ctx.Resource.GetType() {
-			result = append(result, object)
+	id := node.GetID()
+	for i, n := range nodes {
+		if n.GetID() == id {
+			if n.Address == node.Address {
+				nodes[i] = node
+			} else {
+				if _, err := h.addNode(node); err != nil {
+					return nil, err
+				}
+				nodes = append(nodes[:i], nodes[i+1:]...)
+			}
+			h.nodes[cn] = nodes
+			return node, nil
 		}
 	}
-	return result
+	return nil, goresterr.NewAPIError(goresterr.NotFound, fmt.Sprintf("node %s not found", id))
 }
 
-func (h *Handler) Get(ctx *resource.Context) interface{} {
-	if parent := ctx.Resource.GetParent(); parent != nil && h.hasID(parent.GetID()) == false {
+func (h *nodeHandler) List(ctx *resource.Context) interface{} {
+	node := ctx.Resource.(*Node)
+	cn := node.GetParent().GetID()
+	nodes, _ := h.getNodesInCluster(cn)
+	return nodes
+}
+
+func (h *nodeHandler) Get(ctx *resource.Context) interface{} {
+	node := ctx.Resource.(*Node)
+	cn := node.GetParent().GetID()
+	nodes, ok := h.getNodesInCluster(cn)
+	if !ok {
 		return nil
 	}
 
-	return h.objects[ctx.Resource.GetID()]
-}
-
-func (h *Handler) Action(ctx *resource.Context) (interface{}, *goresterr.APIError) {
-	err := h.hasObject(ctx.Resource)
-	if err != nil {
-		return nil, err
-	}
-
-	r := ctx.Resource
-	input, ok := r.GetAction().Input.(*Input)
-	if ok == false {
-		return nil, goresterr.NewAPIError(goresterr.InvalidFormat, "action input type invalid")
-	}
-
-	switch r.GetAction().Name {
-	case "encode":
-		return base64.StdEncoding.EncodeToString([]byte(input.Data)), nil
-	case "decode":
-		if data, e := base64.StdEncoding.DecodeString(input.Data); e != nil {
-			err = goresterr.NewAPIError(goresterr.InvalidFormat, "decode failed: "+e.Error())
-		} else {
-			return string(data), nil
+	id := node.GetID()
+	for _, n := range nodes {
+		if n.GetID() == id {
+			return n
 		}
-	default:
-		err = goresterr.NewAPIError(goresterr.NotFound, "not found action "+r.GetAction().Name)
 	}
-
-	return nil, err
+	return nil
 }
 
 type Input struct {
@@ -202,17 +254,13 @@ type Input struct {
 }
 
 func main() {
-	router := gin.Default()
-	apiServer := getApiServer()
-	adaptor.RegisterHandler(router, apiServer, apiServer.Schemas.GenerateResourceRoute())
-	router.Run("0.0.0.0:1234")
-}
-
-func getApiServer() *gorest.Server {
 	schemas := schema.NewSchemaManager()
-	handler, _ := resource.HandlerAdaptor(newHandler())
-	schemas.Import(&version, Cluster{}, handler)
-	schemas.Import(&version, Node{}, handler)
-	server := gorest.NewAPIServer(schemas)
-	return server
+	ch := newClusterHandler()
+	chw, _ := resource.HandlerAdaptor(ch)
+	nhw, _ := resource.HandlerAdaptor(newNodeHandler(ch))
+	schemas.Import(&version, Cluster{}, chw)
+	schemas.Import(&version, Node{}, nhw)
+	router := gin.Default()
+	adaptor.RegisterHandler(router, gorest.NewAPIServer(schemas), schemas.GenerateResourceRoute())
+	router.Run("0.0.0.0:1234")
 }

@@ -119,7 +119,7 @@ func (s *Schema) validateAndFillResource(r resource.Resource, method, action str
 			objMap := make(map[string]interface{})
 			if body != nil {
 				if err := json.Unmarshal(body, &objMap); err != nil {
-					return goresterr.NewAPIError(goresterr.InvalidBodyContent, fmt.Sprintf("request body isn't a string map"))
+					return goresterr.NewAPIError(goresterr.InvalidBodyContent, fmt.Sprintf("request body isn't a string map:%s", err.Error()))
 				}
 			}
 			if err := s.fields.CheckRequired(objMap); err != nil {
