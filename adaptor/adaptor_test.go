@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	ut "github.com/zdnscloud/cement/unittest"
+	"github.com/zdnscloud/gorest/resource"
 )
 
 type testStruct struct {
@@ -21,8 +22,10 @@ func (t *testStruct) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprint(w, "hello")
 }
 
-func (t *testStruct) UrlMethods() map[string][]string {
-	return map[string][]string{http.MethodPost: []string{"/path"}}
+func (t *testStruct) route() resource.ResourceRoute {
+	route := resource.NewResourceRoute()
+	route.AddPathForMethod(http.MethodPost, "/path")
+	return route
 }
 
 func doRequest(r http.Handler, method, path string) *httptest.ResponseRecorder {
@@ -36,7 +39,7 @@ func TestRegisterHandler(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 	ts := &testStruct{}
-	RegisterHandler(router, ts, ts.UrlMethods())
+	RegisterHandler(router, ts, ts.route())
 
 	w := doRequest(router, "POST", "/path")
 	ut.Equal(t, w.Code, 201)

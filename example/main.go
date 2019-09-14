@@ -6,63 +6,70 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/zdnscloud/cement/uuid"
+	"github.com/zdnscloud/gorest"
 	"github.com/zdnscloud/gorest/adaptor"
-	"github.com/zdnscloud/gorest/api"
-	"github.com/zdnscloud/gorest/types"
+	goresterr "github.com/zdnscloud/gorest/error"
+	"github.com/zdnscloud/gorest/resource"
+	"github.com/zdnscloud/gorest/resource/schema"
 )
 
 var (
-	version = types.APIVersion{
+	version = resource.APIVersion{
 		Group:   "zdns.cloud.example",
 		Version: "example/v1",
 	}
+	clusterKind = resource.DefaultKindName(Cluster{})
+	nodeKind    = resource.DefaultKindName(Node{})
 )
 
 type Cluster struct {
-	types.Resource `json:",inline"`
-	Name           string `json:"name,omitempty"`
+	resource.ResourceBase `json:",inline"`
+	Name                  string `json:"name,omitempty"`
 }
 
-func (c Cluster) GetActions() []types.Action {
-	return []types.Action{
-		types.Action{
+func (c Cluster) CreateActions(name string) *resource.Action {
+	if name == "encode" {
+		return &resource.Action{
 			Name:  "encode",
-			Input: Input{},
-		},
-		types.Action{
+			Input: &Input{},
+		}
+	} else if name == "decode" {
+		return &resource.Action{
 			Name:  "decode",
-			Input: Input{},
-		},
+			Input: &Input{},
+		}
+	} else {
+		return nil
 	}
 }
 
 type Node struct {
-	types.Resource `json:",inline"`
-	Name           string `json:"name,omitempty"`
+	resource.ResourceBase `json:",inline"`
+	Name                  string `json:"name,omitempty"`
 }
 
-func (n Node) GetParents() []types.ResourceType {
-	return []types.ResourceType{Cluster{}}
+func (n Node) GetParents() []resource.ResourceKind {
+	return []resource.ResourceKind{Cluster{}}
 }
 
 type Handler struct {
-	objects map[string]types.Object
+	objects map[string]resource.Resource
 }
 
 func newHandler() *Handler {
 	return &Handler{
-		objects: make(map[string]types.Object),
+		objects: make(map[string]resource.Resource),
 	}
 }
 
-func (h *Handler) Create(ctx *types.Context, content []byte) (interface{}, *types.APIError) {
+func (h *Handler) Create(ctx *resource.Context) (interface{}, *goresterr.APIError) {
 	id, _ := uuid.Gen()
-	switch ctx.Object.GetType() {
-	case "cluster":
-		cluster := ctx.Object.(*Cluster)
+	switch ctx.Resource.GetType() {
+	case clusterKind:
+		cluster := ctx.Resource.(*Cluster)
 		for _, object := range h.objects {
-			if object.GetType() == "cluster" && object.(*Cluster).Name == cluster.Name {
-				return nil, types.NewAPIError(types.DuplicateResource, "cluster "+cluster.Name+" already exists")
+			if object.GetType() == clusterKind && object.(*Cluster).Name == cluster.Name {
+				return nil, goresterr.NewAPIError(goresterr.DuplicateResource, "cluster "+cluster.Name+" already exists")
 			}
 		}
 
@@ -70,17 +77,17 @@ func (h *Handler) Create(ctx *types.Context, content []byte) (interface{}, *type
 		cluster.SetCreationTimestamp(time.Now())
 		h.objects[id] = cluster
 		return cluster, nil
-	case "node":
-		if parent := ctx.Object.GetParent(); parent != nil {
+	case nodeKind:
+		if parent := ctx.Resource.GetParent(); parent != nil {
 			if h.hasID(parent.GetID()) == false {
-				return nil, types.NewAPIError(types.NotFound, "cluster "+parent.GetID()+" is non-exists")
+				return nil, goresterr.NewAPIError(goresterr.NotFound, "cluster "+parent.GetID()+" is non-exists")
 			}
 		}
 
-		node := ctx.Object.(*Node)
+		node := ctx.Resource.(*Node)
 		for _, object := range h.objects {
-			if object.GetType() == "node" && object.(*Node).Name == node.Name {
-				return nil, types.NewAPIError(types.DuplicateResource, "node "+node.Name+" already exists")
+			if object.GetType() == nodeKind && object.(*Node).Name == node.Name {
+				return nil, goresterr.NewAPIError(goresterr.DuplicateResource, "node "+node.Name+" already exists")
 			}
 		}
 
@@ -89,19 +96,19 @@ func (h *Handler) Create(ctx *types.Context, content []byte) (interface{}, *type
 		h.objects[id] = node
 		return node, nil
 	default:
-		return nil, types.NewAPIError(types.NotFound, "no found resource type "+ctx.Object.GetType())
+		return nil, goresterr.NewAPIError(goresterr.NotFound, "no found resource type "+ctx.Resource.GetType())
 	}
 }
 
-func (h *Handler) hasObject(obj types.Object) *types.APIError {
+func (h *Handler) hasObject(obj resource.Resource) *goresterr.APIError {
 	if parent := obj.GetParent(); parent != nil {
 		if h.hasID(parent.GetID()) == false {
-			return types.NewAPIError(types.NotFound, "cluster "+parent.GetID()+" is non-exists")
+			return goresterr.NewAPIError(goresterr.NotFound, "cluster "+parent.GetID()+" is non-exists")
 		}
 	}
 
 	if h.hasID(obj.GetID()) == false {
-		return types.NewAPIError(types.NotFound, "no found resource "+obj.GetType()+" with id "+obj.GetID())
+		return goresterr.NewAPIError(goresterr.NotFound, "no found resource "+obj.GetType()+" with id "+obj.GetID())
 	}
 
 	return nil
@@ -122,68 +129,69 @@ func (h *Handler) hasChild(id string) bool {
 	return false
 }
 
-func (h *Handler) Delete(ctx *types.Context) *types.APIError {
-	if err := h.hasObject(ctx.Object); err != nil {
+func (h *Handler) Delete(ctx *resource.Context) *goresterr.APIError {
+	if err := h.hasObject(ctx.Resource); err != nil {
 		return err
 	}
 
-	if h.hasChild(ctx.Object.GetID()) {
-		return types.NewAPIError(types.DeleteParent, "resource has child resource")
+	if h.hasChild(ctx.Resource.GetID()) {
+		return goresterr.NewAPIError(goresterr.DeleteParent, "resource has child resource")
 	}
 
-	delete(h.objects, ctx.Object.GetID())
+	delete(h.objects, ctx.Resource.GetID())
 	return nil
 }
 
-func (h *Handler) Update(ctx *types.Context) (interface{}, *types.APIError) {
-	if err := h.hasObject(ctx.Object); err != nil {
+func (h *Handler) Update(ctx *resource.Context) (interface{}, *goresterr.APIError) {
+	if err := h.hasObject(ctx.Resource); err != nil {
 		return nil, err
 	}
 
-	h.objects[ctx.Object.GetID()] = ctx.Object
-	return ctx.Object, nil
+	h.objects[ctx.Resource.GetID()] = ctx.Resource
+	return ctx.Resource, nil
 }
 
-func (h *Handler) List(ctx *types.Context) interface{} {
-	var result []types.Object
+func (h *Handler) List(ctx *resource.Context) interface{} {
+	var result []resource.Resource
 	for _, object := range h.objects {
-		if object.GetType() == ctx.Object.GetType() {
+		if object.GetType() == ctx.Resource.GetType() {
 			result = append(result, object)
 		}
 	}
 	return result
 }
 
-func (h *Handler) Get(ctx *types.Context) interface{} {
-	if parent := ctx.Object.GetParent(); parent != nil && h.hasID(parent.GetID()) == false {
+func (h *Handler) Get(ctx *resource.Context) interface{} {
+	if parent := ctx.Resource.GetParent(); parent != nil && h.hasID(parent.GetID()) == false {
 		return nil
 	}
 
-	return h.objects[ctx.Object.GetID()]
+	return h.objects[ctx.Resource.GetID()]
 }
 
-func (h *Handler) Action(ctx *types.Context) (interface{}, *types.APIError) {
-	err := h.hasObject(ctx.Object)
+func (h *Handler) Action(ctx *resource.Context) (interface{}, *goresterr.APIError) {
+	err := h.hasObject(ctx.Resource)
 	if err != nil {
 		return nil, err
 	}
 
-	input, ok := ctx.Action.Input.(*Input)
+	r := ctx.Resource
+	input, ok := r.GetAction().Input.(*Input)
 	if ok == false {
-		return nil, types.NewAPIError(types.InvalidFormat, "action input type invalid")
+		return nil, goresterr.NewAPIError(goresterr.InvalidFormat, "action input type invalid")
 	}
 
-	switch ctx.Action.Name {
+	switch r.GetAction().Name {
 	case "encode":
 		return base64.StdEncoding.EncodeToString([]byte(input.Data)), nil
 	case "decode":
 		if data, e := base64.StdEncoding.DecodeString(input.Data); e != nil {
-			err = types.NewAPIError(types.InvalidFormat, "decode failed: "+e.Error())
+			err = goresterr.NewAPIError(goresterr.InvalidFormat, "decode failed: "+e.Error())
 		} else {
 			return string(data), nil
 		}
 	default:
-		err = types.NewAPIError(types.NotFound, "not found action "+ctx.Action.Name)
+		err = goresterr.NewAPIError(goresterr.NotFound, "not found action "+r.GetAction().Name)
 	}
 
 	return nil, err
@@ -196,16 +204,15 @@ type Input struct {
 func main() {
 	router := gin.Default()
 	apiServer := getApiServer()
-	adaptor.RegisterHandler(router, apiServer, apiServer.Schemas.UrlMethods())
+	adaptor.RegisterHandler(router, apiServer, apiServer.Schemas.GenerateResourceRoute())
 	router.Run("0.0.0.0:1234")
 }
 
-func getApiServer() *api.Server {
-	schemas := types.NewSchemas()
-	handler := newHandler()
-	schemas.MustImport(&version, Cluster{}, handler)
-	schemas.MustImport(&version, Node{}, handler)
-	server := api.NewAPIServer(schemas)
-	server.Use(api.RestHandler)
+func getApiServer() *gorest.Server {
+	schemas := schema.NewSchemaManager()
+	handler, _ := resource.HandlerAdaptor(newHandler())
+	schemas.Import(&version, Cluster{}, handler)
+	schemas.Import(&version, Node{}, handler)
+	server := gorest.NewAPIServer(schemas)
 	return server
 }
