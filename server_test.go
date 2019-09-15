@@ -21,7 +21,7 @@ var (
 
 type dumbHandler struct{}
 
-func (h *dumbHandler) Create(ctx *resource.Context) (interface{}, *goresterr.APIError) {
+func (h *dumbHandler) Create(ctx *resource.Context) (resource.Resource, *goresterr.APIError) {
 	return nil, nil
 }
 
@@ -47,8 +47,7 @@ var dumbHandler2 = func(ctx *resource.Context) *goresterr.APIError {
 }
 
 func TestContextPassChain(t *testing.T) {
-	handler, _ := resource.HandlerAdaptor(&dumbHandler{})
-	schemas.Import(&version, Foo{}, handler)
+	schemas.Import(&version, Foo{}, &dumbHandler{})
 	req, _ := http.NewRequest("GET", "/apis/testing/v1/foos", nil)
 	req.Host = "127.0.0.1:1234"
 	w := httptest.NewRecorder()
