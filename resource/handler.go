@@ -17,11 +17,11 @@ const (
 	ActionMethod string = "Action"
 )
 
-type CreateHandler func(*Context) (interface{}, *goresterr.APIError)
+type CreateHandler func(*Context) (Resource, *goresterr.APIError)
 type DeleteHandler func(*Context) *goresterr.APIError
-type UpdateHandler func(*Context) (interface{}, *goresterr.APIError)
+type UpdateHandler func(*Context) (Resource, *goresterr.APIError)
 type ListHandler func(*Context) interface{}
-type GetHandler func(*Context) interface{}
+type GetHandler func(*Context) Resource
 type ActionHandler func(*Context) (interface{}, *goresterr.APIError)
 
 type Handler interface {
@@ -45,7 +45,7 @@ func HandlerAdaptor(obj interface{}) (Handler, error) {
 	}
 
 	if mv := val.MethodByName(GetMethod); mv.IsValid() {
-		if method, ok := mv.Interface().(func(*Context) interface{}); ok {
+		if method, ok := mv.Interface().(func(*Context) Resource); ok {
 			handler.getHandler = method
 			hasAnyHandler = true
 		}
@@ -59,14 +59,14 @@ func HandlerAdaptor(obj interface{}) (Handler, error) {
 	}
 
 	if mv := val.MethodByName(UpdateMethod); mv.IsValid() {
-		if method, ok := mv.Interface().(func(*Context) (interface{}, *goresterr.APIError)); ok {
+		if method, ok := mv.Interface().(func(*Context) (Resource, *goresterr.APIError)); ok {
 			handler.updateHandler = method
 			hasAnyHandler = true
 		}
 	}
 
 	if mv := val.MethodByName(CreateMethod); mv.IsValid() {
-		if method, ok := mv.Interface().(func(*Context) (interface{}, *goresterr.APIError)); ok {
+		if method, ok := mv.Interface().(func(*Context) (Resource, *goresterr.APIError)); ok {
 			handler.createHandler = method
 			hasAnyHandler = true
 		}

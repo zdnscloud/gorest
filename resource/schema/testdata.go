@@ -135,7 +135,6 @@ func PodEqual(t *testing.T, c, p *Pod) {
 
 func createSchemaManager() *SchemaManager {
 	mgr := NewSchemaManager()
-	handler, _ := resource.HandlerAdaptor(&resource.DumbHandler{})
 	resourceKinds := []resource.ResourceKind{
 		Cluster{},
 		Node{},
@@ -146,7 +145,7 @@ func createSchemaManager() *SchemaManager {
 		Pod{},
 	}
 	for _, kind := range resourceKinds {
-		err := mgr.Import(&version, kind, handler)
+		err := mgr.Import(&version, kind, &resource.DumbHandler{})
 		if err != nil {
 			panic("test data isn't correct:" + err.Error())
 		}

@@ -37,15 +37,9 @@ func handleCreate(ctx *resource.Context) *goresterr.APIError {
 		return goresterr.NewAPIError(goresterr.NotFound, "no handler for create")
 	}
 
-	result, err := handler(ctx)
+	resource, err := handler(ctx)
 	if err != nil {
 		return err
-	}
-
-	resource, ok := result.(resource.Resource)
-	if ok == false {
-		return goresterr.NewAPIError(goresterr.ServerError,
-			fmt.Sprintf("create handler doesn't return resource but %v", reflect.TypeOf(result).Kind()))
 	}
 
 	ctx.Resource.SetID(resource.GetID())
@@ -56,7 +50,7 @@ func handleCreate(ctx *resource.Context) *goresterr.APIError {
 		resource.SetLinks(links)
 	}
 	resource.SetType(ctx.Resource.GetType())
-	writeResponse(ctx.Response, http.StatusCreated, result)
+	writeResponse(ctx.Response, http.StatusCreated, resource)
 	return nil
 }
 
@@ -81,15 +75,9 @@ func handleUpdate(ctx *resource.Context) *goresterr.APIError {
 		return goresterr.NewAPIError(goresterr.NotFound, "no handler for update")
 	}
 
-	result, err := handler(ctx)
+	resource, err := handler(ctx)
 	if err != nil {
 		return err
-	}
-
-	resource, ok := result.(resource.Resource)
-	if ok == false {
-		return goresterr.NewAPIError(goresterr.ServerError,
-			fmt.Sprintf("update handler doesn't return resource but %v", reflect.TypeOf(result).Kind()))
 	}
 
 	httpSchemeAndHost := path.Join(ctx.Request.URL.Scheme, ctx.Request.URL.Host)
@@ -99,7 +87,7 @@ func handleUpdate(ctx *resource.Context) *goresterr.APIError {
 		resource.SetLinks(links)
 	}
 	resource.SetType(ctx.Resource.GetType())
-	writeResponse(ctx.Response, http.StatusOK, result)
+	writeResponse(ctx.Response, http.StatusOK, resource)
 	return nil
 }
 

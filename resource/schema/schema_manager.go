@@ -19,13 +19,18 @@ func NewSchemaManager() *SchemaManager {
 	return &SchemaManager{}
 }
 
-func (m *SchemaManager) Import(v *resource.APIVersion, kind resource.ResourceKind, handler resource.Handler) error {
+func (m *SchemaManager) Import(v *resource.APIVersion, kind resource.ResourceKind, handler interface{}) error {
+	handler_, err := resource.HandlerAdaptor(handler)
+	if err != nil {
+		return err
+	}
+
 	vs := m.getVersionedSchemas(v)
 	if vs == nil {
 		vs = NewVersionedSchemas(v)
 		m.schemas = append(m.schemas, vs)
 	}
-	return vs.Import(kind, handler)
+	return vs.Import(kind, handler_)
 }
 
 func (m *SchemaManager) getVersionedSchemas(v *resource.APIVersion) *VersionedSchemas {

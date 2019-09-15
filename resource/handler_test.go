@@ -10,8 +10,8 @@ import (
 
 type dumbHandlerTwo struct{}
 
-func (h *dumbHandlerTwo) Create(ctx *Context) (interface{}, *err.APIError) {
-	return 10, nil
+func (h *dumbHandlerTwo) Create(ctx *Context) (Resource, *err.APIError) {
+	return &dumbResource{Number: 60}, nil
 }
 
 type emptyHandler struct{}
@@ -25,23 +25,23 @@ func TestHandlerGen(t *testing.T) {
 
 	createResult, err := handler.GetCreateHandler()(nil)
 	ut.Assert(t, err == nil, "")
-	ut.Equal(t, createResult.(int), 10)
+	ut.Equal(t, createResult.(*dumbResource).Number, 10)
 
 	updateResult, err := handler.GetUpdateHandler()(nil)
 	ut.Assert(t, err == nil, "")
-	ut.Equal(t, updateResult.(int), 20)
+	ut.Equal(t, updateResult.(*dumbResource).Number, 20)
 
 	err = handler.GetDeleteHandler()(nil)
 	ut.Assert(t, err == nil, "")
 
 	listResult := handler.GetListHandler()(nil)
-	ut.Equal(t, listResult.([]uint), []uint{1, 2, 3})
+	ut.Equal(t, listResult.([]*dumbResource), []*dumbResource{&dumbResource{Number: 30}})
 
 	getResult := handler.GetGetHandler()(nil)
-	ut.Equal(t, getResult.(int), 10)
+	ut.Equal(t, getResult.(*dumbResource).Number, 40)
 
 	actionResult, err := handler.GetActionHandler()(nil)
-	ut.Equal(t, actionResult.(int), 10)
+	ut.Equal(t, actionResult.(int), 50)
 	ut.Assert(t, err == nil, "")
 
 	handler, _ = HandlerAdaptor(&dumbHandlerTwo{})

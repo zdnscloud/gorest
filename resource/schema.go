@@ -6,7 +6,7 @@ import (
 )
 
 type SchemaManager interface {
-	Import(*APIVersion, ResourceKind, Handler) error
+	Import(*APIVersion, ResourceKind, interface{}) error
 
 	//for GET/ DELETE, return empty resource, with id and parent set,
 	//for POST and PUT, the resource unmarshal from body will be returned
