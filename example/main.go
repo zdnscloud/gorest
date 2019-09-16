@@ -32,6 +32,12 @@ type Cluster struct {
 	nodes []*Node `json:"-"`
 }
 
+type Node struct {
+	resource.ResourceBase `json:",inline"`
+	Address               string `json:"address,omitempty" rest:"required=true,minLen=7,maxLen=13"`
+	IsWorker              bool   `json:"isWorker"`
+}
+
 func (c Cluster) CreateActions(name string) *resource.Action {
 	switch name {
 	case "encode":
@@ -46,6 +52,20 @@ func (c Cluster) CreateActions(name string) *resource.Action {
 		}
 	default:
 		return nil
+	}
+}
+
+type Input struct {
+	Data string `json:"data,omitempty"`
+}
+
+func (n Node) GetParents() []resource.ResourceKind {
+	return []resource.ResourceKind{Cluster{}}
+}
+
+func (n Node) CreateDefaultResource() resource.Resource {
+	return &Node{
+		IsWorker: true,
 	}
 }
 
@@ -188,6 +208,7 @@ func (h *clusterHandler) Create(ctx *resource.Context) (resource.Resource, *gore
 }
 
 func (h *clusterHandler) List(ctx *resource.Context) interface{} {
+	//return []int{1, 2, 3}
 	return h.clusters.GetClusters()
 }
 
@@ -209,22 +230,6 @@ func (h *clusterHandler) Action(ctx *resource.Context) (interface{}, *goresterr.
 		}
 	default:
 		panic("it should never come here")
-	}
-}
-
-type Node struct {
-	resource.ResourceBase `json:",inline"`
-	Address               string `json:"address,omitempty" rest:"required=true,minLen=7,maxLen=13"`
-	IsWorker              bool   `json:"isWorker"`
-}
-
-func (n Node) GetParents() []resource.ResourceKind {
-	return []resource.ResourceKind{Cluster{}}
-}
-
-func (n Node) CreateDefaultResource() resource.Resource {
-	return &Node{
-		IsWorker: true,
 	}
 }
 
@@ -268,10 +273,6 @@ func (h *nodeHandler) List(ctx *resource.Context) interface{} {
 func (h *nodeHandler) Get(ctx *resource.Context) interface{} {
 	node := ctx.Resource.(*Node)
 	return h.clusters.GetNode(node.GetParent().GetID(), node.GetID())
-}
-
-type Input struct {
-	Data string `json:"data,omitempty"`
 }
 
 func main() {
