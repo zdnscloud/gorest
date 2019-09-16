@@ -27,16 +27,14 @@ type leafField struct {
 	name       string
 	jsonName   string
 	required   bool
-	defaultVal interface{}
 	validators []Validator
 }
 
 func newLeafField(name, jsonName string) *leafField {
 	return &leafField{
-		name:       name,
-		jsonName:   jsonName,
-		required:   false,
-		defaultVal: nil,
+		name:     name,
+		jsonName: jsonName,
+		required: false,
 	}
 }
 

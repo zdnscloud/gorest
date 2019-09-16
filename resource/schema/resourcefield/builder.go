@@ -86,7 +86,8 @@ func (b *FieldBuilder) createField(name string, typ reflect.Type, json, rest str
 			nestKind = nestType.Kind()
 		}
 
-		if nestKind == reflect.Struct {
+		switch nestKind {
+		case reflect.Struct:
 			field, err := b.createField(name, nestType, json, rest)
 			if err == nil && field != nil {
 				if typ.Kind() == reflect.Map {
@@ -104,6 +105,10 @@ func (b *FieldBuilder) createField(name string, typ reflect.Type, json, rest str
 				}
 			}
 			return nil, err
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.String, reflect.Bool:
+			if restTags := strings.Split(rest, ","); len(restTags) > 0 {
+				return b.buildLeafField(name, typ.Kind(), json, restTags)
+			}
 		}
 	case reflect.Struct:
 		nb := NewBuilder()

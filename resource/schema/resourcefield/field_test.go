@@ -12,7 +12,7 @@ func TestFieldBuild(t *testing.T) {
 	sf, err := builder.Build(reflect.TypeOf(TestStruct{}))
 	ut.Assert(t, err == nil, "")
 
-	ut.Equal(t, len(sf.fields), 12)
+	ut.Equal(t, len(sf.fields), 14)
 	fieldNames := []string{
 		"Id",
 		"Age",
@@ -20,6 +20,8 @@ func TestFieldBuild(t *testing.T) {
 		"StringWithOption",
 		"StringWithLenLimit",
 		"IntWithRange",
+		"StringIntMap",
+		"BoolSlice",
 
 		"SliceComposition",
 		"StringMapCompostion",
@@ -59,6 +61,8 @@ func TestCheckRequired(t *testing.T) {
 		StringWithOption:   "ceph",
 		StringWithLenLimit: "aaa",
 		IntWithRange:       100,
+		StringIntMap:       map[string]int32{"name": 20},
+		BoolSlice:          []bool{false},
 		SliceComposition: []IncludeStruct{
 			IncludeStruct{
 				Int8WithRange: 5,
@@ -94,7 +98,7 @@ func TestCheckRequired(t *testing.T) {
 	json.Unmarshal(rawByte, &raw)
 	ut.Assert(t, sf.CheckRequired(raw) == nil, "")
 
-	for _, name := range []string{"name", "stringWithOption", "stringMapComposition", "intMapComposition", "ptrComposition", "slicePtrComposition", "intPtrMapComposition"} {
+	for _, name := range []string{"name", "stringWithOption", "stringMapComposition", "intMapComposition", "ptrComposition", "slicePtrComposition", "intPtrMapComposition", "stringIntMap", "boolSlice"} {
 		json.Unmarshal(rawByte, &raw)
 		delete(raw, name)
 		ut.Assert(t, sf.CheckRequired(raw) != nil, "")

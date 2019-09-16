@@ -13,13 +13,15 @@ type IncludeStruct struct {
 type TestStruct struct {
 	Embed `json:",inline"`
 
-	Name               string `json:"name" rest:"required=true"`
-	StringWithOption   string `json:"stringWithOption,omitempty" rest:"required=true,options=lvm|ceph"`
-	StringWithDefault  string `json:"stringWithDefault,omitempty"`
-	StringWithLenLimit string `json:"stringWithLenLimit" rest:"minLen=2,maxLen=10"`
-	IntWithDefault     int    `json:"intWithDefault,omitempty"`
-	IntWithRange       uint32 `json:"intWithRange" rest:"min=1,max=1000"`
-	BoolWithDefault    bool   `json:"boolWithDefault,omitempty"`
+	Name               string           `json:"name" rest:"required=true"`
+	StringWithOption   string           `json:"stringWithOption,omitempty" rest:"required=true,options=lvm|ceph"`
+	StringWithDefault  string           `json:"stringWithDefault,omitempty"`
+	StringWithLenLimit string           `json:"stringWithLenLimit" rest:"minLen=2,maxLen=10"`
+	IntWithDefault     int              `json:"intWithDefault,omitempty"`
+	IntWithRange       uint32           `json:"intWithRange" rest:"min=1,max=1000"`
+	BoolWithDefault    bool             `json:"boolWithDefault,omitempty"`
+	StringIntMap       map[string]int32 `json:"stringIntMap,omitempty" rest:"required=true"`
+	BoolSlice          []bool           `json:"boolSlice,omitempty" rest:"required=true"`
 
 	SliceComposition    []IncludeStruct          `json:"sliceComposition" rest:"required=true"`
 	StringMapCompostion map[string]IncludeStruct `json:"stringMapComposition" rest:"required=true"`
