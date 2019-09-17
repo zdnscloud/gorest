@@ -192,7 +192,7 @@ func TestAddResourceCollectionLink(t *testing.T) {
 
 		{
 			"/apis/testing/v1/clusters/c1/namespaces/n1/deployments",
-			pods,
+			deployments,
 			map[resource.ResourceLinkType]resource.ResourceLink{
 				resource.SelfLink: resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments"),
 			},
@@ -202,14 +202,14 @@ func TestAddResourceCollectionLink(t *testing.T) {
 					resource.SelfLink:                 resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/deploy0"),
 					resource.UpdateLink:               resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/deploy0"),
 					resource.RemoveLink:               resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/deploy0"),
-					resource.CollectionLink:           resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/deploy0"),
+					resource.CollectionLink:           resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments"),
 					resource.ResourceLinkType("pods"): resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/deploy0/pods"),
 				},
 				map[resource.ResourceLinkType]resource.ResourceLink{
 					resource.SelfLink:                 resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/deploy1"),
 					resource.UpdateLink:               resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/deploy1"),
 					resource.RemoveLink:               resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/deploy1"),
-					resource.CollectionLink:           resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/deploy1"),
+					resource.CollectionLink:           resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments"),
 					resource.ResourceLinkType("pods"): resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/deploy1/pods"),
 				},
 			},
