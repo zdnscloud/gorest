@@ -26,8 +26,9 @@ var (
 
 type Cluster struct {
 	resource.ResourceBase `json:",inline"`
-	Name                  string `json:"name" rest:"required=true,minLen=1,maxLen=10"`
-	NodeCount             int    `json:"nodeCount" rest:"required=true,min=1,max=1000"`
+	Name                  string         `json:"name" rest:"required=true,minLen=1,maxLen=10"`
+	NodeCount             int            `json:"nodeCount" rest:"required=true,min=1,max=1000"`
+	MapData               map[string]int `json:"mapData" rest:"required=true"`
 
 	nodes []*Node `json:"-"`
 }
@@ -209,7 +210,8 @@ func (h *clusterHandler) Create(ctx *resource.Context) (resource.Resource, *gore
 
 func (h *clusterHandler) List(ctx *resource.Context) interface{} {
 	//return []int{1, 2, 3}
-	return h.clusters.GetClusters()
+	return 1
+	//return h.clusters.GetClusters()
 }
 
 func (h *clusterHandler) Get(ctx *resource.Context) resource.Resource {

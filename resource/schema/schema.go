@@ -256,32 +256,38 @@ func (s *Schema) generateCollectionLink(r resource.Resource, httpSchemeAndHost s
 	return s.generateCollectionPath(ss, ids, httpSchemeAndHost), nil
 }
 
-func (s *Schema) GenerateLinks(r resource.Resource, httpSchemeAndHost string) (map[resource.ResourceLinkType]resource.ResourceLink, error) {
-	schema := r.GetSchema().(*Schema)
-	if schema == nil || schema.Equal(s) == false {
-		return nil, fmt.Errorf("use wrong schema to generate link for resources")
-	}
-
+func (s *Schema) AddLinksToResource(r resource.Resource, httpSchemeAndHost string) error {
 	if r.GetID() == "" {
-		if cl, err := s.generateCollectionLink(r, httpSchemeAndHost); err != nil {
-			return nil, err
-		} else {
-			return map[resource.ResourceLinkType]resource.ResourceLink{
-				resource.SelfLink: resource.ResourceLink(cl),
-			}, nil
-		}
+		return fmt.Errorf("resource has no id")
 	}
 
-	links := make(map[resource.ResourceLinkType]resource.ResourceLink)
-	collectionLink, err := schema.generateCollectionLink(r, httpSchemeAndHost)
+	cl, err := s.generateCollectionLink(r, httpSchemeAndHost)
 	if err != nil {
-		return nil, err
+		return err
+	}
+	r.SetLinks(s.generateResourceLinks(r, cl))
+	return nil
+}
+
+func (s *Schema) AddLinksToResourceCollection(rs *resource.ResourceCollection, httpSchemeAndHost string) error {
+	cl, err := s.generateCollectionLink(rs.GetCollection(), httpSchemeAndHost)
+	if err != nil {
+		return err
+	}
+	for _, r := range rs.GetResources() {
+		r.SetLinks(s.generateResourceLinks(r, cl))
 	}
 
-	selfLink := path.Join(collectionLink, r.GetID())
-	handler := schema.GetHandler()
+	rs.SetLinks(map[resource.ResourceLinkType]resource.ResourceLink{resource.SelfLink: resource.ResourceLink(cl)})
+	return nil
+}
+
+func (s *Schema) generateResourceLinks(r resource.Resource, parentLink string) map[resource.ResourceLinkType]resource.ResourceLink {
+	links := make(map[resource.ResourceLinkType]resource.ResourceLink)
+	selfLink := path.Join(parentLink, r.GetID())
+	handler := s.GetHandler()
 	if handler.GetListHandler() != nil {
-		links[resource.CollectionLink] = resource.ResourceLink(collectionLink)
+		links[resource.CollectionLink] = resource.ResourceLink(parentLink)
 	}
 	if handler.GetGetHandler() != nil {
 		links[resource.SelfLink] = resource.ResourceLink(selfLink)
@@ -292,9 +298,9 @@ func (s *Schema) GenerateLinks(r resource.Resource, httpSchemeAndHost string) (m
 	if handler.GetDeleteHandler() != nil {
 		links[resource.RemoveLink] = resource.ResourceLink(selfLink)
 	}
-	for _, child := range schema.GetChildren() {
+	for _, child := range s.GetChildren() {
 		childName := child.ResourceName()
 		links[resource.ResourceLinkType(childName)] = resource.ResourceLink(path.Join(selfLink, childName))
 	}
-	return links, nil
+	return links
 }

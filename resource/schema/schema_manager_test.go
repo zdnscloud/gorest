@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"fmt"
 	"net/http"
 	"sort"
 	"testing"
@@ -103,7 +104,7 @@ func TestCreateResourceFromRequest(t *testing.T) {
 	}
 }
 
-func TestGenerateLink(t *testing.T) {
+func TestAddResourceLinks(t *testing.T) {
 	cases := []struct {
 		url   string
 		links map[resource.ResourceLinkType]resource.ResourceLink
@@ -130,19 +131,102 @@ func TestGenerateLink(t *testing.T) {
 				resource.ResourceLinkType("statefulsets"): resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/statefulsets"),
 			},
 		},
-		{
-			"/apis/testing/v1/clusters/c1/namespaces",
-			map[resource.ResourceLinkType]resource.ResourceLink{
-				resource.SelfLink: resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces"),
+		/*
+			{
+				"/apis/testing/v1/clusters/c1/namespaces",
+				map[resource.ResourceLinkType]resource.ResourceLink{
+					resource.SelfLink: resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces"),
+				},
 			},
-		},
+		*/
 	}
 	mgr := createSchemaManager()
 	for _, tc := range cases {
 		req, _ := http.NewRequest(http.MethodGet, tc.url, nil)
 		r, _ := mgr.CreateResourceFromRequest(req)
-		links, err := r.GetSchema().(*Schema).GenerateLinks(r, "http://127.0.0.1:5555")
+		err := r.GetSchema().(*Schema).AddLinksToResource(r, "http://127.0.0.1:5555")
 		ut.Assert(t, err == nil, "")
-		ut.Equal(t, links, tc.links)
+		ut.Equal(t, r.GetLinks(), tc.links)
+	}
+}
+
+func TestAddResourceCollectionLink(t *testing.T) {
+	pods := []*Pod{&Pod{}, &Pod{}}
+	for i, pod := range pods {
+		pod.SetID(fmt.Sprintf("pod%d", i))
+	}
+
+	deployments := []*Deployment{&Deployment{}, &Deployment{}}
+	for i, deploy := range deployments {
+		deploy.SetID(fmt.Sprintf("deploy%d", i))
+	}
+
+	cases := []struct {
+		url             string
+		children        interface{}
+		collectionLinks map[resource.ResourceLinkType]resource.ResourceLink
+		childLinks      []map[resource.ResourceLinkType]resource.ResourceLink
+	}{
+		{
+			"/apis/testing/v1/clusters/c1/namespaces/n1/deployments/d1/pods",
+			pods,
+			map[resource.ResourceLinkType]resource.ResourceLink{
+				resource.SelfLink: resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/d1/pods"),
+			},
+
+			[]map[resource.ResourceLinkType]resource.ResourceLink{
+				map[resource.ResourceLinkType]resource.ResourceLink{
+					resource.SelfLink:       resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/d1/pods/pod0"),
+					resource.UpdateLink:     resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/d1/pods/pod0"),
+					resource.RemoveLink:     resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/d1/pods/pod0"),
+					resource.CollectionLink: resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/d1/pods"),
+				},
+				map[resource.ResourceLinkType]resource.ResourceLink{
+					resource.SelfLink:       resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/d1/pods/pod1"),
+					resource.UpdateLink:     resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/d1/pods/pod1"),
+					resource.RemoveLink:     resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/d1/pods/pod1"),
+					resource.CollectionLink: resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/d1/pods"),
+				},
+			},
+		},
+
+		{
+			"/apis/testing/v1/clusters/c1/namespaces/n1/deployments",
+			pods,
+			map[resource.ResourceLinkType]resource.ResourceLink{
+				resource.SelfLink: resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments"),
+			},
+
+			[]map[resource.ResourceLinkType]resource.ResourceLink{
+				map[resource.ResourceLinkType]resource.ResourceLink{
+					resource.SelfLink:                 resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/deploy0"),
+					resource.UpdateLink:               resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/deploy0"),
+					resource.RemoveLink:               resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/deploy0"),
+					resource.CollectionLink:           resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/deploy0"),
+					resource.ResourceLinkType("pods"): resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/deploy0/pods"),
+				},
+				map[resource.ResourceLinkType]resource.ResourceLink{
+					resource.SelfLink:                 resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/deploy1"),
+					resource.UpdateLink:               resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/deploy1"),
+					resource.RemoveLink:               resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/deploy1"),
+					resource.CollectionLink:           resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/deploy1"),
+					resource.ResourceLinkType("pods"): resource.ResourceLink("http:/127.0.0.1:5555/apis/testing/v1/clusters/c1/namespaces/n1/deployments/deploy1/pods"),
+				},
+			},
+		},
+	}
+
+	mgr := createSchemaManager()
+	for _, tc := range cases {
+		req, _ := http.NewRequest(http.MethodGet, tc.url, nil)
+		r, _ := mgr.CreateResourceFromRequest(req)
+		coll, err := resource.NewResourceCollection(r, tc.children)
+		ut.Assert(t, err == nil, "get err %v", err)
+		err = r.GetSchema().(*Schema).AddLinksToResourceCollection(coll, "http://127.0.0.1:5555")
+		ut.Assert(t, err == nil, "")
+		ut.Equal(t, coll.GetLinks(), tc.collectionLinks)
+		for i, r := range coll.GetResources() {
+			ut.Equal(t, r.GetLinks(), tc.childLinks[i])
+		}
 	}
 }
