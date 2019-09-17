@@ -103,6 +103,11 @@ func TestCheckRequired(t *testing.T) {
 		delete(raw, name)
 		ut.Assert(t, sf.CheckRequired(raw) != nil, "")
 	}
+
+	ts.Name = ""
+	rawByte, _ = json.Marshal(ts)
+	json.Unmarshal(rawByte, &raw)
+	ut.Assert(t, sf.CheckRequired(raw) != nil, "")
 }
 
 func TestValidate(t *testing.T) {
