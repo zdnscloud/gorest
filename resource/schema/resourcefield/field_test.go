@@ -106,6 +106,35 @@ func TestCheckRequired(t *testing.T) {
 	ut.Assert(t, sf.CheckRequired(raw) != nil, "")
 }
 
+func TestCheckNestRequired(t *testing.T) {
+	type inner struct {
+		Age  int
+		Name string `json:"name" rest:"required=true"`
+	}
+
+	type wrapper struct {
+		Inner inner `json:"name" rest:"required=true"`
+	}
+	builder := NewBuilder()
+	sf, _ := builder.Build(reflect.TypeOf(wrapper{}))
+	w := wrapper{
+		Inner: inner{
+			Age:  10,
+			Name: "aaa",
+		},
+	}
+	raw := make(map[string]interface{})
+	rawByte, _ := json.Marshal(w)
+	json.Unmarshal(rawByte, &raw)
+	ut.Assert(t, sf.CheckRequired(raw) == nil, "")
+
+	w.Inner.Name = ""
+	raw = make(map[string]interface{})
+	rawByte, _ = json.Marshal(w)
+	json.Unmarshal(rawByte, &raw)
+	ut.Assert(t, sf.CheckRequired(raw) != nil, "")
+}
+
 func TestValidate(t *testing.T) {
 	builder := NewBuilder()
 	sf, _ := builder.Build(reflect.TypeOf(TestStruct{}))
