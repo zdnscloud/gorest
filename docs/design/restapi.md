@@ -7,87 +7,122 @@ api server 会使用注册的资源schema及schema之间父子关系，自动生
 ![""](restapi.jpg)
 # 详细设计
 *  资源定义
-	* api server提供object接口，用来设置或获取资源基础属性
-
-			type Object interface {
-    			ObjectID
-    			ObjectType
-    			ObjectLinks
-    			ObjectTimestamp
-    			ObjectParent
-    			ObjectSchema
+	* api server提供Resource接口，用来设置或获取资源基础属性
+	
+			type Resource interface {
+    			GetParent() Resource
+    			SetParent(Resource)
+    			GetID() string
+    			SetID(string)
+    			GetLinks() map[ResourceLinkType]ResourceLink
+    			SetLinks(map[ResourceLinkType]ResourceLink)
+    			GetCreationTimestamp() time.Time
+    			SetCreationTimestamp(time.Time)
+    			GetSchema() Schema
+    			SetSchema(Schema)
+    			SetType(string)
+    			GetType() string
+    			GetAction() *Action
+    			SetAction(*Action)
+			}
+	
+    * api server提供ResourceKind接口，用来获取资源所有父资源、创建资源默认值、生成资源支持的Action
+		
+			type ResourceKind interface {
+    			GetParents() []ResourceKind
+    			CreateDefaultResource() Resource
+    			CreateAction(name string) *Action
 			}
 
-    * api server 提供Resource基础资源对象，实现Object接口，每个资源的定义必须包含Resource
+    * api server 提供ResourceBase基础资源对象，实现Resource和ResourceKind接口，每个资源的定义必须包含ResourceBase
     
-    		type Resource struct {
-    			ID                string             
-    			Type              string             
-    			Links             map[string]string  
-    			CreationTimestamp ISOTime            
-    			Parent            Object             
-    			Schema            *Schema            
+			type ResourceBase struct {
+    			ID                string                            `json:"id,omitempty"`
+    			Type              string                            `json:"type,omitempty"`
+    			Links             map[ResourceLinkType]ResourceLink `json:"links,omitempty"`
+    			CreationTimestamp ISOTime                           `json:"creationTimestamp,omitempty"`
+    			action *Action  `json:"-"`
+    			parent Resource `json:"-"`
+    			schema Schema   `json:"-"`
 			}
 	资源定义案例如下：
 	
 			type Secret struct {
-				resttypes.Resource `json:",inline"`
+				resttypes.ResourceBase `json:",inline"`
 				Name               string       `json:"name"`
 			}
-   			
-	* api server提供Handler接口，完成资源的增删改查操作，资源需实现所支持的操作
-	
-			type Handler interface {
-    			Create(*Context, []byte) (interface{}, *APIError)
-    			Delete(*Context) *APIError
-    			Update(*Context) (interface{}, *APIError)
-    			List(*Context) interface{}
-    			Get(*Context) interface{}
-    			Action(*Context) (interface{}, *APIError)
+    * api server 提供ResourceCollection基础资源对象，表示相同ResourceType的资源集合，所有资源存放在Resources字段中，当对资源进行list操作时，就会返回Type为collection的ResourceCollection资源
+
+			type ResourceCollection struct {
+    			Type         string                            `json:"type,omitempty"`
+    			ResourceType string                            `json:"resourceType,omitempty"`
+    			Links        map[ResourceLinkType]ResourceLink `json:"links,omitempty"`
+    			Resources    []Resource                        `json:"data"`
+
+    			collection Resource `json:"-"`
 			}
+
+	* api server提供Handler接口，获取资源增删改查的Handler，资源需实现所支持的操作的Handler，在注册资源时，会将这些Handler保存到schema的handler中
+		
+			type Handler interface {
+    			GetCreateHandler() CreateHandler
+    			GetDeleteHandler() DeleteHandler
+    			GetUpdateHandler() UpdateHandler
+    			GetListHandler() ListHandler
+    			GetGetHandler() GetHandler
+    			GetActionHandler() ActionHandler
+			}
+	
+			type CreateHandler func(*Context) (Resource, *goresterr.APIError)
+			type DeleteHandler func(*Context) *goresterr.APIError
+			type UpdateHandler func(*Context) (Resource, *goresterr.APIError)
+			type ListHandler func(*Context) interface{}
+			type GetHandler func(*Context) Resource
+			type ActionHandler func(*Context) (interface{}, *goresterr.APIError)
     
 	* api server提供字段检查，字段检查的json tag为rest，每个属性用逗号分隔
 
 			type Http struct {
 			  resttypes.Resource `json:",inline"`
-			  Port int `json:"port" rest:"required=false,default=9000"`
+			  Port int `json:"port" rest:"required=false,min=1000,max=10000"`
 			}
   	
   	目前字段检查支持:
   	  * required: 当为true时表示字段是必传字段，如果是空就会报错
-  	  * default: 当字段为空时，为其填充该默认值
   	  * options: 当字段为enum类型，有效字段集合定义在options，以 | 分割，如：options=TCP|UDP
+  	  * min、max: 当字段为整形，可以设置字段的最小值和最大值
+  	  * minLen、maxLen: 当字段类型为字符串，可以设置字段的最小长度和最大长度
   	
   	字段检查逻辑
       * 首先检查字段是否为空，如果为空，且字段属性required＝true，则报错
-      * 其次查看字段属性options是否为空，如果不为空，且字段值不在options范围内，则报错
-      * 最后如果字段为空，且字段属性default值不为空，将default值赋给该字段   
+      * 其次查看字段其他属性
+        * 如果字段属性options不为空，且字段值不在options范围内，则报错  
+        * 如果整形字段值不在min和max之间，则报错
+        * 如果字符串字段的长度不在minLen和maxLen之间，则报错 
 
 * schema
   * schema字段定义
 
 		type Schema struct {
-    		Version           APIVersion        
-    		PluralName        string            
-    		ResourceMethods   []string          
-    		ResourceFields    map[string]Field  
-    		ResourceActions   []Action          
-    		CollectionMethods []string          
-    		CollectionFields  map[string]Field 
-    		CollectionActions []Action         
-
-    		StructVal reflect.Value 
-    		Handler   Handler		
-    		Parents   []string
+    		version          *resource.APIVersion
+    		fields           resourcefield.ResourceField
+    		actions          []resource.Action
+    		handler          resource.Handler
+    		resourceKind     resource.ResourceKind
+    		resourceName     string
+    		resourceKindName string
+    		children         []*Schema
 		}
-  其中StructVal为资源结构体定义的反射值，Handler为资源实现具体操作的接口，Parents为资源的父资源，一个资源可以有多个父资源
+	其中fields为资源字段属性，用于字段检查，handler为资源所支持的所有操作，resourceName是资源名字，全小写形式保存，如StatefulSet的resourceName为statefulset，resourceKindName为资源复数名字，如StatefulSet的resourceKindName为statefulsets
+ 
   * 注册schema函数
   
-		MustImportAndCustomize(version *APIVersion, obj interface{}, handler Handler, f func(*Schema, Handler), externalOverrides ...interface{})
-  其中入参 f 为自定义函数，用来设置schema的Handler、Parents、ResourceMethods、ResourceActions、CollectionMethods等字段
+		Import(v *resource.APIVersion, kind resource.ResourceKind, handler interface{}) 
 
+	通过参数handler，使用resource.HandlerAdaptor函数，解析出资源所支持的操作并保存到资源schema中，通过kind参数解析资源字段属性并保存到资源schema中
+		
 * URL生成
-  * 资源URL由groupPrefix、apiversion和资源父子关系组成, 目前支持的groupPrefix只有/apis， apiversion包含group和version两个字段，group目前只支持zcloud.cn，version为v1
+  * 资源URL GroupPrefix、APIVersion和资源父子关系组成, 目前支持的GroupPrefix只有/apis， APIVersion包含group和version两个字段，group目前只支持zcloud.cn，version为v1
   * 如果资源是顶级资源，没有父资源，如cluster，自动生成URL为 /apis/zcloud.cn/v1/clusters
   * 如果资源只有一个父资源，如namespace父资源为cluster，那么自动生成URL为 /apis/zcloud.cn/v1/clusters/cluster_id/namespaces
   * 如果资源有多个父资源，那么会自动生成多个URL， 如pod父资源有deployment、daemonset、statefulset，自动生成的URL为：
@@ -96,7 +131,7 @@ api server 会使用注册的资源schema及schema之间父子关系，自动生
     /apis/zcloud.cn/v1/clusters/cluster_id/namespaces/namespace_id/statefulsets/statefulset_id/pods
   
 * Links
-  * 资源注册schema到api server，操作资源时response会有links字段返回，方便client快捷使用，如statefulset的id为sts123的资源links如下
+  * 资源注册schema到api server，操作资源时response会有Links字段返回，方便client快捷使用，如statefulset的id为sts123的资源Links如下
 
 		{
 			"links": {
@@ -108,12 +143,16 @@ api server 会使用注册的资源schema及schema之间父子关系，自动生
     		}
     	} 
    
-  * links说明如下  		
-    * 如果资源支持单个资源的get，即资源schema的ResourceMethods中设置了GET，links中就会包含self
-    * 如果资源支持所有资源的list， 即资源schema的CollectionMethods中设置了GET，links中就会包含collection
-    * 如果资源支持删除操作，即资源schema的ResourceMethods中设置了DELETE，links中就会包含remove
-    * 如果资源支持更新操作，即资源schema的ResourceMethods中设置了PUT，links中就会包含update
-    * 如果资源有子资源，如statefulset的是pod父资源，links中会包含pod的collection，即pods
-    
+  * links说明如下
+    * 单个资源的Links  		
+      * 如果资源支持单个资源的get，即资源schema的handler中设置了getHandler，links中就会包含self
+      * 如果资源支持所有资源的list， 即资源schema的handler中设置了listHandler，links中就会包含collection
+      * 如果资源支持删除操作，即资源schema的handler中设置了deleteHandler，links中就会包含remove
+      * 如果资源支持更新操作，即资源schema的handler中设置了updateHandler，links中就会包含update
+      * 如果资源有子资源，如statefulset的是pod父资源，links中会包含pod的collection，即pods
+    * 当list资源时返回ResourceCollection
+      * ResourceCollection的Links存放self
+      * Resource中每个资源都需要设置这个资源所支持的所有Links
+  
 # 未来工作
-* 添加更多的字段属性检查
+* 添加更多的字段属性检查，如检查ipv4和ipv6有效性，域名检查，host检查等
