@@ -10,32 +10,38 @@ import (
 
 func TestBuildValidatorWithValidTag(t *testing.T) {
 	sv := reflect.ValueOf(TestStruct{
-		StringWithOption:   "lvm",
-		StringWithLenLimit: "good",
-		IntWithRange:       10,
+		StringWithOption:      "lvm",
+		StringWithLenLimit:    "good",
+		IntWithRange:          10,
+		StringSliceWithOption: []MyOption{"ceph"},
 	})
 
 	sv2 := reflect.ValueOf(TestStruct{
-		StringWithOption:   "lvms",
-		StringWithLenLimit: "g",
-		IntWithRange:       10000,
+		StringWithOption:      "lvms",
+		StringWithLenLimit:    "g",
+		IntWithRange:          10000,
+		StringSliceWithOption: []MyOption{"ceph", "xxx"},
 	})
+	testFields := []string{
+		"StringWithOption",
+		"StringWithLenLimit",
+		"IntWithRange",
+		"StringSliceWithOption",
+	}
 	st := sv.Type()
-	vc := 0
-	for i := 0; i < st.NumField(); i++ {
-		f := st.Field(i)
+	for _, fn := range testFields {
+		f, ok := st.FieldByName(fn)
+		ut.Assert(t, ok, "field %s doesn't exist", fn)
 		tags := strings.Split(f.Tag.Get("rest"), ",")
 		if len(tags) > 0 {
-			validator, err := buildValidator(f.Type.Kind(), tags)
+			validator, err := buildValidator(f.Type, tags)
 			ut.Assert(t, err == nil, "get err %v", err)
 			if validator != nil {
-				vc += 1
-				ut.Assert(t, validator.Validate(sv.Field(i).Interface()) == nil, "")
-				ut.Assert(t, validator.Validate(sv2.Field(i).Interface()) != nil, "")
+				ut.Assert(t, validator.Validate(sv.FieldByName(fn).Interface()) == nil, "")
+				ut.Assert(t, validator.Validate(sv2.FieldByName(fn).Interface()) != nil, "")
 			}
 		}
 	}
-	ut.Equal(t, vc, 3)
 }
 
 func TestBuildValidatorWithInValidTag(t *testing.T) {
@@ -53,7 +59,7 @@ func TestBuildValidatorWithInValidTag(t *testing.T) {
 		f := st.Field(i)
 		tags := strings.Split(f.Tag.Get("rest"), ",")
 		if len(tags) > 0 {
-			validator, _ := buildValidator(f.Type.Kind(), tags)
+			validator, _ := buildValidator(f.Type, tags)
 			ut.Assert(t, validator == nil, "")
 		}
 	}
