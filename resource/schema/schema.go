@@ -9,6 +9,7 @@ import (
 
 	goresterr "github.com/zdnscloud/gorest/error"
 	"github.com/zdnscloud/gorest/resource"
+	"github.com/zdnscloud/gorest/resource/schema/resourcedoc"
 	"github.com/zdnscloud/gorest/resource/schema/resourcefield"
 )
 
@@ -303,4 +304,9 @@ func (s *Schema) generateResourceLinks(r resource.Resource, parentLink string) m
 		links[resource.ResourceLinkType(childName)] = resource.ResourceLink(path.Join(selfLink, childName))
 	}
 	return links
+}
+
+func (s *Schema) WriteJsonDoc(path string) error {
+	docer := resourcedoc.NewDocer(s.resourceKindName, s.resourceKind, s.handler)
+	return docer.WriteConfig(path)
 }
