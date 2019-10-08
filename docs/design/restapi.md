@@ -33,8 +33,13 @@ api server 会使用注册的资源schema及schema之间父子关系，自动生
     			CreateDefaultResource() Resource
     			CreateAction(name string) *Action
 			}
+			
+			type Action struct {
+				Name  string      `json:"name"`
+				Input interface{} `json:"input,omitempty"`
+			}
 
-    * api server 提供ResourceBase基础资源对象，实现Resource和ResourceKind接口，每个资源的定义必须包含ResourceBase
+    * api server 提供ResourceBase基础资源对象，实现Resource和ResourceKind接口，每个资源的定义必须包含ResourceBase，如果有必要，资源需要实现ResourceKind接口提供的函数，即子资源需要实现GetParents函数，确定其父资源，如果资源有默认值，需要实现CreateDefaultResource函数，如果资源支持Action，则需要实现CreateAction函数
     
 			type ResourceBase struct {
     			ID                string                            `json:"id,omitempty"`
@@ -45,12 +50,16 @@ api server 会使用注册的资源schema及schema之间父子关系，自动生
     			parent Resource `json:"-"`
     			schema Schema   `json:"-"`
 			}
-	资源定义案例如下：
+			
+		如资源Namespace是Cluster子资源，需要实现GetParents函数，具体定义案例如下：
 	
-			type Secret struct {
-				resttypes.ResourceBase `json:",inline"`
-				Name               string       `json:"name"`
+			type Namepsace struct {
+				ResourceBase `json:",inline"`
+				Name         string       `json:"name"`
 			}
+			func (n Namespace) GetParents() []ResourceKind {
+				return []ResourceKind{Cluster{}}
+			}																		
     * api server 提供ResourceCollection基础资源对象，表示相同ResourceType的资源集合，所有资源存放在Resources字段中，当对资源进行list操作时，就会返回Type为collection的ResourceCollection资源
 
 			type ResourceCollection struct {
@@ -61,8 +70,8 @@ api server 会使用注册的资源schema及schema之间父子关系，自动生
 
     			collection Resource `json:"-"`
 			}
-
-	* api server提供Handler接口，获取资源增删改查的Handler，资源需实现所支持的操作的Handler，在注册资源时，会将这些Handler保存到schema的handler中
+			
+	* api server提供Handler接口，获取资源增删改查的Handler，提供DefaultHandler来实现Handler接口，在注册资源时，使用reflect.Value.MethodByName函数确定资源支持的Handler，再将Handler保存到DefaultHandler实例中，最后将DefaultHandler实例保存到资源schema的handler中，这样操作资源时，就可以通过资源schema找到对应的Handler进行资源操作。例如资源支持Post操作，此资源必须实现 Create(*Context)(Resource, *goresterr.APIError) 方法，这样注册资源时，才能通过MethodByName确定CreateHandler并保存到DefaultHandler实例的createHandler字段
 		
 			type Handler interface {
     			GetCreateHandler() CreateHandler
@@ -79,6 +88,24 @@ api server 会使用注册的资源schema及schema之间父子关系，自动生
 			type ListHandler func(*Context) interface{}
 			type GetHandler func(*Context) Resource
 			type ActionHandler func(*Context) (interface{}, *goresterr.APIError)
+			
+			const (
+				CreateMethod string = "Create"
+				DeleteMethod string = "Delete"
+				UpdateMethod string = "Update"
+				ListMethod   string = "List"
+				GetMethod    string = "Get"
+				ActionMethod string = "Actiion"
+			)
+			
+			type DefaultHandler struct {
+				createHandler CreateHandler
+				deleteHandler DeleteHandler
+				updateHandler UpdateHandler
+				listHandler   ListHandler
+				getHandler    GetHandler
+				actionHandler ActionHandler
+			}
     
 	* api server提供字段检查，字段检查的json tag为rest，每个属性用逗号分隔
 
@@ -115,11 +142,11 @@ api server 会使用注册的资源schema及schema之间父子关系，自动生
 		}
 	其中fields为资源字段属性，用于字段检查，handler为资源所支持的所有操作，resourceName是资源名字，全小写形式保存，如StatefulSet的resourceName为statefulset，resourceKindName为资源复数名字，如StatefulSet的resourceKindName为statefulsets
  
-  * 注册schema函数
+  * api server 提供SchemaManager接口来注册资源，通过NewSchemaManager函数创建一个实例，然后调用MustImport函数注册资源，注册资源顺序必须先注册顶级资源，再注册顶级资源的子资源，即子资源的注册一定在它的父资源之后注册，这样注册子资源时，才能保证把所有子资源都添加到父资源Schema的children中，当所有资源注册完成，就会为所有资源生成资源URL，生成资源URL就可以从顶级资源开始，自上而下为所有资源生成URL。当收到资源处理请求时，查找资源的schema的方式依然是顶级资源开始查找，逐级向下查找
   
-		Import(v *resource.APIVersion, kind resource.ResourceKind, handler interface{}) 
-
-	通过参数handler，使用resource.HandlerAdaptor函数，解析出资源所支持的操作并保存到资源schema中，通过kind参数解析资源字段属性并保存到资源schema中
+		type SchemaManager interface {
+    		MustImport(*APIVersion, ResourceKind, interface{})
+		｝
 		
 * URL生成
   * 资源URL GroupPrefix、APIVersion和资源父子关系组成, 目前支持的GroupPrefix只有/apis， APIVersion包含group和version两个字段，group目前只支持zcloud.cn，version为v1
