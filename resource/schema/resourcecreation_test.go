@@ -206,6 +206,16 @@ func TestFillDefaultValue(t *testing.T) {
 	}
 }
 
+func PodEqual(t *testing.T, c, p *Pod) {
+	ut.Equal(t, c.Name, p.Name)
+	ut.Equal(t, c.Count, p.Count)
+	ut.Equal(t, c.Annotations, p.Annotations)
+	ut.Equal(t, c.OtherInfo, p.OtherInfo)
+	ut.Equal(t, c.OtherInfoSlice, p.OtherInfoSlice)
+	ut.Equal(t, c.OtherInfoPointer, p.OtherInfoPointer)
+	ut.Equal(t, c.OtherInfoPointerSlice, p.OtherInfoPointerSlice)
+}
+
 func TestAction(t *testing.T) {
 	mgr := createSchemaManager()
 	url := "/apis/testing/v1/clusters/c1/namespaces/n1/deployments/d1/pods/p1?action=move"
