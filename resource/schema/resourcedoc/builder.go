@@ -12,10 +12,11 @@ type Resource struct {
 }
 
 type Field struct {
-	Name string
-	Type reflect.Type
-	Kind util.Kind
-	Tag  reflect.StructTag
+	Name    string
+	Type    reflect.Type
+	Kind    util.Kind
+	Tag     reflect.StructTag
+	Special string
 }
 
 type Builder struct {
@@ -51,22 +52,29 @@ func (b *Builder) buildFields(name string, t reflect.Type) []Field {
 		name := t.Field(i).Name
 		typ := t.Field(i).Type
 		tag := t.Field(i).Tag
-		if strings.Contains(name, "ResourceBase") || typ.Name() == "RawMessage" || typ.Name() == "ISOTime" {
+		jsonname := fieldJsonName(name, tag.Get("json"))
+		if strings.Contains(name, "ResourceBase") || jsonname == "-" {
 			continue
 		}
-
-		jsonname := fieldJsonName(name, tag.Get("json"))
-		if jsonname == "-" {
-			continue
+		var s string
+		if typ.Name() == "RawMessage" {
+			s = "json"
+		}
+		if typ.Name() == "ISOTime" {
+			s = "date"
 		}
 
 		field := Field{
-			Name: name,
-			Type: typ,
-			Kind: util.Inspect(typ),
-			Tag:  tag,
+			Name:    name,
+			Type:    typ,
+			Kind:    util.Inspect(typ),
+			Tag:     tag,
+			Special: s,
 		}
 		fields = append(fields, field)
+		if s == "json" || s == "date" {
+			continue
+		}
 		b.handleField(name, typ)
 	}
 	return fields
@@ -88,5 +96,19 @@ func (b *Builder) structHandle(name string, t reflect.Type) {
 	fields := b.buildFields(name, t)
 	resource := make(map[string][]Field)
 	resource[name] = fields
+	if b.isExist(name) {
+		return
+	}
 	b.resource.Sub = append(b.resource.Sub, resource)
+}
+
+func (b *Builder) isExist(name string) bool {
+	for _, s := range b.resource.Sub {
+		for n, _ := range s {
+			if n == name {
+				return true
+			}
+		}
+	}
+	return false
 }

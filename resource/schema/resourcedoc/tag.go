@@ -6,31 +6,26 @@ import (
 )
 
 const (
-	requiredTag = "required="
-	optionsTag  = "options="
+	requiredTag    = "required="
+	optionsTag     = "options="
+	descriptionTag = "description="
+	required       = "required"
 )
 
-func Mapf(s string) string {
-	switch s {
-	case requiredTag:
-		return "field required"
-	}
-	return ""
-}
-
-func Tets(tag reflect.StructTag) string {
-	var describe string
+func DescriptionTag(tag reflect.StructTag) []string {
+	var describe []string
 	rest := tag.Get("rest")
 	restTags := strings.Split(rest, ",")
-	for _, tag := range restTags {
-		if strings.HasPrefix(tag, requiredTag) {
-			describe += Mapf(requiredTag)
+	for _, t := range restTags {
+		if strings.HasPrefix(t, requiredTag) {
+			describe = append(describe, required)
 		}
-		if strings.HasPrefix(tag, optionsTag) {
-			describe += Mapf(optionsTag)
+		if strings.HasPrefix(t, descriptionTag) {
+			descriptionVal := strings.TrimPrefix(t, descriptionTag)
+			describe = append(describe, descriptionVal)
 		}
 	}
-	return ""
+	return describe
 }
 
 func OptionsTag(tag reflect.StructTag) []string {

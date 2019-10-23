@@ -18,17 +18,27 @@ const (
 	Unknow  = "unknow"
 )
 
+func cutSymbolUint(in string) string {
+	if in == "int8" || in == "int16" || in == "int32" || in == "int64" {
+		return Int
+	}
+	if in == "uint8" || in == "uint16" || in == "uint32" || in == "uint64" {
+		return Uint
+	}
+	return in
+}
+
 func setSlice(t reflect.Type) string {
 	k := util.Inspect(t)
 	switch k {
 	case util.StringSlice:
 		return String
-	case util.IntSlice, util.UintSlice, util.StructSlice, util.StructPtrSlice:
+	case util.IntSlice, util.UintSlice, util.StructSlice, util.StructPtrSlice, util.BoolSlice:
 		nestType := t.Elem()
 		if k == util.StructPtrSlice {
 			nestType = nestType.Elem()
 		}
-		return nestType.Name()
+		return cutSymbolUint(nestType.Name())
 	}
 	return Unknow
 }
@@ -41,7 +51,7 @@ func setMap(t reflect.Type) (string, string) {
 		if k == util.StringStructPtrMap {
 			nestType = nestType.Elem()
 		}
-		return String, nestType.Name()
+		return String, cutSymbolUint(nestType.Name())
 	}
 	return Unknow, Unknow
 }
@@ -59,10 +69,12 @@ func setType(t reflect.Type) string {
 		return Bool
 	case util.StringIntMap, util.StringStringMap, util.StringUintMap, util.StringStructMap, util.StringStructPtrMap:
 		return Map
-	case util.IntSlice, util.UintSlice, util.StringSlice, util.StructSlice, util.StructPtrSlice:
+	case util.IntSlice, util.UintSlice, util.BoolSlice, util.StringSlice, util.StructSlice, util.StructPtrSlice:
 		return Array
-	case util.Struct, util.StructPtr:
+	case util.Struct:
 		return t.Name()
+	case util.StructPtr:
+		return t.Elem().Name()
 	}
 	return Unknow
 }

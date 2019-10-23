@@ -10,6 +10,7 @@ import (
 type Document struct {
 	ResourceType      string                             `json:"resourceType,omitempty"`
 	CollectionName    string                             `json:"collectionName,omitempty"`
+	ParentResources   []string                           `json:"parentResources,omitempty"`
 	ResourceFields    []map[string]DocField              `json:"resourceFields,omitempty"`
 	SubResources      []map[string][]map[string]DocField `json:"subResources,omitempty"`
 	ResourceMethods   []resource.HttpMethod              `json:"resourceMethods,omitempty"`
@@ -22,19 +23,18 @@ type DocField struct {
 	ElemType    string   `json:"elemType,omitempty"`
 	KeyType     string   `json:"keyType,omitempty"`
 	ValueType   string   `json:"valueType,omitempty"`
-	Describe    string   `json:"describe,omitempty"`
+	Description []string `json:"description,omitempty"`
 }
 
-type Docer struct {
+type DocumentManager struct {
 	resourceName string
 	resourceKind resource.ResourceKind
 	document     Document
 }
 
-func NewDocer(name string, kind resource.ResourceKind, handler resource.Handler) *Docer {
+func NewDocumentManager(name string, kind resource.ResourceKind, handler resource.Handler, parents []string) *DocumentManager {
 	builder := NewBuilder()
 	builder.BuildResource(name, reflect.TypeOf(kind))
-
 	var resourceType, collectionName string
 	var resourceFields []map[string]DocField
 	for _, v := range builder.GetTop() {
@@ -65,12 +65,13 @@ func NewDocer(name string, kind resource.ResourceKind, handler resource.Handler)
 			subresources = append(subresources, subresource)
 		}
 	}
-	return &Docer{
+	return &DocumentManager{
 		resourceName: name,
 		resourceKind: kind,
 		document: Document{
 			ResourceType:      resourceType,
 			CollectionName:    collectionName,
+			ParentResources:   parents,
 			ResourceFields:    resourceFields,
 			SubResources:      subresources,
 			ResourceMethods:   resource.GetResourceMethods(handler),
@@ -79,7 +80,7 @@ func NewDocer(name string, kind resource.ResourceKind, handler resource.Handler)
 	}
 }
 
-func (d *Docer) WriteConfig(path string) error {
+func (d *DocumentManager) WriteJsonFile(path string) error {
 	data, err := json.MarshalIndent(d.document, "", "  ")
 	if err != nil {
 		return err
@@ -97,8 +98,12 @@ func (d *Docer) WriteConfig(path string) error {
 }
 
 func fieldToDoc(f Field) map[string]DocField {
-	var et, kt, vt string
-	t := setType(f.Type)
+	var t, et, kt, vt string
+	if f.Special == "json" || f.Special == "date" {
+		t = f.Special
+	} else {
+		t = setType(f.Type)
+	}
 	vv := OptionsTag(f.Tag)
 	if len(vv) > 0 {
 		t = Enum
@@ -118,6 +123,7 @@ func fieldToDoc(f Field) map[string]DocField {
 		ValidValues: vv,
 		KeyType:     strFirstToLower(kt),
 		ValueType:   strFirstToLower(vt),
+		Description: DescriptionTag(f.Tag),
 	}
 	return field
 }
