@@ -46,7 +46,7 @@ func NewDocumentManager(name string, kind resource.ResourceKind, handler resourc
 	for _, resource := range builder.GetSub() {
 		for k, v := range resource {
 			subresource := make(map[string][]map[string]DocField)
-			subresource[strFirstToLower(k)] = genDocField(v)
+			subresource[LowerFirstCharacter(k)] = genDocField(v)
 			subresources = append(subresources, subresource)
 		}
 	}
@@ -54,8 +54,8 @@ func NewDocumentManager(name string, kind resource.ResourceKind, handler resourc
 		resourceName: name,
 		resourceKind: kind,
 		document: Document{
-			ResourceType:      name,
-			CollectionName:    util.GuessPluralName(name),
+			ResourceType:      UpperFirstCharacter(name),
+			CollectionName:    UpperFirstCharacter(util.GuessPluralName(name)),
 			ParentResources:   parents,
 			ResourceFields:    resourceFields,
 			SubResources:      subresources,
@@ -111,13 +111,13 @@ func fieldToDoc(f Field) map[string]DocField {
 		typ = f.Special
 	}
 	field := make(map[string]DocField)
-	newname := strFirstToLower(fieldJsonName(f.Name, f.Tag.Get("json")))
+	newname := LowerFirstCharacter(fieldJsonName(f.Name, f.Tag.Get("json")))
 	field[newname] = DocField{
-		Type:        strFirstToLower(typ),
-		ElemType:    strFirstToLower(elemType),
+		Type:        LowerFirstCharacter(typ),
+		ElemType:    LowerFirstCharacter(elemType),
 		ValidValues: validValues,
-		KeyType:     strFirstToLower(keyType),
-		ValueType:   strFirstToLower(valueType),
+		KeyType:     LowerFirstCharacter(keyType),
+		ValueType:   LowerFirstCharacter(valueType),
 		Description: DescriptionTag(f.Tag),
 	}
 	return field
