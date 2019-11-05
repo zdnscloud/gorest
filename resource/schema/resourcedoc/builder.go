@@ -1,9 +1,10 @@
 package resourcedoc
 
 import (
-	"github.com/zdnscloud/gorest/util"
 	"reflect"
 	"strings"
+
+	"github.com/zdnscloud/gorest/util"
 )
 
 type Resource struct {
@@ -41,8 +42,7 @@ func (b *Builder) GetSub() []map[string][]Field {
 }
 
 func (b *Builder) BuildResource(name string, t reflect.Type) {
-	fields := b.buildFields(name, t)
-	b.resource.Top[name] = fields
+	b.resource.Top[name] = b.buildFields(name, t)
 	return
 }
 
@@ -52,16 +52,8 @@ func (b *Builder) buildFields(name string, t reflect.Type) []Field {
 		name := t.Field(i).Name
 		typ := t.Field(i).Type
 		tag := t.Field(i).Tag
-		jsonname := fieldJsonName(name, tag.Get("json"))
-		if strings.Contains(name, "ResourceBase") || jsonname == "-" {
+		if strings.Contains(name, "ResourceBase") || fieldJsonName(name, tag.Get("json")) == "-" {
 			continue
-		}
-		var s string
-		if typ.Name() == "RawMessage" {
-			s = "json"
-		}
-		if typ.Name() == "ISOTime" {
-			s = "date"
 		}
 
 		field := Field{
@@ -69,13 +61,13 @@ func (b *Builder) buildFields(name string, t reflect.Type) []Field {
 			Type:    typ,
 			Kind:    util.Inspect(typ),
 			Tag:     tag,
-			Special: s,
+			Special: specialType(typ.Name()),
 		}
 		fields = append(fields, field)
-		if s == "json" || s == "date" {
-			continue
+
+		if field.Special == "" {
+			b.handleField(name, typ)
 		}
-		b.handleField(name, typ)
 	}
 	return fields
 }
@@ -93,13 +85,11 @@ func (b *Builder) handleField(name string, t reflect.Type) {
 }
 
 func (b *Builder) structHandle(name string, t reflect.Type) {
-	fields := b.buildFields(name, t)
 	resource := make(map[string][]Field)
-	resource[name] = fields
-	if b.isExist(name) {
-		return
+	resource[name] = b.buildFields(name, t)
+	if !b.isExist(name) {
+		b.resource.Sub = append(b.resource.Sub, resource)
 	}
-	b.resource.Sub = append(b.resource.Sub, resource)
 }
 
 func (b *Builder) isExist(name string) bool {
@@ -111,4 +101,15 @@ func (b *Builder) isExist(name string) bool {
 		}
 	}
 	return false
+}
+
+func specialType(typ string) string {
+	switch typ {
+	case "RawMessage":
+		return "json"
+	case "ISOTime":
+		return "date"
+	default:
+		return ""
+	}
 }

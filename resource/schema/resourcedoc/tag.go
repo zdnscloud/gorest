@@ -6,19 +6,17 @@ import (
 )
 
 const (
-	requiredTag    = "required="
+	requiredTag    = "required"
 	optionsTag     = "options="
 	descriptionTag = "description="
-	required       = "required"
 )
 
 func DescriptionTag(tag reflect.StructTag) []string {
 	var describe []string
-	rest := tag.Get("rest")
-	restTags := strings.Split(rest, ",")
+	restTags := strings.Split(tag.Get("rest"), ",")
 	for _, t := range restTags {
 		if strings.HasPrefix(t, requiredTag) {
-			describe = append(describe, required)
+			describe = append(describe, requiredTag)
 		}
 		if strings.HasPrefix(t, descriptionTag) {
 			descriptionVal := strings.TrimPrefix(t, descriptionTag)
@@ -29,14 +27,11 @@ func DescriptionTag(tag reflect.StructTag) []string {
 }
 
 func OptionsTag(tag reflect.StructTag) []string {
-	rest := tag.Get("rest")
-	restTags := strings.Split(rest, ",")
+	restTags := strings.Split(tag.Get("rest"), ",")
 	for _, t := range restTags {
-		if !strings.HasPrefix(t, optionsTag) {
-			continue
+		if strings.HasPrefix(t, optionsTag) {
+			return strings.Split(strings.TrimPrefix(t, optionsTag), "|")
 		}
-		requiredVal := strings.TrimPrefix(t, optionsTag)
-		return strings.Split(requiredVal, "|")
 	}
 	return []string{}
 }

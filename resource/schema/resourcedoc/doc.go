@@ -2,9 +2,12 @@ package resourcedoc
 
 import (
 	"encoding/json"
-	"github.com/zdnscloud/gorest/resource"
 	"os"
+	"path"
 	"reflect"
+
+	"github.com/zdnscloud/gorest/resource"
+	"github.com/zdnscloud/gorest/util"
 )
 
 type Document struct {
@@ -35,33 +38,15 @@ type DocumentManager struct {
 func NewDocumentManager(name string, kind resource.ResourceKind, handler resource.Handler, parents []string) *DocumentManager {
 	builder := NewBuilder()
 	builder.BuildResource(name, reflect.TypeOf(kind))
-	var resourceType, collectionName string
 	var resourceFields []map[string]DocField
 	for _, v := range builder.GetTop() {
-		for _, f := range v {
-			field := fieldToDoc(f)
-			if len(field) == 0 {
-				continue
-			}
-			resourceFields = append(resourceFields, field)
-		}
-		resourceType = name
-		collectionName = name + "s"
+		resourceFields = genDocField(v)
 	}
 	subresources := make([]map[string][]map[string]DocField, 0)
 	for _, resource := range builder.GetSub() {
 		for k, v := range resource {
 			subresource := make(map[string][]map[string]DocField)
-			var fields []map[string]DocField
-			for _, f := range v {
-				field := fieldToDoc(f)
-				if len(field) == 0 {
-					continue
-				}
-				fields = append(fields, field)
-			}
-			name := strFirstToLower(k)
-			subresource[name] = fields
+			subresource[strFirstToLower(k)] = genDocField(v)
 			subresources = append(subresources, subresource)
 		}
 	}
@@ -69,8 +54,8 @@ func NewDocumentManager(name string, kind resource.ResourceKind, handler resourc
 		resourceName: name,
 		resourceKind: kind,
 		document: Document{
-			ResourceType:      resourceType,
-			CollectionName:    collectionName,
+			ResourceType:      name,
+			CollectionName:    util.GuessPluralName(name),
 			ParentResources:   parents,
 			ResourceFields:    resourceFields,
 			SubResources:      subresources,
@@ -80,15 +65,15 @@ func NewDocumentManager(name string, kind resource.ResourceKind, handler resourc
 	}
 }
 
-func (d *DocumentManager) WriteJsonFile(path string) error {
+func (d *DocumentManager) WriteJsonFile(targetPath string) error {
 	data, err := json.MarshalIndent(d.document, "", "  ")
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(path, os.ModePerm); err != nil {
+	if err := os.MkdirAll(targetPath, os.ModePerm); err != nil {
 		return err
 	}
-	file := path + "/" + d.document.ResourceType + ".json"
+	file := path.Join(targetPath, d.document.ResourceType+".json")
 	filePtr, err := os.Create(file)
 	if err != nil {
 		return err
@@ -97,32 +82,42 @@ func (d *DocumentManager) WriteJsonFile(path string) error {
 	return nil
 }
 
+func genDocField(fields []Field) []map[string]DocField {
+	var docFields []map[string]DocField
+	for _, field := range fields {
+		if docField := fieldToDoc(field); len(docField) > 0 {
+			docFields = append(docFields, docField)
+		}
+	}
+	return docFields
+}
+
 func fieldToDoc(f Field) map[string]DocField {
-	var t, et, kt, vt string
-	if f.Special == "json" || f.Special == "date" {
-		t = f.Special
+	var typ, elemType, keyType, valueType string
+	validValues := OptionsTag(f.Tag)
+	if f.Special == "" {
+		if len(validValues) > 0 {
+			typ = Enum
+		} else {
+			typ = setType(f.Type)
+			switch typ {
+			case Array:
+				elemType = setSlice(f.Type)
+			case Map:
+				keyType, valueType = setMap(f.Type)
+			}
+		}
 	} else {
-		t = setType(f.Type)
-	}
-	vv := OptionsTag(f.Tag)
-	if len(vv) > 0 {
-		t = Enum
-	}
-	if t == Array {
-		et = setSlice(f.Type)
-	}
-	if t == Map {
-		kt, vt = setMap(f.Type)
+		typ = f.Special
 	}
 	field := make(map[string]DocField)
-	jsonname := fieldJsonName(f.Name, f.Tag.Get("json"))
-	newname := strFirstToLower(jsonname)
+	newname := strFirstToLower(fieldJsonName(f.Name, f.Tag.Get("json")))
 	field[newname] = DocField{
-		Type:        strFirstToLower(t),
-		ElemType:    strFirstToLower(et),
-		ValidValues: vv,
-		KeyType:     strFirstToLower(kt),
-		ValueType:   strFirstToLower(vt),
+		Type:        strFirstToLower(typ),
+		ElemType:    strFirstToLower(elemType),
+		ValidValues: validValues,
+		KeyType:     strFirstToLower(keyType),
+		ValueType:   strFirstToLower(valueType),
 		Description: DescriptionTag(f.Tag),
 	}
 	return field
