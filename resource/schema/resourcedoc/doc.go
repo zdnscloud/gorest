@@ -54,8 +54,8 @@ func NewDocumentManager(name string, kind resource.ResourceKind, handler resourc
 		resourceName: name,
 		resourceKind: kind,
 		document: Document{
-			ResourceType:      UpperFirstCharacter(name),
-			CollectionName:    UpperFirstCharacter(util.GuessPluralName(name)),
+			ResourceType:      LowerFirstCharacter(reflect.TypeOf(kind).Name()),
+			CollectionName:    util.GuessPluralName(LowerFirstCharacter(reflect.TypeOf(kind).Name())),
 			ParentResources:   parents,
 			ResourceFields:    resourceFields,
 			SubResources:      subresources,
