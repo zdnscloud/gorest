@@ -73,7 +73,7 @@ func (d *DocumentManager) WriteJsonFile(targetPath string) error {
 	if err := os.MkdirAll(targetPath, os.ModePerm); err != nil {
 		return err
 	}
-	file := path.Join(targetPath, LowerFirstCharacter(d.document.ResourceType)+".json")
+	file := path.Join(targetPath, d.document.ResourceType+".json")
 	filePtr, err := os.Create(file)
 	if err != nil {
 		return err
