@@ -307,6 +307,6 @@ func (s *Schema) generateResourceLinks(r resource.Resource, parentLink string) m
 }
 
 func (s *Schema) WriteJsonDoc(path string, parents []string) error {
-	resourceInfo := resourcedoc.NewResourceInfo(s.resourceKindName, s.resourceKind, s.handler, parents)
-	return resourceInfo.WriteJsonFile(path)
+	resource := resourcedoc.NewResource(s.resourceKindName, s.resourceKind, s.handler, parents)
+	return resource.WriteJsonFile(path)
 }

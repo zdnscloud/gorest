@@ -57,13 +57,11 @@ func getType(t reflect.Type) string {
 
 func getElemType(t reflect.Type) string {
 	switch k := util.Inspect(t); k {
-	case util.StringSlice:
-		return string(util.String)
 	case util.IntSlice:
 		return string(util.Int)
 	case util.UintSlice:
 		return string(util.Uint)
-	case util.StructSlice, util.StructPtrSlice, util.BoolSlice:
+	case util.StructSlice, util.StructPtrSlice, util.BoolSlice, util.StringSlice:
 		nestType := t.Elem()
 		if k == util.StructPtrSlice {
 			nestType = nestType.Elem()
