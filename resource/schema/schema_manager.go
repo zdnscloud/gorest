@@ -108,7 +108,9 @@ func getSchemas(vs *VersionedSchemas) []*Schema {
 	var schemas []*Schema
 	for _, topSchema := range vs.toplevelSchemas {
 		schemas = append(schemas, topSchema)
-		schemas = append(schemas, getChild(topSchema)...)
+		for _, child := range getChild(topSchema) {
+			schemas = append(schemas, child)
+		}
 	}
 	return schemas
 }
@@ -116,10 +118,8 @@ func getSchemas(vs *VersionedSchemas) []*Schema {
 func getChild(s *Schema) []*Schema {
 	var schemas []*Schema
 	for _, child := range s.GetChildren() {
-		if !isExist(schemas, child) {
-			schemas = append(schemas, getChild(child)...)
-		}
 		schemas = append(schemas, child)
+		schemas = append(schemas, getChild(child)...)
 	}
 	return schemas
 }

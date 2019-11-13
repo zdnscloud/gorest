@@ -61,12 +61,10 @@ func getElemType(t reflect.Type) string {
 		return string(util.Int)
 	case util.UintSlice, util.StringUintMap:
 		return string(util.Uint)
-	case util.StructSlice, util.StructPtrSlice, util.BoolSlice, util.StringSlice, util.StringStringMap, util.StringStructMap, util.StringStructPtrMap:
-		nestType := t.Elem()
-		if k == util.StructPtrSlice || k == util.StringStructPtrMap {
-			nestType = nestType.Elem()
-		}
-		return LowerFirstCharacter(nestType.Name())
+	case util.StructSlice, util.BoolSlice, util.StringSlice, util.StringStringMap, util.StringStructMap:
+		return LowerFirstCharacter(t.Elem().Name())
+	case util.StructPtrSlice, util.StringStructPtrMap:
+		return LowerFirstCharacter(t.Elem().Elem().Name())
 	default:
 		return Unknow
 	}

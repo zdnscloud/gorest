@@ -6,7 +6,7 @@ import (
 )
 
 func (s TestStruct) GetParents() []resource.ResourceKind {
-	return []resource.ResourceKind{Cluster{}}
+	return []resource.ResourceKind{}
 }
 
 type TestStruct struct {

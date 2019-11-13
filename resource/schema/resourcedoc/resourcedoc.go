@@ -56,7 +56,7 @@ func NewResourceDocument(name string, kind resource.ResourceKind, handler resour
 		CollectionMethods: resource.GetCollectionMethods(handler),
 	}
 	if resourceFields, err := buildResourceFields(resource, reflect.TypeOf(kind)); err != nil {
-		return resource, err
+		return resource, fmt.Errorf("build resource %s failed, %s", name, err.Error())
 	} else {
 		resource.ResourceFields = resourceFields
 	}
@@ -90,7 +90,7 @@ func buildResourceFields(resource *ResourceDocument, t reflect.Type) (ResourceFi
 			continue
 		}
 		if resourceField, err := buildResourceField(typ, tag); err != nil {
-			return resourceFields, fmt.Errorf("resource %s has %s", name, err.Error())
+			return resourceFields, fmt.Errorf("field %s has %s", name, err.Error())
 		} else {
 			resourceFields[jsonName] = resourceField
 		}
@@ -123,13 +123,13 @@ func buildResourceField(t reflect.Type, tag reflect.StructTag) (ResourceField, e
 			switch resourceField.Type {
 			case Array:
 				if elemType := getElemType(t); elemType == Unknow {
-					return resourceField, errors.New("unsupport elem type")
+					return resourceField, errors.New("unsupport array elem type")
 				} else {
 					resourceField.ElemType = elemType
 				}
 			case Map:
 				if valueType := getElemType(t); valueType == Unknow {
-					return resourceField, errors.New("unsupport value type")
+					return resourceField, errors.New("unsupport map value type")
 				} else {
 					resourceField.KeyType = supportKeyType
 					resourceField.ValueType = valueType
