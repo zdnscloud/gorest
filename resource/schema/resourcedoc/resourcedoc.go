@@ -2,6 +2,8 @@ package resourcedoc
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"path"
 	"reflect"
@@ -17,12 +19,13 @@ const (
 	optionsTag     = "options="
 	descriptionTag = "description="
 	docFileSuffix  = ".json"
-	ignoreType     = "ResourceBase"
+	ignoreField    = "ResourceBase"
 	ignoreJsonFlag = "inline"
 	ignoreJsonName = "-"
+	supportKeyType = "string"
 )
 
-type Resource struct {
+type ResourceDocument struct {
 	ResourceType      string                    `json:"resourceType,omitempty"`
 	CollectionName    string                    `json:"collectionName,omitempty"`
 	ParentResources   []string                  `json:"parentResources,omitempty"`
@@ -43,8 +46,8 @@ type ResourceField struct {
 	Description []string `json:"description,omitempty"`
 }
 
-func NewResource(name string, kind resource.ResourceKind, handler resource.Handler, parents []string) *Resource {
-	resource := &Resource{
+func NewResourceDocument(name string, kind resource.ResourceKind, handler resource.Handler, parents []string) (*ResourceDocument, error) {
+	resource := &ResourceDocument{
 		ResourceType:      name,
 		CollectionName:    util.GuessPluralName(name),
 		ParentResources:   parents,
@@ -52,11 +55,15 @@ func NewResource(name string, kind resource.ResourceKind, handler resource.Handl
 		ResourceMethods:   resource.GetResourceMethods(handler),
 		CollectionMethods: resource.GetCollectionMethods(handler),
 	}
-	resource.ResourceFields = buildResourceFields(resource, reflect.TypeOf(kind))
-	return resource
+	if resourceFields, err := buildResourceFields(resource, reflect.TypeOf(kind)); err != nil {
+		return resource, err
+	} else {
+		resource.ResourceFields = resourceFields
+	}
+	return resource, nil
 }
 
-func (r *Resource) WriteJsonFile(targetPath string) error {
+func (r *ResourceDocument) WriteJsonFile(targetPath string) error {
 	if err := os.MkdirAll(targetPath, os.ModePerm); err != nil {
 		return err
 	}
@@ -72,53 +79,67 @@ func (r *Resource) WriteJsonFile(targetPath string) error {
 	return err
 }
 
-func buildResourceFields(resource *Resource, t reflect.Type) ResourceFields {
+func buildResourceFields(resource *ResourceDocument, t reflect.Type) (ResourceFields, error) {
 	resourceFields := make(map[string]ResourceField)
 	for i := 0; i < t.NumField(); i++ {
 		name := t.Field(i).Name
 		typ := t.Field(i).Type
 		tag := t.Field(i).Tag
 		jsonName := fieldJsonName(name, tag)
-		if (strings.HasSuffix(name, ignoreType) && slice.SliceIndex(strings.Split(tag.Get("json"), ","), ignoreJsonFlag) >= 0) || jsonName == ignoreJsonName {
+		if (strings.HasSuffix(name, ignoreField) && slice.SliceIndex(strings.Split(tag.Get("json"), ","), ignoreJsonFlag) >= 0) || jsonName == ignoreJsonName {
 			continue
 		}
+		if resourceField, err := buildResourceField(typ, tag); err != nil {
+			return resourceFields, fmt.Errorf("resource %s has %s", name, err.Error())
+		} else {
+			resourceFields[jsonName] = resourceField
+		}
 
-		resourceFields[jsonName] = buildResourceField(typ, tag)
-
-		if _, ignore := getTypeIfIgnore(typ.Name()); !ignore {
+		if _, ignore := getIgnoreType(typ); !ignore {
 			if t := getStructType(typ); t != nil {
-				resource.SubResources[LowerFirstCharacter(t.Name())] = buildResourceFields(resource, t)
+				if resourceFields, err := buildResourceFields(resource, t); err != nil {
+					return resourceFields, err
+				} else {
+					resource.SubResources[LowerFirstCharacter(t.Name())] = resourceFields
+				}
 			}
 		}
 	}
-	return resourceFields
+	return resourceFields, nil
 }
 
-func buildResourceField(t reflect.Type, tag reflect.StructTag) ResourceField {
-	var elemType, keyType, valueType string
-	valueRange := parseTag(tag, true)
-	typ, ignore := getTypeIfIgnore(t.Name())
+func buildResourceField(t reflect.Type, tag reflect.StructTag) (ResourceField, error) {
+	typ, ignore := getIgnoreType(t)
+	resourceField := ResourceField{
+		Type:        typ,
+		Description: parseTag(tag, false),
+	}
 	if !ignore {
-		if len(valueRange) > 0 {
-			typ = Enum
+		if valueRange := parseTag(tag, true); len(valueRange) > 0 {
+			resourceField.Type = Enum
+			resourceField.ValidValues = valueRange
 		} else {
-			typ = getType(t)
-			switch typ {
+			resourceField.Type = getType(t)
+			switch resourceField.Type {
 			case Array:
-				elemType = getElemType(t)
+				if elemType := getElemType(t); elemType == Unknow {
+					return resourceField, errors.New("unsupport elem type")
+				} else {
+					resourceField.ElemType = elemType
+				}
 			case Map:
-				keyType, valueType = getMapElemType(t)
+				if valueType := getElemType(t); valueType == Unknow {
+					return resourceField, errors.New("unsupport value type")
+				} else {
+					resourceField.KeyType = supportKeyType
+					resourceField.ValueType = valueType
+				}
+			case Unknow:
+				return resourceField, errors.New("unsupport type")
 			}
 		}
 	}
-	return ResourceField{
-		Type:        typ,
-		ElemType:    elemType,
-		ValidValues: valueRange,
-		KeyType:     keyType,
-		ValueType:   valueType,
-		Description: parseTag(tag, false),
-	}
+	return resourceField, nil
 }
 
 func parseTag(tag reflect.StructTag, isOptions bool) []string {

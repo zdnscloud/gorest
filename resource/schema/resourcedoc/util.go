@@ -14,8 +14,8 @@ const (
 	Unknow = "unknow"
 )
 
-func getTypeIfIgnore(typ string) (string, bool) {
-	switch typ {
+func getIgnoreType(typ reflect.Type) (string, bool) {
+	switch typ.Name() {
 	case "RawMessage":
 		return "json", true
 	case "ISOTime":
@@ -57,36 +57,18 @@ func getType(t reflect.Type) string {
 
 func getElemType(t reflect.Type) string {
 	switch k := util.Inspect(t); k {
-	case util.IntSlice:
+	case util.IntSlice, util.StringIntMap:
 		return string(util.Int)
-	case util.UintSlice:
+	case util.UintSlice, util.StringUintMap:
 		return string(util.Uint)
-	case util.StructSlice, util.StructPtrSlice, util.BoolSlice, util.StringSlice:
+	case util.StructSlice, util.StructPtrSlice, util.BoolSlice, util.StringSlice, util.StringStringMap, util.StringStructMap, util.StringStructPtrMap:
 		nestType := t.Elem()
-		if k == util.StructPtrSlice {
+		if k == util.StructPtrSlice || k == util.StringStructPtrMap {
 			nestType = nestType.Elem()
 		}
 		return LowerFirstCharacter(nestType.Name())
 	default:
 		return Unknow
-	}
-}
-
-func getMapElemType(t reflect.Type) (string, string) {
-	switch k := util.Inspect(t); k {
-	case util.StringIntMap:
-		return string(util.String), string(util.Int)
-	case util.StringUintMap:
-		return string(util.String), string(util.Uint)
-	case util.StringStringMap, util.StringStructMap, util.StringStructPtrMap:
-		nestType := t.Elem()
-		if k == util.StringStructPtrMap {
-			nestType = nestType.Elem()
-		}
-		return string(util.String), LowerFirstCharacter(nestType.Name())
-	default:
-		return Unknow, Unknow
-
 	}
 }
 
