@@ -24,8 +24,6 @@ const (
 	NotNull Modifier = "notnull"
 )
 
-type Modifier string
-
 type Context struct {
 	Schemas  SchemaManager
 	Request  *http.Request
@@ -33,7 +31,7 @@ type Context struct {
 	Resource Resource
 	Method   string
 	params   map[string]interface{}
-	Filters  []Filter
+	filters  []Filter
 }
 
 type Filter struct {
@@ -41,6 +39,8 @@ type Filter struct {
 	Modifier
 	Value []string
 }
+
+type Modifier string
 
 func NewContext(resp http.ResponseWriter, req *http.Request, schemas SchemaManager) (*Context, *error.APIError) {
 	r, err := schemas.CreateResourceFromRequest(req)
@@ -55,7 +55,7 @@ func NewContext(resp http.ResponseWriter, req *http.Request, schemas SchemaManag
 		Schemas:  schemas,
 		Method:   req.Method,
 		params:   make(map[string]interface{}),
-		Filters:  genFilters(req.URL),
+		filters:  genFilters(req.URL),
 	}, nil
 }
 
@@ -66,6 +66,10 @@ func (ctx *Context) Set(key string, value interface{}) {
 func (ctx *Context) Get(key string) (interface{}, bool) {
 	v, ok := ctx.params[key]
 	return v, ok
+}
+
+func (ctx *Context) GetFilters() []Filter {
+	return ctx.filters
 }
 
 func genFilters(url *url.URL) []Filter {
