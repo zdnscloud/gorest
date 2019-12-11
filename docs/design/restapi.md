@@ -187,7 +187,7 @@ api server 会使用注册的资源schema及schema之间父子关系，自动生
     * resource.Context.GetFilters()
   * URL
     * 资源集合URL+?{filter name}{"_"+modifier}={value}（例如：.../pods?name_eq=abc&siz_gt=30 ）
-    * 如果modifier是eq，则_eq可以省略（name_eq=a和name=a是等价的），但如果filter name命名包含 '_'，则_eq不可以省略
+    * 如果modifier是eq，则_eq可以省略（name_eq=a和name=a是等价的），但如果filter name命名包含 '_eq'，则作为filter的 '_eq' 不可以省略
     * 多个条件之间用 "&" 连接。目前不支持 "或"，所有条件之间都是 "与"
     * value中如果有特殊字符，必须使用URL编码
     * 如果value是可以枚举的，使用 "," 隔开
