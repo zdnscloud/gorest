@@ -183,7 +183,10 @@ api server 会使用注册的资源schema及schema之间父子关系，自动生
   
 * Filter
   * 支持对资源集合进行搜索/过滤
-  * URL请求：集合URL+?{filter name}{"_"+modifier}={value}（例如：pods?name_eq=abc&siz_gt=30 ）
+  * 获取
+    * resource.Context.GetFilters()
+  * URL
+    * 资源集合URL+?{filter name}{"_"+modifier}={value}（例如：.../pods?name_eq=abc&siz_gt=30 ）
     * 如果modifier是eq，则_eq可以省略（name_eq=a和name=a是等价的），但如果filter name命名包含 '_'，则_eq不可以省略
     * 多个条件之间用 "&" 连接。目前不支持 "或"，所有条件之间都是 "与"
     * value中如果有特殊字符，必须使用URL编码
@@ -204,8 +207,7 @@ modifier               | meaning
 `"notlike"` | does not match (as above)
 `"null"`    | value is NULL
 `"notnull"` | value is not NULL
-  * 获取
-    * resource.Context.GetFilters()
+
   
 # 未来工作
 * 添加更多的字段属性检查，如检查ipv4和ipv6有效性，域名检查，host检查等
