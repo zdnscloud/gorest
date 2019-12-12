@@ -57,35 +57,34 @@ type testCase struct {
 }
 
 func TestIntegerRangeValidator(t *testing.T) {
-	validator, err := buildValidator(reflect.TypeOf(uint(10)), []string{"min=1", "max=10"})
-	ut.Assert(t, err == nil && validator != nil, "")
-	testValidator(t, validator, []testCase{
+	cases := []testCase{
 		{1, true},
 		{10, false},
 		{11, false},
 		{[]int{1, 2, 9}, true},
 		{[]int{1, 2, 10}, false},
 		{[]int{10, 11}, false},
-	})
+	}
+
+	testValidator(t, int(10), []string{"min=1", "max=10"}, cases)
+	testValidator(t, []uint{10}, []string{"min=1", "max=10"}, cases)
 }
 
 func TestStringLenValidator(t *testing.T) {
-	validator, err := buildValidator(reflect.TypeOf("xxx"), []string{"minLen=1", "maxLen=3"})
-	ut.Assert(t, err == nil && validator != nil, "")
-	testValidator(t, validator, []testCase{
+	cases := []testCase{
 		{"a", true},
 		{"abc", false},
 		{"", false},
 		{[]string{"a", "ab", "b"}, true},
 		{[]string{"a", "abc", "b"}, false},
 		{[]string{"", "abc"}, false},
-	})
+	}
+	testValidator(t, "xxx", []string{"minLen=1", "maxLen=3"}, cases)
+	testValidator(t, []string{"xxx"}, []string{"minLen=1", "maxLen=3"}, cases)
 }
 
 func TestOptionValidator(t *testing.T) {
-	validator, err := buildValidator(reflect.TypeOf("xxx"), []string{"options=aa|bb"})
-	ut.Assert(t, err == nil && validator != nil, "")
-	testValidator(t, validator, []testCase{
+	cases := []testCase{
 		{"aa", true},
 		{"bb", true},
 		{"Aa", false},
@@ -93,13 +92,13 @@ func TestOptionValidator(t *testing.T) {
 		{[]string{"aa", "bb", "aa"}, true},
 		{[]string{"xa", "bb"}, false},
 		{[]string{"", "ac"}, false},
-	})
+	}
+	testValidator(t, "xxx", []string{"options=aa|bb"}, cases)
+	testValidator(t, []string{"xxx"}, []string{"options=aa|bb"}, cases)
 }
 
 func TestDomainValidator(t *testing.T) {
-	validator, err := buildValidator(reflect.TypeOf("xxx"), []string{"isDomain=true"})
-	ut.Assert(t, err == nil && validator != nil, "")
-	testValidator(t, validator, []testCase{
+	cases := []testCase{
 		{"aa", true},
 		{"11-bb", true},
 		{"11_bb", false},
@@ -109,10 +108,15 @@ func TestDomainValidator(t *testing.T) {
 		{[]string{"aa", "11bb", "11.aa"}, true},
 		{[]string{"adsfasdf-xa", "11111bb11111"}, true},
 		{[]string{"adsfasdfasdfA111", "adsfadf?xx"}, false},
-	})
+	}
+
+	testValidator(t, "xxxx", []string{"isDomain=true"}, cases)
+	testValidator(t, []string{"xxxx"}, []string{"isDomain=true"}, cases)
 }
 
-func testValidator(t *testing.T, validator Validator, cases []testCase) {
+func testValidator(t *testing.T, fieldValue interface{}, tags []string, cases []testCase) {
+	validator, err := buildValidator(reflect.TypeOf(fieldValue), tags)
+	ut.Assert(t, err == nil && validator != nil, "")
 	for i := 0; i < len(cases); i++ {
 		err := validator.Validate(cases[i].value)
 		if cases[i].isValide {
