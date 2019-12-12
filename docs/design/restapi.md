@@ -18,8 +18,8 @@ api server 会使用注册的资源schema及schema之间父子关系，自动生
     			SetLinks(map[ResourceLinkType]ResourceLink)
     			GetCreationTimestamp() time.Time
     			SetCreationTimestamp(time.Time)
-			GetDeletionTimestamp() time.Time
-   			SetDeletionTimestamp(time.Time)
+    			GetDeletionTimestamp() time.Time
+    			SetDeletionTimestamp(time.Time)
     			GetSchema() Schema
     			SetSchema(Schema)
     			SetType(string)
