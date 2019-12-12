@@ -88,16 +88,20 @@ func (m *ClusterManager) Action(ctx *restresource.Context) (interface{}, *rester
 	* api server提供字段检查，字段检查的json tag为rest，每个属性用逗号分隔
 
 			type Http struct {
-			  resttypes.Resource `json:",inline"`
-			  Port int `json:"port" rest:"required=false,min=1000,max=10000"`
+			  resttypes.Resource 			`json:",inline"`
+			  Port 			int 		`json:"port" rest:"required=false,min=1000,max=10000"`
+			  DomainName            string          `json:"domainName" rest:"isDomain=true"`
+			  StorageType           string        	`json:"storageType" rest:"required=true,options=lvm|cephfs"`
+			  Address    		string          `json:"sddress" rest:"minLen=1,maxLen=128"`
 			}
   	
-  	目前字段检查支持:
-  	  * required: 当为true时表示字段是必传字段，如果是空就会报错
-  	  * options: 当字段为enum类型，有效字段集合定义在options，以 | 分割，如：options=TCP|UDP
-  	  * min、max: 当字段为整形，可以设置字段的最小值和最大值
-  	  * minLen、maxLen: 当字段类型为字符串、字符串数组，可以设置字段的最小长度和最大长度
-	  * isDomain：当字段类型为字符串、字符串数组，可以设置域名格式验证，如果长度大于253或者格式不匹配（必须满足由小写字母、数字、-、.组成且以字母或数组开头和结尾）就会报错
+  	目前字段检查支持下面的5种（一个字段2、3、4、5只能使用其中的1个，1可以与其他的任何一个组合使用）:
+  	  1： required: 当为true时表示字段是必传字段，如果是空就会报错
+  	  2： options: 当字段为enum类型，有效字段集合定义在options，以 | 分割，如：options=TCP|UDP
+  	  3： min、max: 当字段为整形，可以设置字段的最小值和最大值
+  	  4： minLen、maxLen: 当字段类型为字符串、字符串数组，可以设置字段的最小长度和最大长度
+	  5： isDomain：当字段类型为字符串、字符串数组，可以设置域名格式验证，如果长度大于253或者格式不匹配（必须满足由小写字母、数字、-、.组成且以字母或数组开头和结尾）就会报错
+
   	
   	字段检查逻辑
       * 首先检查字段是否为空，如果为空，且字段属性required＝true，则报错
