@@ -30,6 +30,7 @@ func TestBuildValidator(t *testing.T) {
 	type testStruct2 struct {
 		IntWithOption      int    `rest:"required=true,options=lvm|ceph"`
 		IntWithLenLimit    int    `rest:"minLen=10,maxLen=11"`
+		IntWithDomainCheck int    `rest:"isDomain=true"`
 		IntRangeShortOfMax uint32 `rest:"min=1"`
 		IntRangeShortOfMin int8   `rest:"max=1"`
 		IntRangeInvalid    int8   `rest:"min=2,max=1"`
