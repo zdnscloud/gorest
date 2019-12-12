@@ -48,7 +48,7 @@ api server 会使用注册的资源schema及schema之间父子关系，自动生
     			Type              string                            `json:"type,omitempty"`
     			Links             map[ResourceLinkType]ResourceLink `json:"links,omitempty"`
     			CreationTimestamp ISOTime                           `json:"creationTimestamp,omitempty"`
-			DeletionTimestamp ISOTime                           `json:"deletionTimestamp,omitempty"`
+    			DeletionTimestamp ISOTime                           `json:"deletionTimestamp,omitempty"`
     			action *Action  `json:"-"`
     			parent Resource `json:"-"`
     			schema Schema   `json:"-"`
