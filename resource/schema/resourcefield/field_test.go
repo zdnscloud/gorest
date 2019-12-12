@@ -7,16 +7,52 @@ import (
 	"testing"
 )
 
+type Embed struct {
+	Id  string `rest:"default=xxxx"`
+	Age int64  `rest:"default=20"`
+}
+
+type IncludeStruct struct {
+	Int8WithRange     int8   `json:"int8WithRange" rest:"min=1,max=20"`
+	Uint16WithDefault uint16 `json:"uint16WithDefault,omitempty"`
+}
+
+type MyOption string
+
+type TestStruct struct {
+	Embed `json:",inline"`
+
+	Name                  string           `json:"name" rest:"required=true"`
+	DomainName            string           `json:"domainName" rest:"isDomain=true"`
+	StringWithOption      MyOption         `json:"stringWithOption,omitempty" rest:"required=true,options=lvm|ceph"`
+	StringWithDefault     string           `json:"stringWithDefault,omitempty"`
+	StringWithLenLimit    string           `json:"stringWithLenLimit" rest:"minLen=2,maxLen=10"`
+	IntWithDefault        int              `json:"intWithDefault,omitempty"`
+	IntWithRange          uint32           `json:"intWithRange" rest:"min=1,max=1000"`
+	BoolWithDefault       bool             `json:"boolWithDefault,omitempty"`
+	StringIntMap          map[string]int32 `json:"stringIntMap,omitempty" rest:"required=true"`
+	IntSlice              []uint32         `json:"intSlice,omitempty" rest:"required=true"`
+	StringSliceWithOption []MyOption       `json:"stringSliceWithOption,omitempty" rest:"required=true,options=lvm|ceph"`
+
+	SliceComposition    []IncludeStruct          `json:"sliceComposition" rest:"required=true"`
+	StringMapCompostion map[string]IncludeStruct `json:"stringMapComposition" rest:"required=true"`
+
+	PtrComposition         *IncludeStruct            `json:"ptrComposition" rest:"required=true"`
+	SlicePtrComposition    []*IncludeStruct          `json:"slicePtrComposition" rest:"required=true"`
+	StringPtrMapCompostion map[string]*IncludeStruct `json:"stringPtrMapComposition" rest:"required=true"`
+}
+
 func TestFieldBuild(t *testing.T) {
 	builder := NewBuilder()
 	sf, err := builder.Build(reflect.TypeOf(TestStruct{}))
 	ut.Assert(t, err == nil, "")
 
-	ut.Equal(t, len(sf.fields), 14)
+	ut.Equal(t, len(sf.fields), 15)
 	fieldNames := []string{
 		"Id",
 		"Age",
 		"Name",
+		"DomainName",
 		"StringWithOption",
 		"StringWithLenLimit",
 		"IntWithRange",
@@ -141,6 +177,7 @@ func TestValidate(t *testing.T) {
 
 	ts := TestStruct{
 		Name:               "dd",
+		DomainName:         "abc.com",
 		StringWithOption:   "ceph",
 		StringWithLenLimit: "aaa",
 		IntWithRange:       100,
@@ -174,6 +211,13 @@ func TestValidate(t *testing.T) {
 
 	rawByte, _ := json.Marshal(ts)
 
+	ts = TestStruct{}
+	json.Unmarshal(rawByte, &ts)
+	ts.DomainName = "xxxxxxx_xx"
+	ut.Assert(t, sf.Validate(ts) != nil, "")
+
+	ts = TestStruct{}
+	json.Unmarshal(rawByte, &ts)
 	ts.StringWithOption = "oo"
 	ut.Assert(t, sf.Validate(ts) != nil, "")
 
