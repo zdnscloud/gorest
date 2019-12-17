@@ -156,7 +156,7 @@ func (b *FieldBuilder) createField(name string, typ reflect.Type, json, rest str
 	return nil, nil
 }
 
-func (b *FieldBuilder) buildLeafField(name string, typ reflect.Type, json string, restTags []string) (Field, error) {
+func (b *FieldBuilder) buildLeafField(name string, typ reflect.Type, json string, restTags []string) (*leafField, error) {
 	v, err := validator.Build(typ, restTags)
 	if err != nil {
 		return nil, err

@@ -5,8 +5,7 @@ import (
 )
 
 type ResourceField interface {
-	Validate(interface{}) error
-	CheckRequired(raw map[string]interface{}) error
+	Validate(interface{}, map[string]interface{}) error
 }
 
 func New(typ reflect.Type) (ResourceField, error) {
@@ -31,11 +30,6 @@ func newResourceField(field Field) *resourceField {
 }
 
 //validate the resource go struct
-func (f *resourceField) Validate(value interface{}) error {
-	return f.field.Validate(value)
-}
-
-//check the json string whether the required field is specified
-func (f *resourceField) CheckRequired(raw map[string]interface{}) error {
-	return f.field.CheckRequired(raw)
+func (f *resourceField) Validate(value interface{}, raw map[string]interface{}) error {
+	return f.field.Validate(value, raw)
 }

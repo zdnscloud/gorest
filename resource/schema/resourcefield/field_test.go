@@ -171,28 +171,31 @@ func TestCheckRequired(t *testing.T) {
 	raw := make(map[string]interface{})
 	rawByte, _ := json.Marshal(ts)
 	json.Unmarshal(rawByte, &raw)
-	err := sf.CheckRequired(raw)
+	err := sf.Validate(ts, raw)
 	ut.Assert(t, err == nil, "required check should pass but get %v", err)
 
 	//delete required in map will cause error
 	for _, name := range []string{"name", "int", "sliceStruct", "slicePtrStruct", "stringMapStruct", "stringIntMap", "ptrStruct"} {
+		raw = make(map[string]interface{})
 		json.Unmarshal(rawByte, &raw)
 		delete(raw, name)
-		ut.Assert(t, sf.CheckRequired(raw) != nil, "delete %s should failed", name)
+		ut.Assert(t, sf.Validate(ts, raw) != nil, "delete %s should failed", name)
 	}
 
 	//empty array will cause error
 	for _, name := range []string{"sliceStruct", "slicePtrStruct", "stringMapStruct", "stringIntMap"} {
+		raw = make(map[string]interface{})
 		json.Unmarshal(rawByte, &raw)
 		raw[name] = nil
-		ut.Assert(t, sf.CheckRequired(raw) != nil, "set %s to nil should failed", name)
+		ut.Assert(t, sf.Validate(ts, raw) != nil, "set %s to nil should failed", name)
 	}
 
 	//empty array will cause error
 	for _, name := range []string{"stringPtrMapStruct", "intSlice"} {
+		raw = make(map[string]interface{})
 		json.Unmarshal(rawByte, &raw)
 		raw[name] = nil
-		ut.Assert(t, sf.CheckRequired(raw) == nil, "unrequired field %s shouldn't fail ", name)
+		ut.Assert(t, sf.Validate(ts, raw) == nil, "unrequired field %s shouldn't fail ", name)
 	}
 
 	//check nest required
@@ -208,7 +211,7 @@ func TestCheckRequired(t *testing.T) {
 		raw := make(map[string]interface{})
 		tmpRawByte, _ := json.Marshal(tmp)
 		json.Unmarshal(tmpRawByte, &raw)
-		err := sf.CheckRequired(raw)
+		err := sf.Validate(tmp, raw)
 		ut.Assert(t, err != nil, "")
 		ut.Assert(t, strings.Contains(err.Error(), "StringIntMap"), "")
 
@@ -220,7 +223,7 @@ func TestCheckRequired(t *testing.T) {
 		}
 		tmpRawByte, _ = json.Marshal(tmp)
 		json.Unmarshal(tmpRawByte, &raw)
-		err = sf.CheckRequired(raw)
+		err = sf.Validate(tmp, raw)
 		ut.Assert(t, err != nil, "")
 		ut.Assert(t, strings.Contains(err.Error(), "StringSlice"), "")
 	}
@@ -276,41 +279,34 @@ func TestValidate(t *testing.T) {
 			Int8WithRange: 5,
 		},
 	}
-
-	ut.Assert(t, sf.Validate(ts) == nil, "")
 	rawByte, _ := json.Marshal(ts)
+	raw := make(map[string]interface{})
+	json.Unmarshal(rawByte, &raw)
+	ut.Assert(t, sf.Validate(ts, raw) == nil, "")
 
 	//intslice with min-max
 	var tmp TestStruct
 	json.Unmarshal(rawByte, &tmp)
 	tmp.IntSlice[0] = 32
-	err = sf.Validate(tmp)
-	ut.Assert(t, err != nil, "")
-	ut.Assert(t, strings.Contains(err.Error(), "exceed the range limit"), "")
+	makeSureValidateFailedWithInfo(t, sf, tmp, "exceed the range limit")
 
 	//stringslice with min-max
 	tmp = TestStruct{}
 	json.Unmarshal(rawByte, &tmp)
 	tmp.StringSliceWithOption[0] = "gogod"
-	err = sf.Validate(tmp)
-	ut.Assert(t, err != nil, "")
-	ut.Assert(t, strings.Contains(err.Error(), "included in options"), "")
+	makeSureValidateFailedWithInfo(t, sf, tmp, "included in options")
 
 	//stringslice with min-max
 	tmp = TestStruct{}
 	json.Unmarshal(rawByte, &tmp)
 	tmp.SlicePtrStruct[0].Int8WithRange = 0
-	err = sf.Validate(tmp)
-	ut.Assert(t, err != nil, "")
-	ut.Assert(t, strings.Contains(err.Error(), "exceed the range limit"), "")
+	makeSureValidateFailedWithInfo(t, sf, tmp, "exceed the range limit")
 
 	//stringmap with isDomain
 	tmp = TestStruct{}
 	json.Unmarshal(rawByte, &tmp)
 	tmp.StringStringMap["c"] = "Xgoo"
-	err = sf.Validate(tmp)
-	ut.Assert(t, err != nil, "")
-	ut.Assert(t, strings.Contains(err.Error(), "subdomain must consist"), "")
+	makeSureValidateFailedWithInfo(t, sf, tmp, "subdomain must consist")
 }
 
 func TestValidateWithOptionField(t *testing.T) {
@@ -335,8 +331,18 @@ func TestValidateWithOptionField(t *testing.T) {
 			},
 		},
 	}
-
-	err = sf.Validate(ts)
+	rawByte, _ := json.Marshal(ts)
+	raw := make(map[string]interface{})
+	json.Unmarshal(rawByte, &raw)
+	err = sf.Validate(ts, raw)
 	ut.Assert(t, err == nil, "shouldn't get err %v", err)
-	//rawByte, _ := json.Marshal(ts)
+}
+
+func makeSureValidateFailedWithInfo(t *testing.T, sf Field, structVal interface{}, errorInfo string) {
+	rawByte, _ := json.Marshal(structVal)
+	raw := make(map[string]interface{})
+	json.Unmarshal(rawByte, &raw)
+	err := sf.Validate(structVal, raw)
+	ut.Assert(t, err != nil, "want err %s", errorInfo)
+	ut.Assert(t, strings.Contains(err.Error(), errorInfo), "")
 }

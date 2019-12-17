@@ -17,10 +17,7 @@ type Field interface {
 	SetRequired(bool)
 
 	//validate fields of go struct
-	Validate(interface{}) error
-
-	//work on json format string
-	CheckRequired(json map[string]interface{}) error
+	Validate(interface{}, map[string]interface{}) error
 }
 
 var _ Field = &leafField{}
@@ -57,34 +54,31 @@ func (f *leafField) SetRequired(required bool) {
 	f.required = required
 }
 
-func (f *leafField) CheckRequired(raw map[string]interface{}) error {
-	jsonName := f.JsonName()
-	if f.IsRequired() {
-		val, ok := raw[jsonName]
-		if ok == false {
-			return fmt.Errorf("field %s is missing", jsonName)
-		}
-
-		v := reflect.ValueOf(val)
-		if !v.IsValid() {
-			return fmt.Errorf("field %s has invalid value", jsonName)
-		}
-
-		kind := v.Kind()
-		if kind == reflect.String || kind == reflect.Map || kind == reflect.Slice {
-			if v.Len() == 0 {
-				return fmt.Errorf("field %s with empty slice or map", jsonName)
-			}
-		}
-	}
-	return nil
-}
-
 func (f *leafField) SetValidators(validators []validator.Validator) {
 	f.validators = validators
 }
 
-func (f *leafField) Validate(val interface{}) error {
+func (f *leafField) Validate(val interface{}, raw map[string]interface{}) error {
+	jsonName := f.JsonName()
+	jsonVal, specified := raw[jsonName]
+	if f.IsRequired() {
+		if !specified {
+			return fmt.Errorf("field %s is missing", jsonName)
+		}
+
+		if !reflect.ValueOf(jsonVal).IsValid() {
+			return fmt.Errorf("field %s has invalid value", jsonName)
+		}
+	}
+
+	if !specified {
+		return nil
+	}
+
+	return f.doValidate(val)
+}
+
+func (f *leafField) doValidate(val interface{}) error {
 	for _, validator := range f.validators {
 		if err := validator.Validate(val); err != nil {
 			return err
@@ -94,23 +88,57 @@ func (f *leafField) Validate(val interface{}) error {
 }
 
 type sliceLeafField struct {
-	Field
+	*leafField
 }
 
-func newSliceLeafField(inner Field) *sliceLeafField {
+func newSliceLeafField(inner *leafField) *sliceLeafField {
 	return &sliceLeafField{
-		Field: inner,
+		leafField: inner,
 	}
 }
 
-func (f *sliceLeafField) Validate(val interface{}) error {
+func (f *sliceLeafField) Validate(val interface{}, raw map[string]interface{}) error {
+	specified, err := fieldIsSpecifiedWithKind(f.leafField, raw, reflect.Slice)
+	if err != nil {
+		return err
+	}
+
 	value := reflect.ValueOf(val)
-	for i := 0; i < value.Len(); i++ {
-		if err := f.Field.Validate(value.Index(i).Interface()); err != nil {
-			return err
+	if specified {
+		for i := 0; i < value.Len(); i++ {
+			if err := f.leafField.doValidate(value.Index(i).Interface()); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
+}
+
+func fieldIsSpecifiedWithKind(f Field, raw map[string]interface{}, kind reflect.Kind) (bool, error) {
+	jsonName := f.JsonName()
+	jsonVal, specified := raw[jsonName]
+	if jsonVal == nil {
+		specified = false
+	}
+
+	if f.IsRequired() {
+		if !specified {
+			return specified, fmt.Errorf("field %s is missing", jsonName)
+		}
+
+		v := reflect.ValueOf(jsonVal)
+		if !v.IsValid() {
+			return specified, fmt.Errorf("field %s has invalid value", jsonName)
+		}
+
+		if v.Kind() != kind {
+			return specified, fmt.Errorf("field %s isn't %v", jsonName, kind)
+		}
+		if v.Len() == 0 {
+			return specified, fmt.Errorf("field %s with empty slice ", jsonName)
+		}
+	}
+	return specified, nil
 }
 
 type sliceStructField struct {
@@ -125,50 +153,31 @@ func newSliceStructField(self, inner Field) *sliceStructField {
 	}
 }
 
-func (f *sliceStructField) Validate(val interface{}) error {
-	if f.inner == nil {
-		return nil
+func (f *sliceStructField) Validate(val interface{}, raw map[string]interface{}) error {
+	specified, err := fieldIsSpecifiedWithKind(f.Field, raw, reflect.Slice)
+	if err != nil {
+		return err
 	}
 
-	value := reflect.ValueOf(val)
-	for i := 0; i < value.Len(); i++ {
-		if err := f.inner.Validate(value.Index(i).Interface()); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (f *sliceStructField) CheckRequired(raw map[string]interface{}) error {
-	if f.Field != nil {
-		if err := f.Field.CheckRequired(raw); err != nil {
-			return err
-		}
-	}
-
-	if f.inner == nil {
+	if !specified || f.inner == nil {
 		return nil
 	}
 
 	jsonName := f.Field.JsonName()
-	v, ok := raw[jsonName]
-	if !ok || v == nil {
-		return nil
-	}
-
-	value := reflect.ValueOf(v)
-	if value.Kind() != reflect.Slice {
-		return fmt.Errorf("elem of field %s is not a slice but %v", jsonName, value.Kind())
+	value := reflect.ValueOf(val)
+	jsonValue := reflect.ValueOf(raw[jsonName])
+	if value.Len() != jsonValue.Len() {
+		panic("json and unmarshalled value isn't related")
 	}
 
 	for i := 0; i < value.Len(); i++ {
-		d, _ := json.Marshal(value.Index(i).Interface())
+		d, _ := json.Marshal(jsonValue.Index(i).Interface())
 		m := make(map[string]interface{})
 		if err := json.Unmarshal(d, &m); err != nil {
 			return fmt.Errorf("elem of field %s is not a struct", jsonName)
 		}
 
-		if err := f.inner.CheckRequired(m); err != nil {
+		if err := f.inner.Validate(value.Index(i).Interface(), m); err != nil {
 			return err
 		}
 	}
@@ -177,19 +186,27 @@ func (f *sliceStructField) CheckRequired(raw map[string]interface{}) error {
 }
 
 type mapLeafField struct {
-	Field
+	*leafField
 }
 
-func newMapLeafField(inner Field) *mapLeafField {
+func newMapLeafField(inner *leafField) *mapLeafField {
 	return &mapLeafField{
-		Field: inner,
+		leafField: inner,
 	}
 }
 
-func (f *mapLeafField) Validate(val interface{}) error {
+func (f *mapLeafField) Validate(val interface{}, raw map[string]interface{}) error {
+	specified, err := fieldIsSpecifiedWithKind(f.leafField, raw, reflect.Map)
+	if err != nil {
+		return err
+	}
+	if !specified {
+		return nil
+	}
+
 	iter := reflect.ValueOf(val).MapRange()
 	for iter.Next() {
-		if err := f.Field.Validate(iter.Value().Interface()); err != nil {
+		if err := f.leafField.doValidate(iter.Value().Interface()); err != nil {
 			return err
 		}
 	}
@@ -208,50 +225,32 @@ func newMapStructField(self, inner Field) *mapStructField {
 	}
 }
 
-func (f *mapStructField) Validate(val interface{}) error {
-	if f.inner == nil {
-		return nil
+func (f *mapStructField) Validate(val interface{}, raw map[string]interface{}) error {
+	specified, err := fieldIsSpecifiedWithKind(f.Field, raw, reflect.Map)
+	if err != nil {
+		return err
 	}
 
-	iter := reflect.ValueOf(val).MapRange()
-	for iter.Next() {
-		if err := f.inner.Validate(iter.Value().Interface()); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (f *mapStructField) CheckRequired(raw map[string]interface{}) error {
-	if f.Field != nil {
-		if err := f.Field.CheckRequired(raw); err != nil {
-			return err
-		}
-	}
-
-	if f.inner == nil {
+	if !specified || f.inner == nil {
 		return nil
 	}
 
 	jsonName := f.Field.JsonName()
-	v, ok := raw[jsonName]
-	if !ok || v == nil {
-		return nil
+	jsonValue := reflect.ValueOf(raw[jsonName])
+	value := reflect.ValueOf(val)
+	if jsonValue.Len() != value.Len() {
+		panic("json and unmarshalled value isn't related")
 	}
 
-	value := reflect.ValueOf(v)
-	if value.Kind() != reflect.Map {
-		return fmt.Errorf("field %s isn't a map but %v", jsonName, value.Kind())
-	}
-
-	iter := value.MapRange()
-	for iter.Next() {
-		d, _ := json.Marshal(iter.Value().Interface())
+	ji := jsonValue.MapRange()
+	vi := value.MapRange()
+	for ji.Next() && vi.Next() {
+		d, _ := json.Marshal(ji.Value().Interface())
 		m := make(map[string]interface{})
 		if err := json.Unmarshal(d, &m); err != nil {
 			return fmt.Errorf("value of field %s is not a struct", jsonName)
 		}
-		if err := f.inner.CheckRequired(m); err != nil {
+		if err := f.inner.Validate(vi.Value().Interface(), m); err != nil {
 			return err
 		}
 	}
@@ -270,22 +269,32 @@ func newStructField(self Field, fields map[string]Field) *structField {
 	}
 }
 
-func (f *structField) Validate(val interface{}) error {
+func (f *structField) Validate(val interface{}, raw map[string]interface{}) error {
+	value := reflect.ValueOf(val)
 	kind := reflect.TypeOf(val).Kind()
 	if kind == reflect.Ptr {
-		value := reflect.ValueOf(val)
-		if !value.IsNil() {
-			return f.Validate(value.Elem().Interface())
-		} else {
-			return nil
-		}
+		value = value.Elem()
 	}
 
-	if kind != reflect.Struct {
+	if value.Kind() != reflect.Struct {
 		return fmt.Errorf("struct field doesn't support type %v", kind)
 	}
 
-	value := reflect.ValueOf(val)
+	if f.Field != nil {
+		jsonName := f.Field.JsonName()
+		jsonVal, ok := raw[jsonName]
+		if f.Field.IsRequired() && !ok {
+			return fmt.Errorf("struct field %s is missing", jsonName)
+		}
+
+		d, _ := json.Marshal(jsonVal)
+		m := make(map[string]interface{})
+		if err := json.Unmarshal(d, &m); err != nil {
+			return fmt.Errorf("value of field %s is not a struct", jsonName)
+		}
+		raw = m
+	}
+
 	typ := value.Type()
 	for i := 0; i < typ.NumField(); i++ {
 		ft := typ.Field(i)
@@ -294,39 +303,16 @@ func (f *structField) Validate(val interface{}) error {
 		}
 
 		if ft.Anonymous {
-			if err := f.Validate(value.Field(i).Interface()); err != nil {
+			if err := f.Validate(value.Field(i).Interface(), raw); err != nil {
 				return err
 			}
 			continue
 		}
 
 		if field, ok := f.fields[ft.Name]; ok {
-			if err := field.Validate(value.Field(i).Interface()); err != nil {
+			if err := field.Validate(value.Field(i).Interface(), raw); err != nil {
 				return err
 			}
-		}
-	}
-	return nil
-}
-
-func (f *structField) CheckRequired(jd map[string]interface{}) error {
-	if f.Field != nil {
-		if err := f.Field.CheckRequired(jd); err != nil {
-			return err
-		}
-
-		jsonName := f.Field.JsonName()
-		d, _ := json.Marshal(jd[jsonName])
-		m := make(map[string]interface{})
-		if err := json.Unmarshal(d, &m); err != nil {
-			return fmt.Errorf("elem of field %s is not a struct", jsonName)
-		}
-		jd = m
-	}
-
-	for _, field := range f.fields {
-		if err := field.CheckRequired(jd); err != nil {
-			return err
 		}
 	}
 	return nil
