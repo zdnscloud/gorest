@@ -1,4 +1,4 @@
-package resourcefield
+package validator
 
 import (
 	"reflect"
@@ -9,6 +9,7 @@ import (
 )
 
 func TestBuildValidator(t *testing.T) {
+	type MyOption string
 	type testStruct struct {
 		DomainName            string     `json:"domainName" rest:"isDomain=true"`
 		StringWithOption      MyOption   `json:"stringWithOption,omitempty" rest:"required=true,options=lvm|ceph"`
@@ -23,7 +24,7 @@ func TestBuildValidator(t *testing.T) {
 		f := st.Field(i)
 		tags := strings.Split(f.Tag.Get("rest"), ",")
 		ut.Assert(t, len(tags) > 0, "")
-		validator, err := buildValidator(f.Type, tags)
+		validator, err := Build(f.Type, tags)
 		ut.Assert(t, err == nil && validator != nil, "")
 	}
 
@@ -35,19 +36,16 @@ func TestBuildValidator(t *testing.T) {
 		IntRangeShortOfMin int8   `rest:"max=1"`
 		IntRangeInvalid    int8   `rest:"min=2,max=1"`
 
-		StringWithInvalidLenLimit       string `rest:"minLen=12,maxLen=12"`
-		StringWithPartialLenLimit       string `rest:"minLen=12"`
-		StringWithBothLenLimitAndDoamin string `rest:"minLen=1,maxLen=10,isDomain=true"`
-		StringWithBothOptionAndDoamin   string `rest:"options=xx|bb,isDomain=true"`
-		StringWithBothOptionAndLenLimit string `rest:"options=xx|bb,minLen=1,maxLen=10"`
+		StringWithInvalidLenLimit string `rest:"minLen=12,maxLen=12"`
+		StringWithPartialLenLimit string `rest:"minLen=12"`
 	}
 
 	st = reflect.TypeOf(testStruct2{})
 	for i := 0; i < st.NumField(); i++ {
 		f := st.Field(i)
 		tags := strings.Split(f.Tag.Get("rest"), ",")
-		validator, _ := buildValidator(f.Type, tags)
-		ut.Assert(t, validator == nil, "%d:%v", i, f)
+		validators, _ := Build(f.Type, tags)
+		ut.Assert(t, len(validators) == 0, "tag should has error %v", tags)
 	}
 }
 
@@ -61,9 +59,11 @@ func TestIntegerRangeValidator(t *testing.T) {
 		{1, true},
 		{10, false},
 		{11, false},
-		{[]int{1, 2, 9}, true},
-		{[]int{1, 2, 10}, false},
-		{[]int{10, 11}, false},
+		/*
+			{[]int{1, 2, 9}, true},
+			{[]int{1, 2, 10}, false},
+			{[]int{10, 11}, false},
+		*/
 	}
 
 	testValidator(t, int(10), []string{"min=1", "max=10"}, cases)
@@ -75,9 +75,11 @@ func TestStringLenValidator(t *testing.T) {
 		{"a", true},
 		{"abc", false},
 		{"", false},
-		{[]string{"a", "ab", "b"}, true},
-		{[]string{"a", "abc", "b"}, false},
-		{[]string{"", "abc"}, false},
+		/*
+			{[]string{"a", "ab", "b"}, true},
+			{[]string{"a", "abc", "b"}, false},
+			{[]string{"", "abc"}, false},
+		*/
 	}
 	testValidator(t, "xxx", []string{"minLen=1", "maxLen=3"}, cases)
 	testValidator(t, []string{"xxx"}, []string{"minLen=1", "maxLen=3"}, cases)
@@ -89,9 +91,11 @@ func TestOptionValidator(t *testing.T) {
 		{"bb", true},
 		{"Aa", false},
 		{"Aaa", false},
-		{[]string{"aa", "bb", "aa"}, true},
-		{[]string{"xa", "bb"}, false},
-		{[]string{"", "ac"}, false},
+		/*
+			{[]string{"aa", "bb", "aa"}, true},
+			{[]string{"xa", "bb"}, false},
+			{[]string{"", "ac"}, false},
+		*/
 	}
 	testValidator(t, "xxx", []string{"options=aa|bb"}, cases)
 	testValidator(t, []string{"xxx"}, []string{"options=aa|bb"}, cases)
@@ -105,9 +109,11 @@ func TestDomainValidator(t *testing.T) {
 		{"Aaa", false},
 		{"-aa", false},
 		{"11?aa", false},
-		{[]string{"aa", "11bb", "11.aa"}, true},
-		{[]string{"adsfasdf-xa", "11111bb11111"}, true},
-		{[]string{"adsfasdfasdfA111", "adsfadf?xx"}, false},
+		/*
+			{[]string{"aa", "11bb", "11.aa"}, true},
+			{[]string{"adsfasdf-xa", "11111bb11111"}, true},
+			{[]string{"adsfasdfasdfA111", "adsfadf?xx"}, false},
+		*/
 	}
 
 	testValidator(t, "xxxx", []string{"isDomain=true"}, cases)
@@ -115,8 +121,9 @@ func TestDomainValidator(t *testing.T) {
 }
 
 func testValidator(t *testing.T, fieldValue interface{}, tags []string, cases []testCase) {
-	validator, err := buildValidator(reflect.TypeOf(fieldValue), tags)
-	ut.Assert(t, err == nil && validator != nil, "")
+	validators, err := Build(reflect.TypeOf(fieldValue), tags)
+	ut.Assert(t, err == nil && len(validators) == 1, "")
+	validator := validators[0]
 	for i := 0; i < len(cases); i++ {
 		err := validator.Validate(cases[i].value)
 		if cases[i].isValide {
