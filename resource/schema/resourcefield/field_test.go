@@ -70,6 +70,7 @@ func TestFieldBuild(t *testing.T) {
 	}
 }
 
+//for struct without any rest contraint generate nil field
 func TestFieldBuildForNoneRestStruct(t *testing.T) {
 	type IncludeStruct struct {
 		Int8WithRange     int8   `json:"int8WithRange"`
@@ -85,8 +86,9 @@ func TestFieldBuildForNoneRestStruct(t *testing.T) {
 		IncludeStructPtr *IncludeStruct
 	}
 	builder = NewBuilder()
-	sf, _ = builder.Build(reflect.TypeOf(TestStruct{}))
+	sf, err := builder.Build(reflect.TypeOf(TestStruct{}))
 	ut.Assert(t, sf == nil, "")
+	ut.Assert(t, err == nil, "")
 }
 
 func TestCheckRequired(t *testing.T) {
@@ -190,7 +192,7 @@ func TestCheckRequired(t *testing.T) {
 		ut.Assert(t, sf.Validate(ts, raw) != nil, "set %s to nil should failed", name)
 	}
 
-	//empty array will cause error
+	//empty array will non-required field should be ok
 	for _, name := range []string{"stringPtrMapStruct", "intSlice"} {
 		raw = make(map[string]interface{})
 		json.Unmarshal(rawByte, &raw)
@@ -199,34 +201,24 @@ func TestCheckRequired(t *testing.T) {
 	}
 
 	//check nest required
-	{
-		var tmp TestStruct
-		json.Unmarshal(rawByte, &tmp)
-		tmp.SliceStruct = []IncludeStruct{
-			IncludeStruct{
-				StringSlice:  []string{"c", "d"},
-				StringIntMap: make(map[string]int),
-			},
-		}
-		raw := make(map[string]interface{})
-		tmpRawByte, _ := json.Marshal(tmp)
-		json.Unmarshal(tmpRawByte, &raw)
-		err := sf.Validate(tmp, raw)
-		ut.Assert(t, err != nil, "")
-		ut.Assert(t, strings.Contains(err.Error(), "StringIntMap"), "")
-
-		json.Unmarshal(rawByte, &tmp)
-		tmp.StringMapStruct = map[string]IncludeStruct{
-			"a": IncludeStruct{
-				StringIntMap: map[string]int{"a": 20},
-			},
-		}
-		tmpRawByte, _ = json.Marshal(tmp)
-		json.Unmarshal(tmpRawByte, &raw)
-		err = sf.Validate(tmp, raw)
-		ut.Assert(t, err != nil, "")
-		ut.Assert(t, strings.Contains(err.Error(), "StringSlice"), "")
+	var tmp TestStruct
+	json.Unmarshal(rawByte, &tmp)
+	tmp.SliceStruct = []IncludeStruct{
+		IncludeStruct{
+			StringSlice:  []string{"c", "d"},
+			StringIntMap: make(map[string]int),
+		},
 	}
+	makeSureValidateFailedWithInfo(t, sf, tmp, "StringIntMap")
+
+	tmp = TestStruct{}
+	json.Unmarshal(rawByte, &tmp)
+	tmp.StringMapStruct = map[string]IncludeStruct{
+		"a": IncludeStruct{
+			StringIntMap: map[string]int{"a": 20},
+		},
+	}
+	makeSureValidateFailedWithInfo(t, sf, tmp, "StringSlice")
 }
 
 func TestValidate(t *testing.T) {
@@ -290,7 +282,7 @@ func TestValidate(t *testing.T) {
 	tmp.IntSlice[0] = 32
 	makeSureValidateFailedWithInfo(t, sf, tmp, "exceed the range limit")
 
-	//stringslice with min-max
+	//stringslice with option
 	tmp = TestStruct{}
 	json.Unmarshal(rawByte, &tmp)
 	tmp.StringSliceWithOption[0] = "gogod"
@@ -309,7 +301,7 @@ func TestValidate(t *testing.T) {
 	makeSureValidateFailedWithInfo(t, sf, tmp, "subdomain must consist")
 }
 
-func TestValidateWithOptionField(t *testing.T) {
+func TestValidateWithOptionalField(t *testing.T) {
 	type IncludeStruct struct {
 		Int8WithRange     int8   `json:"int8WithRange" rest:"min=1,max=20"`
 		Uint16WithDefault uint16 `json:"uint16WithDefault,omitempty"`

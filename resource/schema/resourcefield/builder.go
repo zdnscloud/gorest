@@ -145,7 +145,7 @@ func (b *FieldBuilder) createField(name string, typ reflect.Type, json, rest str
 		}
 
 		if sf != nil {
-			self := newLeafField(name, fieldJsonName(name, json))
+			self := newLeafField(name, fieldJsonName(name, json), typ.Kind())
 			if err := fieldParseOptional(self, typ.Kind(), strings.Split(rest, ",")); err != nil {
 				return nil, err
 			}
@@ -161,7 +161,7 @@ func (b *FieldBuilder) buildLeafField(name string, typ reflect.Type, json string
 	if err != nil {
 		return nil, err
 	}
-	field := newLeafField(name, fieldJsonName(name, json))
+	field := newLeafField(name, fieldJsonName(name, json), typ.Kind())
 	if len(v) > 0 {
 		field.SetValidators(v)
 	}
