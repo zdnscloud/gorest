@@ -39,7 +39,7 @@ type Node struct {
 	IsWorker              bool   `json:"isWorker"`
 }
 
-func (c Cluster) CreateActions(name string) *resource.Action {
+func (c Cluster) CreateAction(name string) *resource.Action {
 	switch name {
 	case "encode":
 		return &resource.Action{
@@ -209,9 +209,7 @@ func (h *clusterHandler) Create(ctx *resource.Context) (resource.Resource, *gore
 }
 
 func (h *clusterHandler) List(ctx *resource.Context) interface{} {
-	//return []int{1, 2, 3}
-	return 1
-	//return h.clusters.GetClusters()
+	return h.clusters.GetClusters()
 }
 
 func (h *clusterHandler) Get(ctx *resource.Context) resource.Resource {
@@ -272,7 +270,7 @@ func (h *nodeHandler) List(ctx *resource.Context) interface{} {
 	return h.clusters.GetNodes(node.GetParent().GetID())
 }
 
-func (h *nodeHandler) Get(ctx *resource.Context) interface{} {
+func (h *nodeHandler) Get(ctx *resource.Context) resource.Resource {
 	node := ctx.Resource.(*Node)
 	return h.clusters.GetNode(node.GetParent().GetID(), node.GetID())
 }
