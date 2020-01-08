@@ -33,6 +33,11 @@ type Cluster struct {
 	nodes []*Node `json:"-"`
 }
 
+type CLusterEvent struct {
+	EventType string `json:"eventType"`
+	Cluster   string `json:"cluster"`
+}
+
 type Node struct {
 	resource.ResourceBase `json:",inline"`
 	Address               string `json:"address,omitempty" rest:"required=true,minLen=7,maxLen=13"`
@@ -231,6 +236,20 @@ func (h *clusterHandler) Action(ctx *resource.Context) (interface{}, *goresterr.
 	default:
 		panic("it should never come here")
 	}
+}
+
+func (h *clusterHandler) Watch(ctx *resource.Context) (<-chan interface{}, *goresterr.APIError) {
+	result := make(chan interface{}, 0)
+	go func() {
+		for {
+			result <- &CLusterEvent{
+				EventType: "update",
+				Cluster:   "wyw",
+			}
+			<-time.After(time.Second * 2)
+		}
+	}()
+	return result, nil
 }
 
 type nodeHandler struct {

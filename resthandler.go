@@ -7,6 +7,7 @@ import (
 	"path"
 	"reflect"
 
+	"github.com/gorilla/websocket"
 	goresterr "github.com/zdnscloud/gorest/error"
 	"github.com/zdnscloud/gorest/resource"
 )
@@ -18,6 +19,9 @@ func restHandler(ctx *resource.Context) *goresterr.APIError {
 
 	switch ctx.Method {
 	case http.MethodGet:
+		if isWatchRequest(ctx) {
+			return handleWatch(ctx)
+		}
 		return handleList(ctx)
 	case http.MethodPost:
 		return handleCreate(ctx)
@@ -146,6 +150,43 @@ func handleAction(ctx *resource.Context) *goresterr.APIError {
 
 	WriteResponse(ctx.Response, http.StatusOK, result)
 	return nil
+}
+
+func handleWatch(ctx *resource.Context) *goresterr.APIError {
+	handler := ctx.Resource.GetSchema().GetHandler().GetWatchHandler()
+	if handler == nil {
+		return goresterr.NewAPIError(goresterr.NotFound, "no handler for watch")
+	}
+
+	wsCh, err := handler(ctx)
+	if err != nil {
+		return err
+	}
+
+	conn, wsErr := websocket.Upgrade(ctx.Response, ctx.Request, nil, 4096, 4096)
+	if wsErr != nil {
+		return goresterr.NewAPIError(goresterr.ServerError, fmt.Sprintf("websocket upgrade failed %s", wsErr.Error()))
+	}
+
+	defer conn.Close()
+	for {
+		obj, ok := <-wsCh
+		if !ok {
+			break
+		}
+		if err := conn.WriteJSON(obj); err != nil {
+			break
+		}
+	}
+	return nil
+}
+
+func isWatchRequest(ctx *resource.Context) bool {
+	flags := ctx.Request.URL.Query()
+	if watchFlag := flags.Get("watch"); watchFlag == "true" {
+		return true
+	}
+	return false
 }
 
 const ContentTypeKey = "Content-Type"

@@ -15,6 +15,7 @@ const (
 	ListMethod   string = "List"
 	GetMethod    string = "Get"
 	ActionMethod string = "Action"
+	WatchMethod  string = "Watch"
 )
 
 type CreateHandler func(*Context) (Resource, *goresterr.APIError)
@@ -23,6 +24,7 @@ type UpdateHandler func(*Context) (Resource, *goresterr.APIError)
 type ListHandler func(*Context) interface{}
 type GetHandler func(*Context) Resource
 type ActionHandler func(*Context) (interface{}, *goresterr.APIError)
+type WatchHandler func(*Context) (<-chan interface{}, *goresterr.APIError)
 
 type Handler interface {
 	GetCreateHandler() CreateHandler
@@ -31,6 +33,7 @@ type Handler interface {
 	GetListHandler() ListHandler
 	GetGetHandler() GetHandler
 	GetActionHandler() ActionHandler
+	GetWatchHandler() WatchHandler
 }
 
 func HandlerAdaptor(obj interface{}) (Handler, error) {
@@ -79,6 +82,13 @@ func HandlerAdaptor(obj interface{}) (Handler, error) {
 		}
 	}
 
+	if mv := val.MethodByName(WatchMethod); mv.IsValid() {
+		if method, ok := mv.Interface().(func(*Context) (<-chan interface{}, *goresterr.APIError)); ok {
+			handler.watchHandler = method
+			hasAnyHandler = true
+		}
+	}
+
 	if hasAnyHandler == false {
 		return nil, fmt.Errorf("handler doesn't have any handle method")
 	} else {
@@ -95,6 +105,7 @@ type DefaultHandler struct {
 	listHandler   ListHandler
 	getHandler    GetHandler
 	actionHandler ActionHandler
+	watchHandler  WatchHandler
 }
 
 func (h *DefaultHandler) GetCreateHandler() CreateHandler {
@@ -121,13 +132,22 @@ func (h *DefaultHandler) GetActionHandler() ActionHandler {
 	return h.actionHandler
 }
 
+func (h *DefaultHandler) GetWatchHandler() WatchHandler {
+	return h.watchHandler
+}
+
 func GetCollectionMethods(handler Handler) []HttpMethod {
 	var collectionMethods []HttpMethod
+	var isGetMethodAdded bool
 	if handler.GetListHandler() != nil {
 		collectionMethods = append(collectionMethods, http.MethodGet)
+		isGetMethodAdded = true
 	}
 	if handler.GetCreateHandler() != nil {
 		collectionMethods = append(collectionMethods, http.MethodPost)
+	}
+	if handler.GetWatchHandler() != nil && !isGetMethodAdded {
+		collectionMethods = append(collectionMethods, http.MethodGet)
 	}
 	return collectionMethods
 }
