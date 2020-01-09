@@ -44,6 +44,9 @@ func (ctx *Context) CloseStopCh() {
 ```
 * 原理
 在Context的构造函数中初始化一个stopCh，并提供两个Context的函数GetStopCh和CloseStopCh，后端handler实现中通过GetStopCh获取websocket的连接情况，若连接已断开，则执行goroutine的回收操作
+### URL
+实际场景中websocket基本都是对某一类资源的watch，所以watch接口的URL复用collection的URL，并通过flag(watch=true)与资源的list接口进行区分，通过GET方法建立websocket连接，示例如下：
+`ws://127.0.0.1:1234/apis/zdns.cloud.example/example/v1/clusters\?watch=true`
 ## Example
 ```go
 type CLusterEvent struct {
