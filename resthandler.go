@@ -168,7 +168,11 @@ func handleWatch(ctx *resource.Context) *goresterr.APIError {
 		return goresterr.NewAPIError(goresterr.ServerError, fmt.Sprintf("websocket upgrade failed %s", wsErr.Error()))
 	}
 
-	defer conn.Close()
+	defer func() {
+		conn.Close()
+		ctx.CloseStopCh()
+	}()
+
 	for {
 		obj, ok := <-wsCh
 		if !ok {

@@ -29,6 +29,10 @@ func (r ResourceBase) CreateAction(name string) *Action {
 	return nil
 }
 
+func (r ResourceBase) GetWatchObj() interface{} {
+	return nil
+}
+
 var _ ResourceKind = ResourceBase{}
 
 func (r *ResourceBase) GetID() string {

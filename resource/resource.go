@@ -57,6 +57,7 @@ type ResourceKind interface {
 	//default value
 	CreateDefaultResource() Resource
 	CreateAction(name string) *Action
+	GetWatchObj() interface{}
 }
 
 //lowercase singluar

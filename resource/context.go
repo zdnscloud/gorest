@@ -32,6 +32,7 @@ type Context struct {
 	Method   string
 	params   map[string]interface{}
 	filters  []Filter
+	stopCh   chan struct{}
 }
 
 type Filter struct {
@@ -56,6 +57,7 @@ func NewContext(resp http.ResponseWriter, req *http.Request, schemas SchemaManag
 		Method:   req.Method,
 		params:   make(map[string]interface{}),
 		filters:  genFilters(req.URL),
+		stopCh:   make(chan struct{}),
 	}, nil
 }
 
@@ -70,6 +72,14 @@ func (ctx *Context) Get(key string) (interface{}, bool) {
 
 func (ctx *Context) GetFilters() []Filter {
 	return ctx.filters
+}
+
+func (ctx *Context) GetStopCh() <-chan struct{} {
+	return ctx.stopCh
+}
+
+func (ctx *Context) CloseStopCh() {
+	close(ctx.stopCh)
 }
 
 func genFilters(url *url.URL) []Filter {

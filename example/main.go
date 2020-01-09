@@ -61,6 +61,10 @@ func (c Cluster) CreateAction(name string) *resource.Action {
 	}
 }
 
+func (c Cluster) GetWatchObj() interface{} {
+	return &CLusterEvent{}
+}
+
 type Input struct {
 	Data string `json:"data,omitempty"`
 }
@@ -242,11 +246,17 @@ func (h *clusterHandler) Watch(ctx *resource.Context) (<-chan interface{}, *gore
 	result := make(chan interface{}, 0)
 	go func() {
 		for {
-			result <- &CLusterEvent{
-				EventType: "update",
-				Cluster:   "wyw",
+			select {
+			case <-ctx.GetStopCh():
+				fmt.Println("ws connection has been closed, will return")
+				return
+			default:
+				result <- &CLusterEvent{
+					EventType: "update",
+					Cluster:   "wyw",
+				}
+				<-time.After(time.Second * 2)
 			}
-			<-time.After(time.Second * 2)
 		}
 	}()
 	return result, nil
