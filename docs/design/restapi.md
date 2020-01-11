@@ -33,15 +33,17 @@ api server 会使用注册的资源schema及schema之间父子关系，自动生
 			type ResourceKind interface {
     			GetParents() []ResourceKind
     			CreateDefaultResource() Resource
-    			CreateAction(name string) *Action
+			GetActions() []Action
 			}
 			
 			type Action struct {
-				Name  string      `json:"name"`
-				Input interface{} `json:"input,omitempty"`
+				Name   string      `json:"name"`
+				Input  interface{} `json:"input,omitempty"`
+				Output interface{} `json:"output,omitempty"`
 			}
+>  Input和Output的类型必须结构体指针
 
-    * api server 提供ResourceBase基础资源对象，实现Resource和ResourceKind接口，每个资源的定义必须包含ResourceBase，如果有必要，资源需要实现ResourceKind接口提供的函数，即子资源需要实现GetParents函数，确定其父资源，如果资源有默认值，需要实现CreateDefaultResource函数，如果资源支持Action，则需要实现CreateAction函数
+    * api server 提供ResourceBase基础资源对象，实现Resource和ResourceKind接口，每个资源的定义必须包含ResourceBase，如果有必要，资源需要实现ResourceKind接口提供的函数，即子资源需要实现GetParents函数，确定其父资源，如果资源有默认值，需要实现CreateDefaultResource函数，如果资源支持Action，则需要实现GetActions函数
     
 			type ResourceBase struct {
     			ID                string                            `json:"id,omitempty"`

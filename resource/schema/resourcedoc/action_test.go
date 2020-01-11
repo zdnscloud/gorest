@@ -18,6 +18,12 @@ type Action struct {
 	ID                    int    `json:"id"`
 }
 
+type ActionErr struct {
+	resource.ResourceBase `json:",inline"`
+	Name                  string `json:"name"`
+	ID                    int    `json:"id"`
+}
+
 type UserPassword struct {
 	SliceStructPtr  []*Struct         `json:"sliceStructPtr"`
 	MapStringInt8   map[string]int8   `json:"mapStringInt8"`
@@ -59,36 +65,41 @@ func (a Action) GetActions() []resource.Action {
 	}
 }
 
+func (a ActionErr) GetActions() []resource.Action {
+	return []resource.Action{
+		resource.Action{
+			Name:  "test-string",
+			Input: "string",
+		},
+	}
+}
+
 func TestIngressRuleValidate(t *testing.T) {
 	cases := []struct {
 		kind            resource.ResourceKind
+		isValid         bool
 		resourceActions []ResourceAction
 		actionsNum      int
 	}{
 		{
 			Action{},
+			true,
 			[]ResourceAction{
 				ResourceAction{
 					Name: "actionLogin",
-					Input: ResourceField{
-						Type: "userPassword",
+					Input: ResourceFields{
+						"mapStringInt8":   ResourceField{Type: "map", KeyType: "string", ValueType: "int"},
+						"mapStringStruct": ResourceField{Type: "map", KeyType: "string", ValueType: "struct"},
+						"structPtr":       ResourceField{Type: "struct"},
+						"sliceStructPtr":  ResourceField{Type: "array", ElemType: "struct"},
 					},
-					Output: ResourceField{
-						Type: "loginInfo",
+					Output: ResourceFields{
+						"uint32":          ResourceField{Type: "uint"},
+						"mapStringString": ResourceField{Type: "map", KeyType: "string", ValueType: "string"},
+						"mapStringInt":    ResourceField{Type: "map", KeyType: "string", ValueType: "int"},
+						"boolPtr":         ResourceField{Type: "bool"},
 					},
 					SubResources: map[string]ResourceFields{
-						"loginInfo": map[string]ResourceField{
-							"uint32":          ResourceField{Type: "uint"},
-							"mapStringString": ResourceField{Type: "map", KeyType: "string", ValueType: "string"},
-							"mapStringInt":    ResourceField{Type: "map", KeyType: "string", ValueType: "int"},
-							"boolPtr":         ResourceField{Type: "bool"},
-						},
-						"userPassword": map[string]ResourceField{
-							"mapStringInt8":   ResourceField{Type: "map", KeyType: "string", ValueType: "int"},
-							"mapStringStruct": ResourceField{Type: "map", KeyType: "string", ValueType: "struct"},
-							"structPtr":       ResourceField{Type: "struct"},
-							"sliceStructPtr":  ResourceField{Type: "array", ElemType: "struct"},
-						},
 						"struct2": map[string]ResourceField{
 							"Id": ResourceField{Type: "int"},
 						},
@@ -110,15 +121,23 @@ func TestIngressRuleValidate(t *testing.T) {
 			},
 			2,
 		},
+		{
+			ActionErr{},
+			false,
+			[]ResourceAction{},
+			0,
+		},
 	}
 	for _, k := range cases {
 		as, err := genActions(k.kind)
-		if err != nil {
+		if !k.isValid {
+			ut.Assert(t, err != nil, "should err for case %s, but get nothing", k.kind)
+		} else {
 			ut.Assert(t, err == nil, "should ok but get %v", err)
-		}
-		ut.Equal(t, len(as), k.actionsNum)
-		for i, a := range as {
-			ut.Equal(t, a, k.resourceActions[i])
+			ut.Equal(t, len(as), k.actionsNum)
+			for i, a := range as {
+				ut.Equal(t, a, k.resourceActions[i])
+			}
 		}
 	}
 }
