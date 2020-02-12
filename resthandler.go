@@ -48,8 +48,7 @@ func handleCreate(ctx *resource.Context) *goresterr.APIError {
 	if err := schema.AddLinksToResource(r, httpSchemeAndHost); err != nil {
 		return goresterr.NewAPIError(goresterr.ServerError, fmt.Sprintf("generate links failed:%s", err.Error()))
 	}
-	WriteResponse(ctx.Response, http.StatusCreated, r)
-	return nil
+	return WriteResponse(ctx.Response, http.StatusCreated, r)
 }
 
 func handleDelete(ctx *resource.Context) *goresterr.APIError {
@@ -62,8 +61,15 @@ func handleDelete(ctx *resource.Context) *goresterr.APIError {
 		return err
 	}
 
-	WriteResponse(ctx.Response, http.StatusNoContent, nil)
-	return nil
+	kind, ok := ctx.Resource.(resource.ResourceKind)
+	if !ok {
+		panic(fmt.Sprintf("resource %v doesn't implement resource kind", ctx.Resource))
+	}
+	status := http.StatusNoContent
+	if kind.SupportAsyncDelete() {
+		status = http.StatusAccepted
+	}
+	return WriteResponse(ctx.Response, status, nil)
 }
 
 func handleUpdate(ctx *resource.Context) *goresterr.APIError {
@@ -83,8 +89,7 @@ func handleUpdate(ctx *resource.Context) *goresterr.APIError {
 		return goresterr.NewAPIError(goresterr.ServerError, fmt.Sprintf("generate links failed:%s", err.Error()))
 	}
 	r.SetType(ctx.Resource.GetType())
-	WriteResponse(ctx.Response, http.StatusOK, r)
-	return nil
+	return WriteResponse(ctx.Response, http.StatusOK, r)
 }
 
 func handleList(ctx *resource.Context) *goresterr.APIError {
@@ -129,8 +134,7 @@ func handleList(ctx *resource.Context) *goresterr.APIError {
 		result = r
 	}
 
-	WriteResponse(ctx.Response, http.StatusOK, result)
-	return nil
+	return WriteResponse(ctx.Response, http.StatusOK, result)
 }
 
 func handleAction(ctx *resource.Context) *goresterr.APIError {
@@ -144,16 +148,22 @@ func handleAction(ctx *resource.Context) *goresterr.APIError {
 		return err
 	}
 
-	WriteResponse(ctx.Response, http.StatusOK, result)
-	return nil
+	return WriteResponse(ctx.Response, http.StatusOK, result)
 }
 
 const ContentTypeKey = "Content-Type"
 
-func WriteResponse(resp http.ResponseWriter, status int, result interface{}) {
-	var body []byte
+func WriteResponse(resp http.ResponseWriter, status int, result interface{}) *goresterr.APIError {
 	resp.Header().Set(ContentTypeKey, "application/json")
-	body, _ = json.Marshal(result)
 	resp.WriteHeader(status)
+	if result == nil {
+		return nil
+	}
+
+	body, err := json.Marshal(result)
+	if err != nil {
+		return goresterr.NewAPIError(goresterr.ServerError, fmt.Sprintf("marshal failed:%s", err.Error()))
+	}
 	resp.Write(body)
+	return nil
 }

@@ -29,6 +29,10 @@ func (r ResourceBase) GetActions() []Action {
 	return nil
 }
 
+func (r ResourceBase) SupportAsyncDelete() bool {
+	return false
+}
+
 var _ ResourceKind = ResourceBase{}
 
 func (r *ResourceBase) GetID() string {

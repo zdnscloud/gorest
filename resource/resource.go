@@ -57,6 +57,7 @@ type ResourceKind interface {
 	//default value
 	CreateDefaultResource() Resource
 	GetActions() []Action
+	SupportAsyncDelete() bool
 }
 
 //lowercase singluar
