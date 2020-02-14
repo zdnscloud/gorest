@@ -84,14 +84,13 @@ type Location struct {
 	NodeName string `json:"nodeName"`
 }
 
-func (c Pod) CreateAction(name string) *resource.Action {
-	if name == "move" {
-		return &resource.Action{
+func (c Pod) GetActions() []resource.Action {
+	return []resource.Action{
+		resource.Action{
 			Name:  "move",
 			Input: &Location{},
-		}
+		},
 	}
-	return nil
 }
 
 func (c Pod) CreateDefaultResource() resource.Resource {

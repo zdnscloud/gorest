@@ -222,7 +222,7 @@ func TestAction(t *testing.T) {
 	reqBody, _ := json.Marshal(Location{NodeName: "n1"})
 	req, _ := http.NewRequest(http.MethodPost, url, bytes.NewBufferString(string(reqBody)))
 	r, err := mgr.CreateResourceFromRequest(req)
-	ut.Assert(t, err == nil, "")
+	ut.Assert(t, err == nil, "get err:%v", err)
 	ut.Equal(t, r.GetType(), "pod")
 	action := r.GetAction()
 	ut.Equal(t, action.Name, "move")
