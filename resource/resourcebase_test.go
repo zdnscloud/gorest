@@ -16,5 +16,7 @@ func (d Deployment) Default() Resource {
 
 func TestKindAndResourceName(t *testing.T) {
 	ut.Equal(t, DefaultKindName(Deployment{}), "deployment")
+	ut.Equal(t, DefaultKindName(&Deployment{}), "deployment")
 	ut.Equal(t, DefaultResourceName(Deployment{}), "deployments")
+	ut.Equal(t, DefaultResourceName(&Deployment{}), "deployments")
 }

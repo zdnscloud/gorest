@@ -62,13 +62,22 @@ type ResourceKind interface {
 
 //lowercase singluar
 //eg: type Node struct -> node
-func DefaultKindName(kind interface{}) string {
-	return strings.ToLower(reflect.TypeOf(kind).Name())
+func DefaultKindName(t interface{}) string {
+	typ := reflect.TypeOf(t)
+	kind := typ.Kind()
+	if kind == reflect.Ptr {
+		typ = typ.Elem()
+		kind = typ.Kind()
+	}
+	if kind != reflect.Struct {
+		panic("invalid param, it's not a struct or a struct pointer")
+	}
+
+	return strings.ToLower(typ.Name())
 }
 
 //resource name is lowercase, plural word
 //eg: type Node struct -> nodes
-func DefaultResourceName(kind interface{}) string {
-	gt := reflect.TypeOf(kind)
-	return util.GuessPluralName(strings.ToLower(gt.Name()))
+func DefaultResourceName(t interface{}) string {
+	return util.GuessPluralName(DefaultKindName(t))
 }
