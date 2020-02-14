@@ -27,15 +27,16 @@ const (
 )
 
 type ResourceDocument struct {
-	ResourceType      string                    `json:"resourceType,omitempty"`
-	CollectionName    string                    `json:"collectionName,omitempty"`
-	ParentResources   []string                  `json:"parentResources,omitempty"`
-	GoStructName      string                    `json:"goStructName,omitempty"`
-	ResourceFields    ResourceFields            `json:"resourceFields,omitempty"`
-	SubResources      map[string]ResourceFields `json:"subResources,omitempty"`
-	ResourceMethods   []resource.HttpMethod     `json:"resourceMethods,omitempty"`
-	CollectionMethods []resource.HttpMethod     `json:"collectionMethods,omitempty"`
-	ResourceActions   []ResourceAction          `json:"resourceActions,omitempty"`
+	ResourceType       string                    `json:"resourceType,omitempty"`
+	CollectionName     string                    `json:"collectionName,omitempty"`
+	ParentResources    []string                  `json:"parentResources,omitempty"`
+	GoStructName       string                    `json:"goStructName,omitempty"`
+	SupportAsyncDelete bool                      `json:"supportAsyncDelete"`
+	ResourceFields     ResourceFields            `json:"resourceFields,omitempty"`
+	SubResources       map[string]ResourceFields `json:"subResources,omitempty"`
+	ResourceMethods    []resource.HttpMethod     `json:"resourceMethods,omitempty"`
+	CollectionMethods  []resource.HttpMethod     `json:"collectionMethods,omitempty"`
+	ResourceActions    []ResourceAction          `json:"resourceActions,omitempty"`
 }
 
 type ResourceFields map[string]ResourceField
@@ -51,13 +52,14 @@ type ResourceField struct {
 
 func NewResourceDocument(name string, kind resource.ResourceKind, handler resource.Handler, parents []string) (*ResourceDocument, error) {
 	resource := &ResourceDocument{
-		ResourceType:      name,
-		CollectionName:    util.GuessPluralName(name),
-		ParentResources:   parents,
-		GoStructName:      reflect.TypeOf(kind).Name(),
-		SubResources:      make(map[string]ResourceFields),
-		ResourceMethods:   resource.GetResourceMethods(handler),
-		CollectionMethods: resource.GetCollectionMethods(handler),
+		ResourceType:       name,
+		CollectionName:     util.GuessPluralName(name),
+		ParentResources:    parents,
+		GoStructName:       reflect.TypeOf(kind).Name(),
+		SupportAsyncDelete: kind.SupportAsyncDelete(),
+		SubResources:       make(map[string]ResourceFields),
+		ResourceMethods:    resource.GetResourceMethods(handler),
+		CollectionMethods:  resource.GetCollectionMethods(handler),
 	}
 	if resourceFields, err := buildResourceFields(resource.SubResources, reflect.TypeOf(kind)); err != nil {
 		return resource, fmt.Errorf("build resource %s failed, %s", name, err.Error())
