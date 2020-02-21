@@ -13,13 +13,13 @@ const minLenPrefix = "minLen="
 const maxLenPrefix = "maxLen="
 
 type stringLenRangeValidator struct {
-	minLen int64
-	maxLen int64
+	minLen *int64
+	maxLen *int64
 }
 
 type stringLenRangeValidatorBuilder struct{}
 
-func newStringLenRangeValidator(minLen, maxLen int64) Validator {
+func newStringLenRangeValidator(minLen, maxLen *int64) Validator {
 	return &stringLenRangeValidator{
 		minLen: minLen,
 		maxLen: maxLen,
@@ -37,8 +37,11 @@ func (v *stringLenRangeValidator) Validate(val interface{}) error {
 
 func (v *stringLenRangeValidator) validateStringLen(s string) error {
 	l := int64(len(s))
-	if l < v.minLen || l >= v.maxLen {
-		return fmt.Errorf("string len %d exceed the range limit[%v:%v)", l, v.minLen, v.maxLen)
+	if v.minLen != nil && l < *v.minLen {
+		return fmt.Errorf("exceed the range limit, (string len %v should >= %v)", l, *v.minLen)
+	}
+	if v.maxLen != nil && l >= *v.maxLen {
+		return fmt.Errorf("exceed the range limit, (string len %v should < %v)", l, *v.maxLen)
 	}
 	return nil
 }
@@ -63,24 +66,27 @@ func (b *stringLenRangeValidatorBuilder) FromTags(tags []string) (Validator, err
 		return nil, nil
 	}
 
-	if minLenStr != "" && maxLenStr == "" {
-		return nil, fmt.Errorf("has min but not max")
-	} else if minLenStr == "" && maxLenStr != "" {
-		return nil, fmt.Errorf("has max but not min")
-	} else {
+	var minLen, maxLen *int64
+	if minLenStr != "" {
 		min, err := strconv.ParseInt(minLenStr, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("min value isn't valid int:%s", err.Error())
 		}
+		minLen = &min
+	}
+
+	if maxLenStr != "" {
 		max, err := strconv.ParseInt(maxLenStr, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("max value isn't valid int:%s", err.Error())
 		}
-		if min >= max {
-			return nil, fmt.Errorf("min value should smaller than max")
-		}
-		return newStringLenRangeValidator(min, max), nil
+		maxLen = &max
 	}
+
+	if minLen != nil && maxLen != nil && *minLen >= *maxLen {
+		return nil, fmt.Errorf("min value should smaller than max")
+	}
+	return newStringLenRangeValidator(minLen, maxLen), nil
 }
 
 func (b *stringLenRangeValidatorBuilder) SupportKind(kind util.Kind) bool {

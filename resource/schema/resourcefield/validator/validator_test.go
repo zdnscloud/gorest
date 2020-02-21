@@ -29,15 +29,14 @@ func TestBuildValidator(t *testing.T) {
 	}
 
 	type testStruct2 struct {
-		IntWithOption      int    `rest:"required=true,options=lvm|ceph"`
-		IntWithLenLimit    int    `rest:"minLen=10,maxLen=11"`
-		IntWithDomainCheck int    `rest:"isDomain=true"`
-		IntRangeShortOfMax uint32 `rest:"min=1"`
-		IntRangeShortOfMin int8   `rest:"max=1"`
-		IntRangeInvalid    int8   `rest:"min=2,max=1"`
+		IntWithOption      int  `rest:"required=true,options=lvm|ceph"`
+		IntWithLenLimit    int  `rest:"minLen=10,maxLen=11"`
+		IntWithDomainCheck int  `rest:"isDomain=true"`
+		IntRangeInvalid    int8 `rest:"min=2,max=1"`
+		IntWithEmptyRange  int8 `rest:"min="`
 
 		StringWithInvalidLenLimit string `rest:"minLen=12,maxLen=12"`
-		StringWithPartialLenLimit string `rest:"minLen=12"`
+		StringWithEmptyInterval   string `rest:"minLen=,maxLen="`
 	}
 
 	st = reflect.TypeOf(testStruct2{})
@@ -59,15 +58,25 @@ func TestIntegerRangeValidator(t *testing.T) {
 		{1, true},
 		{10, false},
 		{11, false},
-		/*
-			{[]int{1, 2, 9}, true},
-			{[]int{1, 2, 10}, false},
-			{[]int{10, 11}, false},
-		*/
 	}
-
 	testValidator(t, int(10), []string{"min=1", "max=10"}, cases)
 	testValidator(t, []uint{10}, []string{"min=1", "max=10"}, cases)
+
+	cases = []testCase{
+		{4, true},
+		{2, false},
+		{1000, true},
+	}
+	testValidator(t, int(10), []string{"min=4"}, cases)
+	testValidator(t, []uint{10}, []string{"min=4"}, cases)
+
+	cases = []testCase{
+		{4, true},
+		{99, true},
+		{1000, false},
+	}
+	testValidator(t, int(10), []string{"max=1000"}, cases)
+	testValidator(t, []uint{10}, []string{"max=1000"}, cases)
 }
 
 func TestStringLenValidator(t *testing.T) {
@@ -75,14 +84,27 @@ func TestStringLenValidator(t *testing.T) {
 		{"a", true},
 		{"abc", false},
 		{"", false},
-		/*
-			{[]string{"a", "ab", "b"}, true},
-			{[]string{"a", "abc", "b"}, false},
-			{[]string{"", "abc"}, false},
-		*/
 	}
 	testValidator(t, "xxx", []string{"minLen=1", "maxLen=3"}, cases)
 	testValidator(t, []string{"xxx"}, []string{"minLen=1", "maxLen=3"}, cases)
+
+	cases = []testCase{
+		{"a", false},
+		{"ab", true},
+		{"abcc", true},
+		{"", false},
+	}
+	testValidator(t, "xxx", []string{"minLen=2"}, cases)
+	testValidator(t, []string{"xxx"}, []string{"minLen=2"}, cases)
+
+	cases = []testCase{
+		{"", true},
+		{"a", true},
+		{"abb", false},
+		{"abcc", false},
+	}
+	testValidator(t, "xxx", []string{"maxLen=3"}, cases)
+	testValidator(t, []string{"xxx"}, []string{"maxLen=3"}, cases)
 }
 
 func TestOptionValidator(t *testing.T) {
@@ -91,11 +113,6 @@ func TestOptionValidator(t *testing.T) {
 		{"bb", true},
 		{"Aa", false},
 		{"Aaa", false},
-		/*
-			{[]string{"aa", "bb", "aa"}, true},
-			{[]string{"xa", "bb"}, false},
-			{[]string{"", "ac"}, false},
-		*/
 	}
 	testValidator(t, "xxx", []string{"options=aa|bb"}, cases)
 	testValidator(t, []string{"xxx"}, []string{"options=aa|bb"}, cases)
@@ -109,11 +126,6 @@ func TestDomainValidator(t *testing.T) {
 		{"Aaa", false},
 		{"-aa", false},
 		{"11?aa", false},
-		/*
-			{[]string{"aa", "11bb", "11.aa"}, true},
-			{[]string{"adsfasdf-xa", "11111bb11111"}, true},
-			{[]string{"adsfasdfasdfA111", "adsfadf?xx"}, false},
-		*/
 	}
 
 	testValidator(t, "xxxx", []string{"isDomain=true"}, cases)

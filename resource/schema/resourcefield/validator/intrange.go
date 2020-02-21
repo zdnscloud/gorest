@@ -13,12 +13,12 @@ const minPrefix = "min="
 const maxPrefix = "max="
 
 type intRangeValidator struct {
-	min int64
-	max int64
+	min *int64
+	max *int64
 }
 type intRangeValidatorBuilder struct{}
 
-func newIntRangeValidator(min, max int64) Validator {
+func newIntRangeValidator(min, max *int64) Validator {
 	return &intRangeValidator{
 		min: min,
 		max: max,
@@ -39,8 +39,12 @@ func (v *intRangeValidator) Validate(val interface{}) error {
 }
 
 func (v *intRangeValidator) validateValueRange(i int64) error {
-	if i < v.min || i >= v.max {
-		return fmt.Errorf("int value %v exceed the range limit[%v:%v)", i, v.min, v.max)
+	if v.min != nil && i < *v.min {
+		return fmt.Errorf("exceed the range limit, (%v should >= %v)", i, *v.min)
+	}
+
+	if v.max != nil && i >= *v.max {
+		return fmt.Errorf("exceed the range limit, (%v should < %v)", i, *v.max)
 	}
 	return nil
 }
@@ -65,24 +69,27 @@ func (b *intRangeValidatorBuilder) FromTags(tags []string) (Validator, error) {
 		return nil, nil
 	}
 
-	if minStr != "" && maxStr == "" {
-		return nil, fmt.Errorf("has min but not max")
-	} else if minStr == "" && maxStr != "" {
-		return nil, fmt.Errorf("has max but not min")
-	} else {
-		min, err := strconv.ParseInt(minStr, 10, 64)
+	var min, max *int64
+	if minStr != "" {
+		min_, err := strconv.ParseInt(minStr, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("min value isn't valid int:%s", err.Error())
 		}
-		max, err := strconv.ParseInt(maxStr, 10, 64)
+		min = &min_
+	}
+
+	if maxStr != "" {
+		max_, err := strconv.ParseInt(maxStr, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("max value isn't valid int:%s", err.Error())
 		}
-		if min >= max {
-			return nil, fmt.Errorf("min value should smaller than max")
-		}
-		return newIntRangeValidator(min, max), nil
+		max = &max_
 	}
+
+	if min != nil && max != nil && *min >= *max {
+		return nil, fmt.Errorf("min value should smaller than max")
+	}
+	return newIntRangeValidator(min, max), nil
 }
 
 func (b *intRangeValidatorBuilder) SupportKind(kind util.Kind) bool {

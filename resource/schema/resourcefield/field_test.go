@@ -347,7 +347,7 @@ func makeSureValidateFailedWithInfo(t *testing.T, sf Field, structVal interface{
 	json.Unmarshal(rawByte, &raw)
 	err := sf.Validate(structVal, raw)
 	ut.Assert(t, err != nil, "want err %s", errorInfo)
-	ut.Assert(t, strings.Contains(err.Error(), errorInfo), "")
+	ut.Assert(t, strings.Contains(err.Error(), errorInfo), "%v doesn't contain %v", err.Error(), errorInfo)
 }
 
 func _TestClusterResource(t *testing.T) {
