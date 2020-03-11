@@ -151,10 +151,10 @@ func fieldIsSpecifiedWithKind(f Field, raw map[string]interface{}, kind reflect.
 
 type sliceStructField struct {
 	Field
-	inner Field
+	inner *structField
 }
 
-func newSliceStructField(self, inner Field) *sliceStructField {
+func newSliceStructField(self Field, inner *structField) *sliceStructField {
 	return &sliceStructField{
 		Field: self,
 		inner: inner,
@@ -225,10 +225,10 @@ func (f *mapLeafField) Validate(val interface{}, raw map[string]interface{}) err
 
 type mapStructField struct {
 	Field
-	inner Field
+	inner *structField
 }
 
-func newMapStructField(self, inner Field) *mapStructField {
+func newMapStructField(self Field, inner *structField) *mapStructField {
 	return &mapStructField{
 		Field: self,
 		inner: inner,

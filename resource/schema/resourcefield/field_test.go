@@ -350,29 +350,30 @@ func makeSureValidateFailedWithInfo(t *testing.T, sf Field, structVal interface{
 	ut.Assert(t, strings.Contains(err.Error(), errorInfo), "%v doesn't contain %v", err.Error(), errorInfo)
 }
 
-func _TestClusterResource(t *testing.T) {
-	type ClusterNetwork struct {
-		Plugin string `json:"plugin" rest:"options=flannel|calico"`
-		Iface  string `json:"iface"`
+func TestSliceWithNoInnerStructNoRestParameter(t *testing.T) {
+	type PV struct {
+		Name string `json:"pods"`
 	}
 
-	type Cluster struct {
-		Network ClusterNetwork `json:"network" rest:"description=immutable"`
+	type Storage struct {
+		Name string `json:"name"`
+		Pvs  []PV   `json:"pvs" rest:"required=true"`
 	}
 
 	builder := NewBuilder()
-	sf, err := builder.Build(reflect.TypeOf(Cluster{}))
+	sf, err := builder.Build(reflect.TypeOf(Storage{}))
 	ut.Assert(t, err == nil, "")
 
-	ts := Cluster{
-		Network: ClusterNetwork{
-			Plugin: "flannel",
+	storage := Storage{
+		Pvs: []PV{
+			PV{
+				Name: "xx",
+			},
 		},
 	}
-	rawByte, _ := json.Marshal(ts)
+	rawByte, _ := json.Marshal(storage)
 	raw := make(map[string]interface{})
 	json.Unmarshal(rawByte, &raw)
-	delete(raw, "network")
-	err = sf.Validate(ts, raw)
+	err = sf.Validate(storage, raw)
 	ut.Assert(t, err == nil, "shouldn't get err %v", err)
 }
