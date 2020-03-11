@@ -350,7 +350,7 @@ func makeSureValidateFailedWithInfo(t *testing.T, sf Field, structVal interface{
 	ut.Assert(t, strings.Contains(err.Error(), errorInfo), "%v doesn't contain %v", err.Error(), errorInfo)
 }
 
-func TestSliceWithNoInnerStructNoRestParameter(t *testing.T) {
+func TestSliceWithInnerStructHasNoRestParam(t *testing.T) {
 	type PV struct {
 		Name string `json:"pods"`
 	}
@@ -376,4 +376,51 @@ func TestSliceWithNoInnerStructNoRestParameter(t *testing.T) {
 	json.Unmarshal(rawByte, &raw)
 	err = sf.Validate(storage, raw)
 	ut.Assert(t, err == nil, "shouldn't get err %v", err)
+}
+
+func TestPointerNestedStruct(t *testing.T) {
+	type Lvm struct {
+		Name string `json:"name" rest:"minLen=2"`
+		Cap  int64  `json:"cap" rest:"required=true,min=10,max=20"`
+	}
+
+	type Ceph struct {
+		StringWithOption string `json:"stringWithOption,omitempty" rest:"required=true,options=lvm|ceph"`
+	}
+
+	type Backend struct {
+		Lvm  *Lvm  `json:"lvm" rest:"required=true"`
+		Ceph *Ceph `json:"ceph"`
+	}
+
+	type Storage struct {
+		Backend
+		Name string `json:"name"`
+	}
+
+	builder := NewBuilder()
+	sf, err := builder.Build(reflect.TypeOf(Storage{}))
+	ut.Assert(t, err == nil, "")
+
+	storage := Storage{}
+	storage.Lvm = &Lvm{
+		Name: "lll",
+		Cap:  16,
+	}
+
+	rawByte, _ := json.Marshal(storage)
+	raw := make(map[string]interface{})
+	json.Unmarshal(rawByte, &raw)
+	err = sf.Validate(storage, raw)
+	ut.Assert(t, err == nil, "shouldn't get err %v", err)
+
+	storage = Storage{}
+	storage.Ceph = &Ceph{
+		StringWithOption: "lvm",
+	}
+	rawByte, _ = json.Marshal(storage)
+	raw = make(map[string]interface{})
+	json.Unmarshal(rawByte, &raw)
+	err = sf.Validate(storage, raw)
+	ut.Assert(t, err != nil, "lvm is missing")
 }

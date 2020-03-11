@@ -278,24 +278,19 @@ func newStructField(self Field, fields map[string]Field) *structField {
 }
 
 func (f *structField) Validate(val interface{}, raw map[string]interface{}) error {
-	value := reflect.ValueOf(val)
-	//only handle one level redirect
-	if value.Kind() == reflect.Ptr {
-		value = value.Elem()
-	}
-	if value.Kind() != reflect.Struct {
-		return fmt.Errorf("struct field with non-sturct but %v", value.Kind())
-	}
-
 	//this is a nest struct
 	if f.Field != nil {
 		jsonName := f.Field.JsonName()
-		jsonVal, ok := raw[jsonName]
-		if f.Field.IsRequired() && !ok {
+		jsonVal, hasField := raw[jsonName]
+		if jsonVal == nil {
+			hasField = false
+		}
+
+		if f.Field.IsRequired() && !hasField {
 			return fmt.Errorf("struct field %s is missing", jsonName)
 		}
 		//field isn't speicifed
-		if !ok {
+		if !hasField {
 			return nil
 		}
 
@@ -306,6 +301,14 @@ func (f *structField) Validate(val interface{}, raw map[string]interface{}) erro
 		}
 	}
 
+	value := reflect.ValueOf(val)
+	//only handle one level redirect
+	if value.Kind() == reflect.Ptr {
+		value = value.Elem()
+	}
+	if value.Kind() != reflect.Struct {
+		return fmt.Errorf("struct field with non-sturct but %v", value.Kind())
+	}
 	typ := value.Type()
 	for i := 0; i < typ.NumField(); i++ {
 		ft := typ.Field(i)
