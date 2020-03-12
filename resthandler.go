@@ -101,7 +101,10 @@ func handleList(ctx *resource.Context) *goresterr.APIError {
 			return goresterr.NewAPIError(goresterr.NotFound, "no found for list")
 		}
 
-		data := handler(ctx)
+		data, err_ := handler(ctx)
+		if err_ != nil {
+			return err_
+		}
 		rc, err := resource.NewResourceCollection(ctx.Resource, data)
 		if err != nil {
 			return goresterr.NewAPIError(goresterr.ServerError, err.Error())
@@ -117,7 +120,11 @@ func handleList(ctx *resource.Context) *goresterr.APIError {
 		if handler == nil {
 			return goresterr.NewAPIError(goresterr.NotFound, "no found for list")
 		}
-		r := handler(ctx)
+		r, err := handler(ctx)
+		if err != nil {
+			return err
+		}
+
 		if r == nil || (reflect.ValueOf(r).Kind() == reflect.Ptr && reflect.ValueOf(r).IsNil()) {
 			return goresterr.NewAPIError(goresterr.NotFound,
 				fmt.Sprintf("%s resource with id %s doesn't exist", ctx.Resource.GetType(), ctx.Resource.GetID()))

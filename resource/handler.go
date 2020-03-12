@@ -20,8 +20,8 @@ const (
 type CreateHandler func(*Context) (Resource, *goresterr.APIError)
 type DeleteHandler func(*Context) *goresterr.APIError
 type UpdateHandler func(*Context) (Resource, *goresterr.APIError)
-type ListHandler func(*Context) interface{}
-type GetHandler func(*Context) Resource
+type ListHandler func(*Context) (interface{}, *goresterr.APIError)
+type GetHandler func(*Context) (Resource, *goresterr.APIError)
 type ActionHandler func(*Context) (interface{}, *goresterr.APIError)
 
 type Handler interface {
@@ -38,16 +38,20 @@ func HandlerAdaptor(obj interface{}) (Handler, error) {
 	val := reflect.ValueOf(obj)
 	hasAnyHandler := false
 	if mv := val.MethodByName(ListMethod); mv.IsValid() {
-		if method, ok := mv.Interface().(func(*Context) interface{}); ok {
+		if method, ok := mv.Interface().(func(*Context) (interface{}, *goresterr.APIError)); ok {
 			handler.listHandler = method
 			hasAnyHandler = true
+		} else {
+			return nil, fmt.Errorf("handler has '%s' method but with wrong signature", ListMethod)
 		}
 	}
 
 	if mv := val.MethodByName(GetMethod); mv.IsValid() {
-		if method, ok := mv.Interface().(func(*Context) Resource); ok {
+		if method, ok := mv.Interface().(func(*Context) (Resource, *goresterr.APIError)); ok {
 			handler.getHandler = method
 			hasAnyHandler = true
+		} else {
+			return nil, fmt.Errorf("handler has '%s' method but with wrong signature", GetMethod)
 		}
 	}
 
@@ -55,6 +59,8 @@ func HandlerAdaptor(obj interface{}) (Handler, error) {
 		if method, ok := mv.Interface().(func(*Context) *goresterr.APIError); ok {
 			handler.deleteHandler = method
 			hasAnyHandler = true
+		} else {
+			return nil, fmt.Errorf("handler has '%s' method but with wrong signature", DeleteMethod)
 		}
 	}
 
@@ -62,6 +68,8 @@ func HandlerAdaptor(obj interface{}) (Handler, error) {
 		if method, ok := mv.Interface().(func(*Context) (Resource, *goresterr.APIError)); ok {
 			handler.updateHandler = method
 			hasAnyHandler = true
+		} else {
+			return nil, fmt.Errorf("handler has '%s' method but with wrong signature", UpdateMethod)
 		}
 	}
 
@@ -69,13 +77,18 @@ func HandlerAdaptor(obj interface{}) (Handler, error) {
 		if method, ok := mv.Interface().(func(*Context) (Resource, *goresterr.APIError)); ok {
 			handler.createHandler = method
 			hasAnyHandler = true
+		} else {
+			return nil, fmt.Errorf("handler has '%s' method but with wrong signature", CreateMethod)
 		}
+
 	}
 
 	if mv := val.MethodByName(ActionMethod); mv.IsValid() {
 		if method, ok := mv.Interface().(func(*Context) (interface{}, *goresterr.APIError)); ok {
 			handler.actionHandler = method
 			hasAnyHandler = true
+		} else {
+			return nil, fmt.Errorf("handler has '%s' method but with wrong signature", ActionMethod)
 		}
 	}
 

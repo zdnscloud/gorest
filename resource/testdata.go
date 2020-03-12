@@ -30,14 +30,14 @@ func (h *DumbHandler) Update(ctx *Context) (Resource, *error.APIError) {
 	}, nil
 }
 
-func (h *DumbHandler) List(ctx *Context) interface{} {
-	return []*dumbResource{&dumbResource{Number: 30}}
+func (h *DumbHandler) List(ctx *Context) (interface{}, *error.APIError) {
+	return []*dumbResource{&dumbResource{Number: 30}}, nil
 }
 
-func (h *DumbHandler) Get(ctx *Context) Resource {
+func (h *DumbHandler) Get(ctx *Context) (Resource, *error.APIError) {
 	return &dumbResource{
 		Number: 40,
-	}
+	}, nil
 }
 
 func (h *DumbHandler) Action(ctx *Context) (interface{}, *error.APIError) {

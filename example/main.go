@@ -278,8 +278,8 @@ func (h *nodeHandler) Get(ctx *resource.Context) resource.Resource {
 func main() {
 	schemas := schema.NewSchemaManager()
 	state := newState()
-	schemas.Import(&version, Cluster{}, newClusterHandler(state))
-	schemas.Import(&version, Node{}, newNodeHandler(state))
+	schemas.MustImport(&version, Cluster{}, newClusterHandler(state))
+	schemas.MustImport(&version, Node{}, newNodeHandler(state))
 	router := gin.Default()
 	adaptor.RegisterHandler(router, gorest.NewAPIServer(schemas), schemas.GenerateResourceRoute())
 	router.Run("0.0.0.0:1234")

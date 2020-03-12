@@ -34,10 +34,10 @@ func TestHandlerGen(t *testing.T) {
 	err = handler.GetDeleteHandler()(nil)
 	ut.Assert(t, err == nil, "")
 
-	listResult := handler.GetListHandler()(nil)
+	listResult, _ := handler.GetListHandler()(nil)
 	ut.Equal(t, listResult.([]*dumbResource), []*dumbResource{&dumbResource{Number: 30}})
 
-	getResult := handler.GetGetHandler()(nil)
+	getResult, _ := handler.GetGetHandler()(nil)
 	ut.Equal(t, getResult.(*dumbResource).Number, 40)
 
 	actionResult, err := handler.GetActionHandler()(nil)

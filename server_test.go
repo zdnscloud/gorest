@@ -25,8 +25,8 @@ func (h *dumbHandler) Create(ctx *resource.Context) (resource.Resource, *goreste
 	return nil, nil
 }
 
-func (h *dumbHandler) List(ctx *resource.Context) interface{} {
-	return nil
+func (h *dumbHandler) List(ctx *resource.Context) (interface{}, *goresterr.APIError) {
+	return nil, nil
 }
 
 func (h *dumbHandler) Delete(ctx *resource.Context) *goresterr.APIError {
