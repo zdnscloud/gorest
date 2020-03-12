@@ -208,12 +208,12 @@ func (h *clusterHandler) Create(ctx *resource.Context) (resource.Resource, *gore
 	}
 }
 
-func (h *clusterHandler) List(ctx *resource.Context) interface{} {
-	return h.clusters.GetClusters()
+func (h *clusterHandler) List(ctx *resource.Context) (interface{}, *goresterr.APIError) {
+	return h.clusters.GetClusters(), nil
 }
 
-func (h *clusterHandler) Get(ctx *resource.Context) resource.Resource {
-	return h.clusters.GetCluster(ctx.Resource.GetID())
+func (h *clusterHandler) Get(ctx *resource.Context) (resource.Resource, *goresterr.APIError) {
+	return h.clusters.GetCluster(ctx.Resource.GetID()), nil
 }
 
 func (h *clusterHandler) Action(ctx *resource.Context) (interface{}, *goresterr.APIError) {
@@ -265,14 +265,14 @@ func (h *nodeHandler) Delete(ctx *resource.Context) *goresterr.APIError {
 	}
 }
 
-func (h *nodeHandler) List(ctx *resource.Context) interface{} {
+func (h *nodeHandler) List(ctx *resource.Context) (interface{}, *goresterr.APIError) {
 	node := ctx.Resource.(*Node)
-	return h.clusters.GetNodes(node.GetParent().GetID())
+	return h.clusters.GetNodes(node.GetParent().GetID()), nil
 }
 
-func (h *nodeHandler) Get(ctx *resource.Context) resource.Resource {
+func (h *nodeHandler) Get(ctx *resource.Context) (resource.Resource, *goresterr.APIError) {
 	node := ctx.Resource.(*Node)
-	return h.clusters.GetNode(node.GetParent().GetID(), node.GetID())
+	return h.clusters.GetNode(node.GetParent().GetID(), node.GetID()), nil
 }
 
 func main() {
