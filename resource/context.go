@@ -75,20 +75,18 @@ func (ctx *Context) GetFilters() []Filter {
 func genFilters(url *url.URL) []Filter {
 	filters := make([]Filter, 0)
 	for k, v := range url.Query() {
-		var filter Filter
+		filter := Filter{
+			Name:     k,
+			Modifier: Eq,
+			Values:   v,
+		}
 		i := strings.LastIndexAny(k, "_")
-		if i < 0 {
-			filter.Name = k
-			filter.Modifier = Eq
-		} else {
+		if i >= 0 {
 			filter.Modifier = VerifyModifier(k[i+1:])
-			if filter.Modifier == Eq && k[i+1:] != "eq" {
-				filter.Name = k
-			} else {
+			if filter.Modifier != Eq || k[i+1:] == "eq" {
 				filter.Name = k[:i]
 			}
 		}
-		filter.Values = v
 		filters = append(filters, filter)
 	}
 	return filters
