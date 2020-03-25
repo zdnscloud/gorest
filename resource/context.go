@@ -37,7 +37,7 @@ type Context struct {
 type Filter struct {
 	Name string
 	Modifier
-	Value []string
+	Values []string
 }
 
 type Modifier string
@@ -81,10 +81,14 @@ func genFilters(url *url.URL) []Filter {
 			filter.Name = k
 			filter.Modifier = Eq
 		} else {
-			filter.Name = k[:i]
 			filter.Modifier = VerifyModifier(k[i+1:])
+			if filter.Modifier == Eq && k[i+1:] != "eq" {
+				filter.Name = k
+			} else {
+				filter.Name = k[:i]
+			}
 		}
-		filter.Value = v
+		filter.Values = v
 		filters = append(filters, filter)
 	}
 	return filters
@@ -92,8 +96,6 @@ func genFilters(url *url.URL) []Filter {
 
 func VerifyModifier(str string) Modifier {
 	switch str {
-	case "eq":
-		return Eq
 	case "ne":
 		return Ne
 	case "lt":
@@ -117,6 +119,6 @@ func VerifyModifier(str string) Modifier {
 	case "notnull":
 		return NotNull
 	default:
-		return Modifier(fmt.Sprintf("Unkown(%s)", str))
+		return Eq
 	}
 }
