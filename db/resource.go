@@ -10,7 +10,6 @@ import (
 type ResourceType string
 
 type Resource interface {
-	Validate() error
 }
 
 func GetResourceType(r Resource) ResourceType {

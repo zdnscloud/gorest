@@ -28,8 +28,6 @@ type Transaction interface {
 	DeleteEx(sql string, params ...interface{}) (int64, error)
 	Exec(sql string, params ...interface{}) (int64, error)
 
-	GetDefaultResource(typ ResourceType) (Resource, error)
-
 	Commit() error
 	Rollback() error
 }

@@ -119,6 +119,8 @@ github.com/zdnscloud/cement v0.0.0-20200203063149-0351bc244b72 h1:cAtK7Avqhza0QE
 github.com/zdnscloud/cement v0.0.0-20200203063149-0351bc244b72/go.mod h1:sV8GqHxkOhXAV8DUfOw93QyYjqsRlFf4A+XVpEuipn4=
 github.com/zdnscloud/cement v0.0.0-20200205075737-175eefa2a628 h1:DgH7ntrO6yRlhkKbwmkbtuq0x53dvJshV/FpkwrXgrQ=
 github.com/zdnscloud/cement v0.0.0-20200205075737-175eefa2a628/go.mod h1:4LO5zUFsB9ne6BHQLy0DzXx2+kl7Jfc4eLxidz4oMJA=
+github.com/zdnscloud/cement v0.0.0-20200503120134-aa381f4206fe h1:j/KPwhiAgfKqUMU3qXw75DPGNeIlyIvXnP9h9nwr60E=
+github.com/zdnscloud/cement v0.0.0-20200503120134-aa381f4206fe/go.mod h1:4LO5zUFsB9ne6BHQLy0DzXx2+kl7Jfc4eLxidz4oMJA=
 github.com/zdnscloud/g53 v0.0.0-20191119101753-eb2b1813bd52/go.mod h1:GrZWv638nfn+7y+E5OkKepRuyOeerwTPCNAtAQAdtec=
 github.com/zenazn/goji v0.9.0/go.mod h1:7S9M489iMyHBNxwZnk9/EHS098H4/F6TATF2mIxtB1Q=
 go.uber.org/atomic v1.3.2/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=

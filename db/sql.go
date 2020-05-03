@@ -356,7 +356,7 @@ func getSqlWhereState(conds map[string]interface{}) (string, []interface{}, erro
 
 func rowsToStructs(rows pgx.Rows, out interface{}) error {
 	slice := reflect.Indirect(reflect.ValueOf(out))
-	typ := slice.Type().Elem()
+	typ := slice.Type().Elem().Elem()
 
 	for rows.Next() {
 		elem := reflect.New(typ)
@@ -370,7 +370,7 @@ func rowsToStructs(rows pgx.Rows, out interface{}) error {
 		if err != nil {
 			return err
 		}
-		slice.Set(reflect.Append(slice, elem.Elem()))
+		slice.Set(reflect.Append(slice, elem))
 	}
 	return nil
 }

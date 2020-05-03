@@ -77,27 +77,26 @@ func (tx *RStoreTx) Insert(r Resource) (Resource, error) {
 }
 
 func (tx *RStoreTx) GetOwned(owner ResourceType, ownerID string, owned ResourceType) (interface{}, error) {
-	rt, err := tx.meta.NewDefault(owned)
+	rt, err := tx.meta.GetGoType(owned)
 	if err != nil {
 		return nil, err
 	}
-
-	slicePointer := reflector.NewSlicePointer(reflect.ValueOf(rt).Elem().Type())
+	sp := reflector.NewSlicePointer(reflect.PtrTo(rt))
 	sql, args, err := joinSelectSqlAndArgs(tx.meta, owner, owned, ownerID)
 	if err != nil {
 		return nil, err
 	}
 
-	err = tx.getWithSql(sql, args, slicePointer)
+	err = tx.getWithSql(sql, args, sp)
 	if err != nil {
 		return nil, err
 	} else {
-		return reflect.ValueOf(slicePointer).Elem().Interface(), nil
+		return reflect.ValueOf(sp).Elem().Interface(), nil
 	}
 }
 
 func (tx *RStoreTx) FillOwned(owner ResourceType, ownerID string, out interface{}) error {
-	pr, err := reflector.GetStructInSlice(out)
+	pr, err := reflector.GetStructPointerInSlice(out)
 	if err != nil {
 		return err
 	}
@@ -112,22 +111,21 @@ func (tx *RStoreTx) FillOwned(owner ResourceType, ownerID string, out interface{
 }
 
 func (tx *RStoreTx) Get(typ ResourceType, conds map[string]interface{}) (interface{}, error) {
-	rt, err := tx.meta.NewDefault(typ)
+	rt, err := tx.meta.GetGoType(typ)
 	if err != nil {
 		return nil, err
 	}
-
-	p := reflector.NewSlicePointer(reflect.ValueOf(rt).Elem().Type())
-	err = tx.Fill(conds, p)
+	sp := reflector.NewSlicePointer(reflect.PtrTo(rt))
+	err = tx.Fill(conds, sp)
 	if err != nil {
 		return nil, err
 	} else {
-		return reflect.ValueOf(p).Elem().Interface(), nil
+		return reflect.ValueOf(sp).Elem().Interface(), nil
 	}
 }
 
 func (tx *RStoreTx) Fill(conds map[string]interface{}, out interface{}) error {
-	pr, err := reflector.GetStructInSlice(out)
+	pr, err := reflector.GetStructPointerInSlice(out)
 	if err != nil {
 		return err
 	}
@@ -159,14 +157,19 @@ func (tx *RStoreTx) Exists(typ ResourceType, conds map[string]interface{}) (bool
 }
 
 func (tx *RStoreTx) existsWithSql(sql string, params ...interface{}) (bool, error) {
-	_, err := tx.Query(sql, params...)
-
-	if err == nil {
-		//todo
-		return true, nil
-	} else {
+	rows, err := tx.Query(sql, params...)
+	if err != nil {
 		return false, err
 	}
+
+	var exist bool
+	//there should only one row
+	for rows.Next() {
+		if err := rows.Scan(&exist); err != nil {
+			return false, err
+		}
+	}
+	return exist, nil
 }
 
 func (tx *RStoreTx) Count(typ ResourceType, conds map[string]interface{}) (int64, error) {
@@ -192,11 +195,14 @@ func (tx *RStoreTx) countWithSql(sql string, params ...interface{}) (int64, erro
 	}
 
 	var count int64
-	if err := rows.Scan(&count); err != nil {
-		return 0, err
-	} else {
-		return count, nil
+	//there should only one row
+	for rows.Next() {
+		if err := rows.Scan(&count); err != nil {
+			return 0, err
+		}
 	}
+
+	return count, nil
 }
 
 func (tx *RStoreTx) Update(typ ResourceType, nv map[string]interface{}, conds map[string]interface{}) (int64, error) {
@@ -222,22 +228,17 @@ func (tx *RStoreTx) DeleteEx(sql string, params ...interface{}) (int64, error) {
 }
 
 func (tx *RStoreTx) GetEx(typ ResourceType, sql string, params ...interface{}) (interface{}, error) {
-	rt, err := tx.meta.NewDefault(typ)
+	rt, err := tx.meta.GetGoType(typ)
 	if err != nil {
 		return nil, err
 	}
-
-	p := reflector.NewSlicePointer(reflect.ValueOf(rt).Elem().Type())
-	err = tx.FillEx(p, sql, params...)
+	sp := reflector.NewSlicePointer(reflect.PtrTo(rt))
+	err = tx.FillEx(sp, sql, params...)
 	if err != nil {
 		return nil, err
 	} else {
-		return reflect.ValueOf(p).Elem().Interface(), nil
+		return reflect.ValueOf(sp).Elem().Interface(), nil
 	}
-}
-
-func (tx *RStoreTx) GetDefaultResource(typ ResourceType) (Resource, error) {
-	return tx.meta.NewDefault(typ)
 }
 
 func (tx *RStoreTx) FillEx(out interface{}, sql string, params ...interface{}) error {

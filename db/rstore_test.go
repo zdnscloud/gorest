@@ -1,15 +1,22 @@
 package db
 
 import (
+	"fmt"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
 	ut "github.com/zdnscloud/cement/unittest"
 )
 
-type child struct {
+var dbConf map[string]interface{} = map[string]interface{}{
+	"host":     "localhost",
+	"user":     "lx",
+	"password": "lx",
+	"dbname":   "lx",
+}
+
+type Child struct {
 	Id       string
 	Name     string `sql:"uk"`
 	Age      uint32
@@ -19,370 +26,215 @@ type child struct {
 	Talented bool
 }
 
-func (t *child) Validate() error {
-	return nil
-}
-
-type tuser struct {
+type Mother struct {
 	Id   string
-	Name string `sql:"uk"`
 	Age  int
-	CId  int
+	Name string
 }
 
-func (t *tuser) Validate() error {
-	return nil
+type MotherChild struct {
+	Id     string
+	Mother string `sql:"ownby"`
+	Child  string `sql:"referto"`
 }
 
-type tuserTview struct {
-	Id    string
-	Tuser string `sql:"ownby"`
-	Tview string `sql:"referto"`
+func initChild(store ResourceStore) {
+	tx, _ := store.Begin()
+	c1 := &Child{
+		Id:       "c1",
+		Name:     "ben",
+		Age:      20,
+		Hobbies:  []string{"movie", "music"},
+		Scores:   []int{1, 3, 4},
+		Birthday: time.Now(),
+		Talented: true,
+	}
+	_, err := tx.Insert(c1)
+	if err != nil {
+		fmt.Printf("insert get err:%v\n", err.Error())
+	}
+
+	c2 := &Child{
+		Id:       "c2",
+		Name:     "nana",
+		Age:      30,
+		Hobbies:  []string{"movie", "music"},
+		Scores:   []int{1, 2, 4},
+		Birthday: time.Now(),
+		Talented: true,
+	}
+	_, err = tx.Insert(c2)
+	if err != nil {
+		fmt.Printf("insert get err:%v\n", err.Error())
+	}
+	tx.Commit()
 }
 
-func (t *tuserTview) Validate() error {
-	return nil
+func initMother(store ResourceStore) {
+	tx, _ := store.Begin()
+	tx.Insert(&Mother{
+		Id:   "m1",
+		Name: "lxq",
+	})
+	tx.Commit()
 }
 
-type tview struct {
-	Id   string
-	Name string `sql:"uk"`
+func initMotherChild(store ResourceStore) {
+	tx, _ := store.Begin()
+	tx.Insert(&MotherChild{
+		Mother: "m1",
+		Child:  "c1",
+	})
+	tx.Commit()
 }
 
-func (t *tview) Validate() error {
-	return nil
-}
+func TestCURD(t *testing.T) {
+	meta, err := NewResourceMeta([]Resource{&Child{}})
+	ut.Assert(t, err == nil, "")
+	store, err := NewRStore(dbConf, meta)
+	ut.Assert(t, err == nil, "")
 
-type trr struct {
-	Id    string
-	Name  string `sql:"uk"`
-	Tview string `sql:"referto,uk"`
-	Ttl   int
-}
-
-func (t *trr) Validate() error {
-	return nil
-}
-
-type tnest struct {
-	Id    string
-	Name  string         `sql:"uk"`
-	Inner map[string]int `sql:"-"`
-}
-
-func (t *tnest) Validate() error {
-	return nil
-}
-
-func TestCURDRecord(t *testing.T) {
-	var store ResourceStore
-	var err error
-
-	mr, err := NewResourceMeta([]Resource{&child{}})
-	ut.Assert(t, err == nil, "err should be nil but %v", err)
-	store, err = NewRStore("./foo.db", "zdns", "zdns", "zdns", mr)
-	ut.Equal(t, err, nil)
+	initChild(store)
 
 	tx, _ := store.Begin()
-	birthDay := time.Now()
-	c := &child{
-		Name:     "ben",
-		Age:      20,
-		Hobbies:  []string{"movie", "music"},
-		Scores:   []int{1, 3, 4},
-		Birthday: birthDay,
-		Talented: true,
-	}
-	r, err := tx.Insert(c)
-	newStudent, ok := r.(*child)
-	ut.Equal(t, ok, true)
-	ut.NotEqual(t, newStudent.Id, "")
-
-	children := []child{}
-	tx.Fill(map[string]interface{}{"id": newStudent.Id}, &children)
+	children := []*Child{}
+	c, err := tx.Count("child", nil)
+	ut.Equal(t, c, int64(2))
+	tx.Fill(map[string]interface{}{"id": "c1"}, &children)
 	ut.Equal(t, len(children), 1)
-	ut.Equal(t, children[0].Birthday.Unix(), birthDay.Unix())
+	ut.Equal(t, children[0].Scores, []int{1, 3, 4})
+	tx.Rollback()
+
+	tx, _ = store.Begin()
+	c, err = tx.Update("child", map[string]interface{}{
+		"hobbies": []string{"read book", "travel"},
+	}, map[string]interface{}{"id": "c1"})
+	ut.Assert(t, err == nil, "")
+	ut.Equal(t, c, int64(1))
 	tx.Commit()
 
 	tx, _ = store.Begin()
-	c = &child{
-		Id:       "xxxxxxx",
-		Name:     "benxxxx",
-		Age:      20,
-		Hobbies:  []string{},
-		Scores:   []int{},
-		Birthday: time.Now(),
-		Talented: true,
-	}
+	c, err = tx.Count("child", map[string]interface{}{
+		"hobbies": []string{"read book", "travel"},
+	})
+	ut.Assert(t, err == nil, "")
+	ut.Equal(t, c, int64(1))
+	tx.Rollback()
 
-	_, err = tx.Insert(c)
-	ut.Equal(t, err, nil)
-
-	children = []child{}
-	tx.Fill(map[string]interface{}{"id": "xxxxxxx"}, &children)
-	ut.Equal(t, len(children), 1)
-	ut.Equal(t, len(children[0].Hobbies), 0)
-	ut.Equal(t, len(children[0].Scores), 0)
-	tx.Delete("child", map[string]interface{}{"id": "xxxxxxx"})
+	tx, _ = store.Begin()
+	c, err = tx.Delete("child", map[string]interface{}{
+		"name": "nana",
+	})
+	ut.Assert(t, err == nil, "")
+	ut.Equal(t, c, int64(1))
 	tx.Commit()
 
-	//tx automatic rollback
 	tx, _ = store.Begin()
-	c = &child{
-		Name:     "nana",
-		Age:      20,
-		Hobbies:  []string{"movie", "music"},
-		Scores:   []int{1, 3, 4},
-		Birthday: time.Now(),
-		Talented: false,
-	}
-	tx.Insert(c)
-	c = &child{
-		Name:     "ben",
-		Age:      20,
-		Hobbies:  []string{"movie", "music"},
-		Scores:   []int{1, 3, 4},
-		Birthday: time.Now(),
-		Talented: false,
-	}
-	_, err = tx.Insert(c)
-	ut.NotEqual(t, err, nil)
-	err = tx.Commit()
-	ut.NotEqual(t, err, nil)
-	err = tx.RollBack()
-	ut.NotEqual(t, err, nil)
+	children_, err := tx.Get("child", map[string]interface{}{
+		"name": "nana",
+	})
+	ut.Assert(t, err == nil, "")
+	ut.Equal(t, len(children_.([]*Child)), 0)
+	children_, err = tx.Get("child", map[string]interface{}{
+		"name": "ben",
+	})
+	ut.Assert(t, err == nil, "")
+	ut.Equal(t, children_.([]*Child)[0].Id, "c1")
+	tx.Rollback()
 
-	tx, _ = store.Begin()
-	children = []child{}
-	tx.Fill(map[string]interface{}{"Age": 20}, &children)
-	ut.Equal(t, len(children), 1)
+	store.Clean()
+	store.Destroy()
+}
 
-	c = &child{
-		Name:     "nana",
-		Age:      20,
-		Hobbies:  []string{"movie", "music"},
-		Scores:   []int{1, 3, 4},
-		Birthday: time.Now(),
-		Talented: true,
-	}
-	tx.Insert(c)
-	studentsInterface, err := tx.Get("child", map[string]interface{}{"Age": 20})
-	ut.Equal(t, err, nil)
+func TestCURDEx(t *testing.T) {
+	meta, err := NewResourceMeta([]Resource{&Child{}})
+	ut.Assert(t, err == nil, "")
+	store, err := NewRStore(dbConf, meta)
+	ut.Assert(t, err == nil, "")
 
-	children, ok = studentsInterface.([]child)
-	ut.Equal(t, ok, true)
+	initChild(store)
 
+	tx, _ := store.Begin()
+	children := []*Child{}
+	tx.FillEx(&children, "select distinct age from gr_child ORDER BY age")
 	ut.Equal(t, len(children), 2)
-	for _, s := range children {
-		ut.Assert(t, s.Talented, "child talented isn't stored correctly")
-	}
 
-	rows, err := tx.Update("child", map[string]interface{}{"Age": uint32(0xffff)}, map[string]interface{}{"Name": "ben"})
-	ut.Equal(t, err, nil)
-	ut.Equal(t, rows, int64(1))
-
-	children = []child{}
-	err = tx.Fill(map[string]interface{}{"Age": uint32(0xffff)}, &children)
-	ut.Equal(t, err, nil)
+	children = []*Child{}
+	tx.FillEx(&children, "select * from gr_child where age > $1 and name like $2", 20, "na%")
 	ut.Equal(t, len(children), 1)
-	ut.NotEqual(t, children[0].Id, "")
 
-	rows, err = tx.Delete("child", map[string]interface{}{"Age": 20})
+	children_, _ := tx.GetEx(ResourceType("child"), "select * from gr_child")
+	ut.Equal(t, len(children_.([]*Child)), 2)
+
+	children_, _ = tx.GetEx(ResourceType("child"), "select * from gr_child where age between $1 and $2", 1, 25)
+	ut.Equal(t, len(children_.([]*Child)), 1)
+	tx.Rollback()
+
+	tx, _ = store.Begin()
+	count, err := tx.DeleteEx("delete from gr_child where age >= $1 and age < $2", 25, 400)
+	tx.Commit()
 	ut.Equal(t, err, nil)
-	ut.Equal(t, rows, int64(1))
-
-	rows, err = tx.Delete("child", map[string]interface{}{"Age": 20})
-	ut.Equal(t, rows, int64(0))
-
-	children = []child{}
-	err = tx.Fill(map[string]interface{}{"Age": 20}, &children)
-	ut.Equal(t, err, nil)
-	ut.Equal(t, len(children), 0)
-
-	rows, err = tx.Delete("child", map[string]interface{}{})
-	ut.Equal(t, err, nil)
-	ut.Equal(t, rows, int64(1))
-
-	children = []child{}
-	err = tx.Fill(map[string]interface{}{}, &children)
-	ut.Equal(t, err, nil)
-	ut.Equal(t, len(children), 0)
-	tx.RollBack()
+	ut.Equal(t, count, int64(1))
 
 	store.Clean()
 	store.Destroy()
 }
 
-func TestGetEx(t *testing.T) {
-	var store ResourceStore
-	var err error
+func TestOwnedAndRefer(t *testing.T) {
+	meta, err := NewResourceMeta([]Resource{&Mother{}, &Child{}, &MotherChild{}})
+	ut.Assert(t, err == nil, "")
+	store, err := NewRStore(dbConf, meta)
+	ut.Assert(t, err == nil, "")
 
-	mr, err := NewResourceMeta([]Resource{&child{}})
-	ut.Assert(t, err == nil, "err should be nil but %v", err)
-	store, err = NewRStore("./foo.db", "zdns", "zdns", "zdns", mr)
-	ut.Equal(t, err, nil)
+	initChild(store)
+	initMother(store)
+	initMotherChild(store)
 
 	tx, _ := store.Begin()
-	for i := 0; i < 200; i++ {
-		c := &child{
-			Name: "c" + strconv.Itoa(i),
-			Age:  uint32(i),
-		}
-		tx.Insert(c)
-	}
-
-	for i := 0; i < 200; i++ {
-		c := &child{
-			Name: "a" + strconv.Itoa(i),
-			Age:  uint32(i),
-		}
-		tx.Insert(c)
-	}
-	tx.Commit()
-
-	tx, _ = store.Begin()
-	children := []child{}
-	tx.FillEx(&children, "select distinct age from zc_child ORDER BY age")
-	ut.Equal(t, len(children), 200)
-
-	children = []child{}
-	tx.FillEx(&children, "select * from zc_child where age > $1 and name like $2", 100, "c%")
-	ut.Equal(t, len(children), 99)
-
-	childrenI, _ := tx.GetEx(ResourceType("child"), "select * from zc_child")
-	children, _ = childrenI.([]child)
-	ut.Equal(t, len(children), 400)
-
-	childrenI, _ = tx.GetEx(ResourceType("child"), "select * from zc_child where age between $1 and $2", 1, 10)
-	children, _ = childrenI.([]child)
-	ut.Equal(t, len(children), 20)
-
-	tx.Commit()
-
-	tx, _ = store.Begin()
-	count, err := tx.DeleteEx("delete from zc_child where age >= $1 and age < $2", 50, 100)
-	tx.Commit()
+	result, err := tx.GetOwned(ResourceType("mother"), "m1", ResourceType("child"))
 	ut.Equal(t, err, nil)
-	ut.Equal(t, count, int64(100))
+	ut.Equal(t, len(result.([]*Child)), 1)
+	tx.Rollback()
 
-	store.Clean()
-	store.Destroy()
-}
-
-func TestJoinSelect(t *testing.T) {
-	var store ResourceStore
-	var err error
-
-	mr, _ := NewResourceMeta([]Resource{&tuser{}, &tview{}, &tuserTview{}, &trr{}})
-	ut.Assert(t, err == nil, "err should be nil but %v", err)
-	store, _ = NewRStore("./foo.db", "zdns", "zdns", "zdns", mr)
-
-	tx, err := store.Begin()
-	hasAnyuser, _ := tx.Exists(ResourceType("tuser"), map[string]interface{}{})
-	ut.Equal(t, hasAnyuser, false)
-
-	u := &tuser{Id: "1", Name: "ben"}
-	tx.Insert(u)
-	v := &tview{Id: "1", Name: "v1"}
-	tx.Insert(v)
-	v = &tview{Id: "2", Name: "v2"}
-	tx.Insert(v)
-	v = &tview{Id: "12", Name: "v12"}
-	tx.Insert(v)
-
-	hasAnyuser, _ = tx.Exists(ResourceType("tuser"), map[string]interface{}{})
-	ut.Equal(t, hasAnyuser, true)
-
-	uv := &tuserTview{Id: "1", Tuser: "1", Tview: "1"}
-	tx.Insert(uv)
-
-	uv = &tuserTview{Id: "2", Tuser: "1", Tview: "2"}
-	tx.Insert(uv)
-
-	result, err := tx.GetOwned(ResourceType("tuser"), "1", ResourceType("tview"))
-	ut.Equal(t, err, nil)
-
-	views, ok := result.([]tview)
-	ut.Assert(t, ok, "get user owned view failed")
-	ut.Equal(t, len(views), 2)
-	tx.Commit()
-
+	//insert unknown mother should fail
 	tx, _ = store.Begin()
-	rr := &trr{Id: "1", Name: "a.cn", Tview: "1", Ttl: 10}
-	tx.Insert(rr)
-	rr = &trr{Id: "2", Name: "a.cn", Tview: "2", Ttl: 20}
-	tx.Insert(rr)
-	rr = &trr{Id: "3", Name: "a.a.cn", Tview: "12", Ttl: 30}
-	tx.Insert(rr)
+	_, err = tx.Insert(&MotherChild{
+		Mother: "m2",
+		Child:  "c1",
+	})
+	ut.Assert(t, err != nil, "")
+	tx.Rollback()
 
-	count, _ := tx.Count(ResourceType("trr"), map[string]interface{}{})
-	ut.Equal(t, count, int64(3))
-	count, _ = tx.Count(ResourceType("trr"), map[string]interface{}{"id": 2})
-	ut.Equal(t, count, int64(1))
-	count, _ = tx.Count(ResourceType("trr"), map[string]interface{}{"name": "a.cn", "search": "name"})
-	ut.Equal(t, count, int64(3))
-	count, _ = tx.Count(ResourceType("trr"), map[string]interface{}{"name": "a.cn", "tview": "2", "search": "name"})
-	ut.Equal(t, count, int64(1))
-	count, _ = tx.Count(ResourceType("trr"), map[string]interface{}{"name": "a.cn", "tview": "2", "search": "name,tview"})
-	ut.Equal(t, count, int64(2))
-	count, err = tx.Count(ResourceType("trr"), map[string]interface{}{"tview": "2,12", "match_list": "tview"})
-	ut.Equal(t, count, int64(2))
-	count, err = tx.Count(ResourceType("trr"), map[string]interface{}{"ttl": "10,20,30", "match_list": "ttl"})
-	ut.Equal(t, count, int64(3))
-	count, err = tx.Count(ResourceType("trr"), map[string]interface{}{"ttl": "11,20,30", "match_list": "ttl"})
-	ut.Equal(t, count, int64(2))
-
-	count, _ = tx.Count(ResourceType("trr"), map[string]interface{}{"name": "a.cn"})
-	ut.Equal(t, count, int64(2))
-	count, _ = tx.CountEx(ResourceType("trr"), "select count(*) from zc_trr where id=$1", 2)
-	ut.Equal(t, count, int64(1))
-
-	hasTrr, _ := tx.Exists(ResourceType("trr"), map[string]interface{}{})
-	ut.Equal(t, hasTrr, true)
-	hasTrr, _ = tx.Exists(ResourceType("trr"), map[string]interface{}{"id": 10000})
-	ut.Equal(t, hasTrr, false)
-	hasTrr, _ = tx.Exists(ResourceType("trr"), map[string]interface{}{"id": 2})
-	ut.Equal(t, hasTrr, true)
-
-	rrs := []trr{}
-	tx.Fill(map[string]interface{}{"Name": "a.cn"}, &rrs)
-	ut.Equal(t, len(rrs), 2)
-	tx.RollBack()
-
+	//delete used child should fail
 	tx, _ = store.Begin()
-	result, err = tx.GetOwned(ResourceType("tuser"), "2", ResourceType("tview"))
-	views, _ = result.([]tview)
-	if len(views) != 0 {
-		t.Fatal("should return null views")
-	}
-	tx.RollBack()
+	_, err = tx.Delete("child", map[string]interface{}{
+		"name": "ben",
+	})
+	ut.Assert(t, err != nil, "")
+	tx.Rollback()
 
 	store.Clean()
 	store.Destroy()
 }
 
 func TestGetWithLimitAndOffset(t *testing.T) {
-	var store ResourceStore
-	mr, _ := NewResourceMeta([]Resource{&tuser{}})
-	store, _ = NewRStore("./foo.db", "zdns", "zdns", "zdns", mr)
+	meta, err := NewResourceMeta([]Resource{&Mother{}})
+	ut.Assert(t, err == nil, "")
+	store, err := NewRStore(dbConf, meta)
+	ut.Assert(t, err == nil, "")
 
 	tx, _ := store.Begin()
 	for i := 0; i < 2000; i++ {
-		if i < 1000 {
-			tx.Insert(&tuser{Id: strconv.Itoa(i), Name: "ben" + strconv.Itoa(i), Age: 40, CId: i})
-		} else {
-			tx.Insert(&tuser{Id: strconv.Itoa(i), Name: "nana" + strconv.Itoa(i), Age: 50, CId: i})
-		}
+		tx.Insert(&Mother{Age: i, Name: "m" + strconv.Itoa(i)})
 	}
 	tx.Commit()
 
 	tx, _ = store.Begin()
-	var users []tuser
-	tx.Fill(map[string]interface{}{"age": 40, "offset": 10, "limit": 10, "orderby": "CId"}, &users)
-	ut.Equal(t, len(users), 10)
+	var mothers []*Mother
+	tx.Fill(map[string]interface{}{"offset": 10, "limit": 20, "orderby": "age"}, &mothers)
+	ut.Equal(t, len(mothers), 20)
 	for i := 0; i < 10; i++ {
-		ut.Assert(t, strings.HasPrefix(users[i].Name, "ben"), "")
-		ut.Equal(t, users[i].CId, i+10)
+		ut.Equal(t, mothers[i].Age, i+10)
 	}
 	tx.Commit()
 
@@ -390,169 +242,78 @@ func TestGetWithLimitAndOffset(t *testing.T) {
 	store.Destroy()
 }
 
-func TestSearch(t *testing.T) {
-	var store ResourceStore
-	mr, _ := NewResourceMeta([]Resource{&tuser{}})
-	store, _ = NewRStore("./foo.db", "zdns", "zdns", "zdns", mr)
-
-	tx, _ := store.Begin()
-	tx.Insert(&tuser{Name: "ben", Age: 330, CId: 0})
-	tx.Insert(&tuser{Name: "bean", Age: 30, CId: 0})
-	tx.Insert(&tuser{Name: "baan", Age: 40, CId: 0})
-	tx.Commit()
-
-	tx, _ = store.Begin()
-	var users []tuser
-	tx.Fill(map[string]interface{}{"name": "be", "search": "name"}, &users)
-	ut.Equal(t, len(users), 2)
-
-	users = []tuser{}
-	tx.Fill(map[string]interface{}{"name": "be", "age": 30, "search": "name"}, &users)
-	ut.Equal(t, len(users), 1)
-
-	users_, err := tx.Get("tuser", map[string]interface{}{"name": "b", "search": "name"})
-	ut.Equal(t, err, nil)
-	users, ok := users_.([]tuser)
-	ut.Assert(t, ok, "get should return tusers")
-	ut.Equal(t, len(users), 3)
-
-	users_, err = tx.Get("tuser", map[string]interface{}{"age": "330,30", "match_list": "age"})
-	users, ok = users_.([]tuser)
-	ut.Assert(t, ok, "get should return tusers")
-	ut.Equal(t, len(users), 2)
-	tx.Commit()
-
-	store.Clean()
-	store.Destroy()
-}
-
-func TestErrorMessage(t *testing.T) {
-	var store ResourceStore
-
-	mr, _ := NewResourceMeta([]Resource{&tuser{}, &tview{}, &tuserTview{}, &trr{}})
-	store, _ = NewRStore("./foo.db", "zdns", "zdns", "zdns", mr)
-
-	tx, _ := store.Begin()
-	u := &tuser{Id: "1", Name: "ben"}
-	tx.Insert(u)
-	u = &tuser{Id: "2", Name: "ben2"}
-	tx.Insert(u)
-	tx.Commit()
-
-	tx, _ = store.Begin()
-	u = &tuser{Id: "1", Name: "ben"}
-	_, err := tx.Insert(u)
-	ut.Assert(t, strings.HasPrefix(err.Error(), DuplicateErrorMsg), "duplicate resource error")
-	tx.RollBack()
-
-	tx, _ = store.Begin()
-	_, err = tx.Update("tuser", map[string]interface{}{"id": "1"}, map[string]interface{}{"id": "2"})
-	ut.Assert(t, strings.HasPrefix(err.Error(), DuplicateErrorMsg), "duplicate resource error")
-	tx.RollBack()
-
-	tx, _ = store.Begin()
-	uv := &tuserTview{Id: "1", Tuser: "1", Tview: "1"}
-	_, err = tx.Insert(uv)
-	ut.Assert(t, strings.HasPrefix(err.Error(), RelatedNoneExistsErrorMsg), "refer to resource doesn't exists")
-	tx.RollBack()
-
-	store.Clean()
-	store.Destroy()
+type Student struct {
+	Id        string
+	Name      string `sql:"uk"`
+	Age       uint32
+	Classroom string `sql:"-"`
 }
 
 func TestIgnField(t *testing.T) {
-	var store ResourceStore
-	mr, _ := NewResourceMeta([]Resource{&tnest{}})
-	store, _ = NewRStore("./foo.db", "zdns", "zdns", "zdns", mr)
+	meta, err := NewResourceMeta([]Resource{&Student{}})
+	ut.Assert(t, err == nil, "")
+	store, err := NewRStore(dbConf, meta)
+	ut.Assert(t, err == nil, "")
 
 	tx, _ := store.Begin()
-	u := &tnest{Id: "1", Name: "ben", Inner: map[string]int{"good": 1}}
-	tx.Insert(u)
+	tx.Insert(&Student{
+		Name:      "ben",
+		Age:       40,
+		Classroom: "991",
+	})
 	tx.Commit()
 
 	tx, _ = store.Begin()
-	var nests []tnest
-	tx.Fill(map[string]interface{}{"id": 1}, &nests)
-	ut.Equal(t, len(nests), 1)
-	ut.Equal(t, nests[0].Inner, map[string]int(nil))
+	var students []*Student
+	tx.Fill(nil, &students)
+	ut.Equal(t, len(students), 1)
+	ut.Equal(t, students[0].Classroom, "")
 	tx.Commit()
 
 	store.Clean()
 	store.Destroy()
 }
 
-type trrr struct {
-	Id   string
-	Name string `sql:"suk"`
-	Age  int    `sql:"suk"`
-}
-
-func (t *trrr) Validate() error {
-	return nil
+type Rdata struct {
+	Id    string
+	Name  string `sql:"uk"`
+	Type  string `sql:"uk"`
+	Rdata string `sql:"uk"`
 }
 
 func TestUniqueField(t *testing.T) {
-	var store ResourceStore
-	mr, _ := NewResourceMeta([]Resource{&trrr{}})
-	store, _ = NewRStore("./foo.db", "zdns", "zdns", "zdns", mr)
+	meta, err := NewResourceMeta([]Resource{&Rdata{}})
+	ut.Assert(t, err == nil, "")
+	store, err := NewRStore(dbConf, meta)
+	ut.Assert(t, err == nil, "")
 
 	tx, _ := store.Begin()
-	rr := &trrr{Id: "1", Name: "a.cn", Age: 1}
-	_, err := tx.Insert(rr)
-	ut.Assert(t, err == nil, "err should be nil but %v", err)
-	tx.Commit()
+	_, err = tx.Insert(&Rdata{
+		Name:  "n1",
+		Type:  "a",
+		Rdata: "1.1.1.1",
+	})
+	ut.Assert(t, err == nil, "")
+	_, err = tx.Insert(&Rdata{
+		Name:  "n1",
+		Type:  "a",
+		Rdata: "2.2.2.2",
+	})
+	ut.Assert(t, err == nil, "")
+	_, err = tx.Insert(&Rdata{
+		Name:  "n2",
+		Type:  "a",
+		Rdata: "2.2.2.2",
+	})
+	ut.Assert(t, err == nil, "")
+	_, err = tx.Insert(&Rdata{
+		Name:  "n2",
+		Type:  "a",
+		Rdata: "2.2.2.2",
+	})
+	ut.Assert(t, err != nil, "")
+	tx.Rollback()
 
-	tx, _ = store.Begin()
-	rr = &trrr{Id: "2", Name: "a.cn", Age: 2}
-	_, err = tx.Insert(rr)
-	ut.Assert(t, err != nil, "duplicate name should raise")
-	tx.RollBack()
-
-	tx, _ = store.Begin()
-	rr = &trrr{Id: "2", Name: "a.cn.", Age: 1}
-	_, err = tx.Insert(rr)
-	ut.Assert(t, err != nil, "duplicate age should raise")
-	tx.RollBack()
-
-	tx, _ = store.Begin()
-	rr = &trrr{Id: "2", Name: "a.cn.", Age: 2}
-	_, err = tx.Insert(rr)
-	ut.Assert(t, err == nil, "no error should get but:%v", err)
-	tx.Commit()
-
-	store.Clean()
-	store.Destroy()
-}
-
-func BenchmarkInsert(b *testing.B) {
-	var store ResourceStore
-	mr, _ := NewResourceMeta([]Resource{&trrr{}})
-	store, _ = NewRStore("./foo.db", "zdns", "zdns", "zdns", mr)
-	for i := 0; i < b.N; i++ {
-		tx, _ := store.Begin()
-		rr := &trrr{Name: "a.cn.", Age: 1}
-		tx.Insert(rr)
-		tx.Commit()
-	}
-
-	store.Clean()
-	store.Destroy()
-}
-
-func BenchmarkBatchInsert(b *testing.B) {
-	var store ResourceStore
-	mr, _ := NewResourceMeta([]Resource{&trrr{}})
-	store, _ = NewRStore("./foo.db", "zdns", "zdns", "zdns", mr)
-	tx, _ := store.Begin()
-	for i := 0; i < b.N; i++ {
-		rr := &trrr{Name: "a.cn.", Age: 1}
-		tx.Insert(rr)
-		if i%30 == 0 {
-			tx.Commit()
-			tx, _ = store.Begin()
-		}
-	}
-	tx.Commit()
 	store.Clean()
 	store.Destroy()
 }

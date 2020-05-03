@@ -57,14 +57,14 @@ type ResourceRelationship struct {
 type ResourceMeta struct {
 	resources   []ResourceType //resources has dependencies, resources to store their order
 	descriptors map[ResourceType]*ResourceDescriptor
-	defaultVals map[ResourceType]reflect.Value
+	goTypes     map[ResourceType]reflect.Type
 }
 
 func NewResourceMeta(resources []Resource) (*ResourceMeta, error) {
 	meta := &ResourceMeta{
 		resources:   []ResourceType{},
 		descriptors: make(map[ResourceType]*ResourceDescriptor),
-		defaultVals: make(map[ResourceType]reflect.Value),
+		goTypes:     make(map[ResourceType]reflect.Type),
 	}
 
 	for _, r := range resources {
@@ -78,12 +78,20 @@ func NewResourceMeta(resources []Resource) (*ResourceMeta, error) {
 func (meta *ResourceMeta) Clear() {
 	for _, r := range meta.resources {
 		delete(meta.descriptors, r)
-		delete(meta.defaultVals, r)
+		delete(meta.goTypes, r)
 	}
 }
 
 func (meta *ResourceMeta) Has(typ ResourceType) bool {
 	return meta.descriptors[typ] != nil
+}
+
+func (meta *ResourceMeta) GetGoType(typ ResourceType) (reflect.Type, error) {
+	if gtyp, ok := meta.goTypes[typ]; !ok {
+		return nil, fmt.Errorf("model %v is unknown", typ)
+	} else {
+		return gtyp, nil
+	}
 }
 
 func (meta *ResourceMeta) Register(r Resource) error {
@@ -106,17 +114,8 @@ func (meta *ResourceMeta) Register(r Resource) error {
 
 	meta.resources = append(meta.resources, typ)
 	meta.descriptors[typ] = descriptor
-	meta.defaultVals[typ] = reflect.ValueOf(r).Elem()
+	meta.goTypes[typ] = reflect.TypeOf(r).Elem()
 	return nil
-}
-
-func (meta *ResourceMeta) getDefaultVal(typ ResourceType) (reflect.Value, error) {
-	v, ok := meta.defaultVals[typ]
-	if ok {
-		return v, nil
-	} else {
-		return v, fmt.Errorf("unknown model:%v", typ)
-	}
 }
 
 func parseField(name string, typ *reflect.Type) (*ResourceField, error) {
@@ -227,16 +226,6 @@ func genDescriptor(r Resource) (*ResourceDescriptor, error) {
 		Refers:         refers,
 		IsRelationship: isRelationship,
 	}, nil
-}
-
-func (meta *ResourceMeta) NewDefault(typ ResourceType) (Resource, error) {
-	val, err := meta.getDefaultVal(typ)
-	if err != nil {
-		return nil, err
-	}
-
-	r, _ := reflect.New(val.Type()).Interface().(Resource)
-	return r, nil
 }
 
 func (meta *ResourceMeta) GetDescriptor(typ ResourceType) (*ResourceDescriptor, error) {
