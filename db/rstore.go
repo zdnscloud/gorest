@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"text/template"
+	"time"
 
 	"github.com/zdnscloud/cement/reflector"
 	"github.com/zdnscloud/gorest/resource"
@@ -63,7 +64,7 @@ func (store *RStore) Begin() (Transaction, error) {
 }
 
 func (tx *RStoreTx) Insert(r resource.Resource) (resource.Resource, error) {
-	//this may change the id of r, if id isn't specified
+	r.SetCreationTimestamp(time.Now())
 	sql, args, err := insertSqlArgsAndID(tx.meta, r)
 	if err != nil {
 		return nil, err

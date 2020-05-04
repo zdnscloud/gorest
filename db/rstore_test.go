@@ -295,7 +295,9 @@ func TestGetWithLimitAndOffset(t *testing.T) {
 
 	tx, _ := store.Begin()
 	for i := 0; i < 2000; i++ {
-		tx.Insert(&Mother{Age: i, Name: "m" + strconv.Itoa(i)})
+		r, err := tx.Insert(&Mother{Age: i, Name: "m" + strconv.Itoa(i)})
+		ut.Assert(t, err == nil, "")
+		ut.Assert(t, r.GetID() != "", "")
 	}
 	tx.Commit()
 
