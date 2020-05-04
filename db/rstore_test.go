@@ -11,12 +11,14 @@ import (
 	"github.com/zdnscloud/gorest/resource"
 )
 
-var dbConf map[string]interface{} = map[string]interface{}{
-	"host":     "localhost",
-	"user":     "lx",
-	"password": "lx",
-	"dbname":   "lx",
-}
+const (
+	Host     string = "localhost"
+	User     string = "lx"
+	Password string = "lx"
+	DBName   string = "lx"
+)
+
+const ConnStr string = "user=lx password=lx host=localhost port=5432 database=lx sslmode=disable pool_max_conns=10"
 
 type Child struct {
 	resource.ResourceBase
@@ -103,8 +105,8 @@ func initMotherChild(store ResourceStore) {
 func TestCURD(t *testing.T) {
 	meta, err := NewResourceMeta([]resource.Resource{&Child{}})
 	ut.Assert(t, err == nil, "")
-	store, err := NewRStore(dbConf, meta)
-	ut.Assert(t, err == nil, "")
+	store, err := NewRStore(ConnStr, meta)
+	ut.Assert(t, err == nil, "err str is %v", err)
 
 	initChild(store)
 
@@ -161,7 +163,7 @@ func TestCURD(t *testing.T) {
 func TestCURDEx(t *testing.T) {
 	meta, err := NewResourceMeta([]resource.Resource{&Child{}})
 	ut.Assert(t, err == nil, "")
-	store, err := NewRStore(dbConf, meta)
+	store, err := NewRStore(ConnStr, meta)
 	ut.Assert(t, err == nil, "")
 
 	initChild(store)
@@ -183,7 +185,7 @@ func TestCURDEx(t *testing.T) {
 	tx.Rollback()
 
 	tx, _ = store.Begin()
-	count, err := tx.DeleteEx("delete from gr_child where age >= $1 and age < $2", 25, 400)
+	count, err := tx.Exec("delete from gr_child where age >= $1 and age < $2", 25, 400)
 	tx.Commit()
 	ut.Equal(t, err, nil)
 	ut.Equal(t, count, int64(1))
@@ -195,7 +197,7 @@ func TestCURDEx(t *testing.T) {
 func TestMultiToMultiRelationship(t *testing.T) {
 	meta, err := NewResourceMeta([]resource.Resource{&Mother{}, &Child{}, &MotherChild{}})
 	ut.Assert(t, err == nil, "")
-	store, err := NewRStore(dbConf, meta)
+	store, err := NewRStore(ConnStr, meta)
 	ut.Assert(t, err == nil, "")
 
 	initChild(store)
@@ -243,7 +245,7 @@ type Zone struct {
 func TestOneToManyRelationship(t *testing.T) {
 	meta, err := NewResourceMeta([]resource.Resource{&View{}, &Zone{}})
 	ut.Assert(t, err == nil, "")
-	store, err := NewRStore(dbConf, meta)
+	store, err := NewRStore(ConnStr, meta)
 	ut.Assert(t, err == nil, "")
 
 	tx, _ := store.Begin()
@@ -299,7 +301,7 @@ func TestOneToManyRelationship(t *testing.T) {
 func TestGetWithLimitAndOffset(t *testing.T) {
 	meta, err := NewResourceMeta([]resource.Resource{&Mother{}})
 	ut.Assert(t, err == nil, "")
-	store, err := NewRStore(dbConf, meta)
+	store, err := NewRStore(ConnStr, meta)
 	ut.Assert(t, err == nil, "")
 
 	tx, _ := store.Begin()
@@ -333,7 +335,7 @@ type Student struct {
 func TestIgnField(t *testing.T) {
 	meta, err := NewResourceMeta([]resource.Resource{&Student{}})
 	ut.Assert(t, err == nil, "")
-	store, err := NewRStore(dbConf, meta)
+	store, err := NewRStore(ConnStr, meta)
 	ut.Assert(t, err == nil, "")
 
 	tx, _ := store.Begin()
@@ -366,7 +368,7 @@ type Rdata struct {
 func TestUniqueField(t *testing.T) {
 	meta, err := NewResourceMeta([]resource.Resource{&Rdata{}})
 	ut.Assert(t, err == nil, "")
-	store, err := NewRStore(dbConf, meta)
+	store, err := NewRStore(ConnStr, meta)
 	ut.Assert(t, err == nil, "")
 
 	tx, _ := store.Begin()

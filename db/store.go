@@ -29,7 +29,6 @@ type Transaction interface {
 	GetEx(typ ResourceType, sql string, params ...interface{}) (interface{}, error)
 	CountEx(typ ResourceType, sql string, params ...interface{}) (int64, error)
 	FillEx(out interface{}, sql string, params ...interface{}) error
-	DeleteEx(sql string, params ...interface{}) (int64, error)
 	Exec(sql string, params ...interface{}) (int64, error)
 
 	Commit() error

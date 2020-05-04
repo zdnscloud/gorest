@@ -1,14 +1,5 @@
 package db
 
-import (
-	"context"
-	"fmt"
-	"strconv"
-	"strings"
-
-	"github.com/jackc/pgx/v4"
-)
-
 var postgresqlTypeMap = map[Datatype]string{
 	Bool:        "boolean",
 	Int:         "integer",
@@ -23,6 +14,7 @@ var postgresqlTypeMap = map[Datatype]string{
 	IPNetSlice:  "inet[]",
 }
 
+/*
 func OpenPostgresql(host, user, passwd, dbname string) (*db, error) {
 	port := 5432
 	hostAndPort := strings.Split(host, ":")
@@ -48,3 +40,4 @@ func OpenPostgresql(host, user, passwd, dbname string) (*db, error) {
 		}, nil
 	}
 }
+*/
