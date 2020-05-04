@@ -1,29 +1,39 @@
 # Features
 1. Primitive types to postgresql data type
-- int, string, bool
-- []int, []string
+- int, uint, string, bool
+- time.Time, net.IP, net.IPNet
+- []int, []string, []net.IP, []net.IPNet
 1. Resource integrity
-1. Resource relationship
+1. Resource relationship management
 
 # Convensions
-1. Table name is the snake format of the resource go struct name
-1. Id is unique and is a string, when not specified will be generated use uuid.
+1. Table name is the snake format of the resource go struct name with "gr_" as 
+   prefix
+1. Id is unique with string type, when not specified will be generated use uuid.
 1. use `pk` tag to speicify primiary key
 1. use `uk` tag to include several composite attribute as unique constraint
 1. `Get` and `Fill` interface returns slice of resource pointer
+1. Resource create time is initialized during insert
+
+# Embed struct 
+Each resource has `ResourceBase` as the first embed struct, during insertion, 
+gorest DB module will automaticaly extract the `id` and `create_time` value , 
+and during resource fetch, the related value will set into `ResourceBase`. 
 
 # Relationship between resource
 1. Use
 ```go
 type View struct {
-    Id string
+    ResourceBase 
+
     Name string 
     Acl string `db:"referto"`
 }
 
 type Acl struct {
-    Id string
-    Ips []string
+    ResourceBase 
+
+    Ips []net.IP
 }
 ```
 - `Acl` in `View` is valid acl id
@@ -31,13 +41,15 @@ type Acl struct {
 1. One to many ownership  
 ```go
 type View struct {
-    Id string
+    ResourceBase
+
     Name string 
     Acl string `db:"referto"`
 }
 
 type Zone struct {
-    Id string
+    ResourceBase
+
     View string `db:"ownby"`
 }
 ```
@@ -47,18 +59,21 @@ type Zone struct {
 1. Many to many ownership
 ```go
 type View struct {
-    Id string
+    ResourceBase
+
     Name string 
     Acl string `db:"referto"`
 }
 
 type User struct {
-    Id string
+    ResourceBase
+
     Email string `db:"uk"`
 }
 
 type UserView struct {
-    Id string
+    ResourceBase 
+
     User string `db:"ownby"`
     View string `db:"referto"`
 }
