@@ -6,6 +6,7 @@ import (
 	"text/template"
 
 	"github.com/zdnscloud/cement/reflector"
+	"github.com/zdnscloud/gorest/resource"
 )
 
 type RStore struct {
@@ -61,7 +62,7 @@ func (store *RStore) Begin() (Transaction, error) {
 	}
 }
 
-func (tx *RStoreTx) Insert(r Resource) (Resource, error) {
+func (tx *RStoreTx) Insert(r resource.Resource) (resource.Resource, error) {
 	//this may change the id of r, if id isn't specified
 	sql, args, err := insertSqlArgsAndID(tx.meta, r)
 	if err != nil {
@@ -101,7 +102,7 @@ func (tx *RStoreTx) FillOwned(owner ResourceType, ownerID string, out interface{
 		return err
 	}
 
-	r, _ := pr.(Resource)
+	r, _ := pr.(resource.Resource)
 	sql, args, err := joinSelectSqlAndArgs(tx.meta, owner, ResourceDBType(r), ownerID)
 	if err != nil {
 		return err
@@ -130,7 +131,7 @@ func (tx *RStoreTx) Fill(conds map[string]interface{}, out interface{}) error {
 		return err
 	}
 
-	r, _ := pr.(Resource)
+	r, _ := pr.(resource.Resource)
 	sql, args, err := selectSqlAndArgs(tx.meta, ResourceDBType(r), conds)
 	if err != nil {
 		return err

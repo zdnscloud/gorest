@@ -1,5 +1,9 @@
 package db
 
+import (
+	"github.com/zdnscloud/gorest/resource"
+)
+
 type ResourceStore interface {
 	Clean()
 	Destroy()
@@ -12,7 +16,7 @@ type ResourceStore interface {
 //	Fill will accept the pointer to the concreate resource array
 //	Delete and Update will return how many rows has been affected
 type Transaction interface {
-	Insert(r Resource) (Resource, error)
+	Insert(r resource.Resource) (resource.Resource, error)
 	Get(typ ResourceType, cond map[string]interface{}) (interface{}, error)
 	Exists(typ ResourceType, cond map[string]interface{}) (bool, error)
 	Count(typ ResourceType, cond map[string]interface{}) (int64, error)

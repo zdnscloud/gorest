@@ -1,13 +1,14 @@
 package db
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 
 	"github.com/zdnscloud/cement/reflector"
 	"github.com/zdnscloud/cement/stringtool"
+
+	"github.com/zdnscloud/gorest/resource"
 )
 
 type Datatype int
@@ -61,7 +62,7 @@ type ResourceMeta struct {
 	goTypes     map[ResourceType]reflect.Type
 }
 
-func NewResourceMeta(resources []Resource) (*ResourceMeta, error) {
+func NewResourceMeta(resources []resource.Resource) (*ResourceMeta, error) {
 	meta := &ResourceMeta{
 		resources:   []ResourceType{},
 		descriptors: make(map[ResourceType]*ResourceDescriptor),
@@ -95,7 +96,7 @@ func (meta *ResourceMeta) GetGoType(typ ResourceType) (reflect.Type, error) {
 	}
 }
 
-func (meta *ResourceMeta) Register(r Resource) error {
+func (meta *ResourceMeta) Register(r resource.Resource) error {
 	typ := ResourceDBType(r)
 	if meta.Has(typ) {
 		return fmt.Errorf("duplicate model:%v", typ)
@@ -121,10 +122,6 @@ func (meta *ResourceMeta) Register(r Resource) error {
 
 func parseField(name string, typ *reflect.Type) (*ResourceField, error) {
 	kind := (*typ).Kind()
-	if name == "id" && kind != reflect.String {
-		return nil, errors.New("model id field isn't string")
-	}
-
 	switch kind {
 	case reflect.Int:
 		return &ResourceField{Name: name, Type: Int}, nil
@@ -154,9 +151,12 @@ func parseField(name string, typ *reflect.Type) (*ResourceField, error) {
 	}
 }
 
-func genDescriptor(r Resource) (*ResourceDescriptor, error) {
-	var fields []ResourceField
-	pks := []ResourceType{"id"}
+func genDescriptor(r resource.Resource) (*ResourceDescriptor, error) {
+	fields := []ResourceField{
+		ResourceField{Name: IDField, Type: String},
+		ResourceField{Name: CreateTimeField, Type: Time},
+	}
+	pks := []ResourceType{IDField}
 	uks := []ResourceType{}
 	owners := []ResourceType{}
 	refers := []ResourceType{}
@@ -169,9 +169,12 @@ func genDescriptor(r Resource) (*ResourceDescriptor, error) {
 	rtype := v.Type()
 	typ := ResourceDBType(r)
 
-	hasIDFeild := false
 	for i := 0; i < rtype.NumField(); i++ {
 		field := rtype.Field(i)
+		if field.Name == EmbedResource {
+			continue
+		}
+
 		oFieldName := field.Name
 		fieldName := stringtool.ToSnake(oFieldName)
 		fieldTag := field.Tag.Get(DBTag)
@@ -179,8 +182,8 @@ func genDescriptor(r Resource) (*ResourceDescriptor, error) {
 			continue
 		}
 
-		if fieldName == "id" {
-			hasIDFeild = true
+		if fieldName == IDField || fieldName == CreateTimeField {
+			return nil, fmt.Errorf("has duplicate id or createTime field which already exists in resource base")
 		}
 
 		if tagContains(fieldTag, "ownby") {
@@ -210,10 +213,6 @@ func genDescriptor(r Resource) (*ResourceDescriptor, error) {
 		} else if tagContains(fieldTag, "uk") {
 			uks = append(uks, ResourceType(fieldName))
 		}
-	}
-
-	if hasIDFeild == false {
-		return nil, fmt.Errorf("short of id field")
 	}
 
 	isRelationship := len(fields) == 1 && len(owners) == 1 && len(refers) == 1
@@ -277,7 +276,7 @@ func (descriptor *ResourceDescriptor) GetRelationship() *ResourceRelationship {
 	}
 }
 
-func ResourceToMap(r Resource) (map[string]interface{}, error) {
+func ResourceToMap(r resource.Resource) (map[string]interface{}, error) {
 	v, ok := reflector.GetStructFromPointer(r)
 	if ok == false {
 		return nil, fmt.Errorf("need structure pointer but get %v", v.Kind().String())

@@ -6,11 +6,13 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v4"
 	"github.com/zdnscloud/cement/reflector"
 	"github.com/zdnscloud/cement/stringtool"
 	"github.com/zdnscloud/cement/uuid"
+	"github.com/zdnscloud/gorest/resource"
 )
 
 func resourceTableName(typ ResourceType) string {
@@ -81,7 +83,7 @@ func createTableSql(descriptor *ResourceDescriptor) string {
 	return sql
 }
 
-func insertSqlArgsAndID(meta *ResourceMeta, r Resource) (string, []interface{}, error) {
+func insertSqlArgsAndID(meta *ResourceMeta, r resource.Resource) (string, []interface{}, error) {
 	rvalue, isOk := reflector.GetStructFromPointer(r)
 	if isOk == false {
 		return "", nil, fmt.Errorf("%v is not pointer to resource", reflect.TypeOf(r).Kind().String())
@@ -102,13 +104,19 @@ func insertSqlArgsAndID(meta *ResourceMeta, r Resource) (string, []interface{}, 
 	sql := strings.Join([]string{"insert into", tableName, "values(", strings.Join(markers, ","), ")"}, " ")
 	args := make([]interface{}, 0, rvalue.NumField())
 
+	id := r.GetID()
+	if id == "" {
+		id, _ = uuid.Gen()
+		r.SetID(id)
+	}
+
 	for _, field := range descriptor.Fields {
-		fieldVal := rvalue.FieldByName(stringtool.ToUpperCamel(field.Name))
-		if field.Name == "id" && fieldVal.String() == "" {
-			id, _ := uuid.Gen()
-			fieldVal.SetString(id)
+		if field.Name == IDField {
 			args = append(args, id)
+		} else if field.Name == CreateTimeField {
+			args = append(args, r.GetCreationTimestamp())
 		} else {
+			fieldVal := rvalue.FieldByName(stringtool.ToUpperCamel(field.Name))
 			args = append(args, fieldVal.Interface())
 		}
 	}
@@ -362,14 +370,24 @@ func rowsToStructs(rows pgx.Rows, out interface{}) error {
 		elem := reflect.New(typ)
 		fd := rows.FieldDescriptions()
 		fields := make([]interface{}, 0, len(fd))
+		var id string
+		var createTime time.Time
 		for _, d := range fd {
-			fieldName := stringtool.ToUpperCamel(string(d.Name))
-			fields = append(fields, elem.Elem().FieldByName(fieldName).Addr().Interface())
+			if string(d.Name) == IDField {
+				fields = append(fields, &id)
+			} else if string(d.Name) == CreateTimeField {
+				fields = append(fields, &createTime)
+			} else {
+				fieldName := stringtool.ToUpperCamel(string(d.Name))
+				fields = append(fields, elem.Elem().FieldByName(fieldName).Addr().Interface())
+			}
 		}
 		err := rows.Scan(fields...)
 		if err != nil {
 			return err
 		}
+		elem.Interface().(resource.Resource).SetID(id)
+		elem.Interface().(resource.Resource).SetCreationTimestamp(createTime)
 		slice.Set(reflect.Append(slice, elem))
 	}
 	return nil

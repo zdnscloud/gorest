@@ -7,6 +7,7 @@ import (
 	"time"
 
 	ut "github.com/zdnscloud/cement/unittest"
+	"github.com/zdnscloud/gorest/resource"
 )
 
 var dbConf map[string]interface{} = map[string]interface{}{
@@ -17,7 +18,8 @@ var dbConf map[string]interface{} = map[string]interface{}{
 }
 
 type Child struct {
-	Id       string
+	resource.ResourceBase
+
 	Name     string `db:"uk"`
 	Age      uint32
 	Hobbies  []string
@@ -27,13 +29,13 @@ type Child struct {
 }
 
 type Mother struct {
-	Id   string
+	resource.ResourceBase
 	Age  int
 	Name string
 }
 
 type MotherChild struct {
-	Id     string
+	resource.ResourceBase
 	Mother string `db:"ownby"`
 	Child  string `db:"referto"`
 }
@@ -41,7 +43,6 @@ type MotherChild struct {
 func initChild(store ResourceStore) {
 	tx, _ := store.Begin()
 	c1 := &Child{
-		Id:       "c1",
 		Name:     "ben",
 		Age:      20,
 		Hobbies:  []string{"movie", "music"},
@@ -49,13 +50,13 @@ func initChild(store ResourceStore) {
 		Birthday: time.Now(),
 		Talented: true,
 	}
+	c1.SetID("c1")
 	_, err := tx.Insert(c1)
 	if err != nil {
 		fmt.Printf("insert get err:%v\n", err.Error())
 	}
 
 	c2 := &Child{
-		Id:       "c2",
 		Name:     "nana",
 		Age:      30,
 		Hobbies:  []string{"movie", "music"},
@@ -63,6 +64,7 @@ func initChild(store ResourceStore) {
 		Birthday: time.Now(),
 		Talented: true,
 	}
+	c2.SetID("c2")
 	_, err = tx.Insert(c2)
 	if err != nil {
 		fmt.Printf("insert get err:%v\n", err.Error())
@@ -72,10 +74,11 @@ func initChild(store ResourceStore) {
 
 func initMother(store ResourceStore) {
 	tx, _ := store.Begin()
-	tx.Insert(&Mother{
-		Id:   "m1",
+	m := &Mother{
 		Name: "lxq",
-	})
+	}
+	m.SetID("m1")
+	tx.Insert(m)
 	tx.Commit()
 }
 
@@ -89,7 +92,7 @@ func initMotherChild(store ResourceStore) {
 }
 
 func TestCURD(t *testing.T) {
-	meta, err := NewResourceMeta([]Resource{&Child{}})
+	meta, err := NewResourceMeta([]resource.Resource{&Child{}})
 	ut.Assert(t, err == nil, "")
 	store, err := NewRStore(dbConf, meta)
 	ut.Assert(t, err == nil, "")
@@ -100,7 +103,7 @@ func TestCURD(t *testing.T) {
 	children := []*Child{}
 	c, err := tx.Count("child", nil)
 	ut.Equal(t, c, int64(2))
-	tx.Fill(map[string]interface{}{"id": "c1"}, &children)
+	tx.Fill(map[string]interface{}{IDField: "c1"}, &children)
 	ut.Equal(t, len(children), 1)
 	ut.Equal(t, children[0].Scores, []int{1, 3, 4})
 	tx.Rollback()
@@ -108,7 +111,7 @@ func TestCURD(t *testing.T) {
 	tx, _ = store.Begin()
 	c, err = tx.Update("child", map[string]interface{}{
 		"hobbies": []string{"read book", "travel"},
-	}, map[string]interface{}{"id": "c1"})
+	}, map[string]interface{}{IDField: "c1"})
 	ut.Assert(t, err == nil, "")
 	ut.Equal(t, c, int64(1))
 	tx.Commit()
@@ -139,7 +142,7 @@ func TestCURD(t *testing.T) {
 		"name": "ben",
 	})
 	ut.Assert(t, err == nil, "")
-	ut.Equal(t, children_.([]*Child)[0].Id, "c1")
+	ut.Equal(t, children_.([]*Child)[0].GetID(), "c1")
 	tx.Rollback()
 
 	store.Clean()
@@ -147,7 +150,7 @@ func TestCURD(t *testing.T) {
 }
 
 func TestCURDEx(t *testing.T) {
-	meta, err := NewResourceMeta([]Resource{&Child{}})
+	meta, err := NewResourceMeta([]resource.Resource{&Child{}})
 	ut.Assert(t, err == nil, "")
 	store, err := NewRStore(dbConf, meta)
 	ut.Assert(t, err == nil, "")
@@ -181,7 +184,7 @@ func TestCURDEx(t *testing.T) {
 }
 
 func TestMultiToMultiRelationship(t *testing.T) {
-	meta, err := NewResourceMeta([]Resource{&Mother{}, &Child{}, &MotherChild{}})
+	meta, err := NewResourceMeta([]resource.Resource{&Mother{}, &Child{}, &MotherChild{}})
 	ut.Assert(t, err == nil, "")
 	store, err := NewRStore(dbConf, meta)
 	ut.Assert(t, err == nil, "")
@@ -218,27 +221,33 @@ func TestMultiToMultiRelationship(t *testing.T) {
 }
 
 type View struct {
-	Id   string
+	resource.ResourceBase
 	Name string `db:"uk"`
 }
 
 type Zone struct {
-	Id   string
+	resource.ResourceBase
 	Name string
 	View string `db:"ownby"`
 }
 
 func TestOneToManyRelationship(t *testing.T) {
-	meta, err := NewResourceMeta([]Resource{&View{}, &Zone{}})
+	meta, err := NewResourceMeta([]resource.Resource{&View{}, &Zone{}})
 	ut.Assert(t, err == nil, "")
 	store, err := NewRStore(dbConf, meta)
 	ut.Assert(t, err == nil, "")
 
 	tx, _ := store.Begin()
-	tx.Insert(&View{Id: "v1", Name: "v1"})
-	tx.Insert(&View{Id: "v2", Name: "v2"})
-	tx.Insert(&Zone{Name: "cn", View: "v1"})
-	tx.Insert(&Zone{Name: "com", View: "v1"})
+	v1 := &View{Name: "v1"}
+	v1.SetID("v1")
+	v2 := &View{Name: "v2"}
+	v2.SetID("v2")
+	cnZone := &Zone{Name: "cn", View: "v1"}
+	comZone := &Zone{Name: "com", View: "v1"}
+	tx.Insert(v1)
+	tx.Insert(v2)
+	tx.Insert(cnZone)
+	tx.Insert(comZone)
 	tx.Commit()
 
 	tx, _ = store.Begin()
@@ -259,14 +268,14 @@ func TestOneToManyRelationship(t *testing.T) {
 	//delete mother will delete owned child
 	tx, _ = store.Begin()
 	c, err := tx.Delete("view", map[string]interface{}{
-		"id": "v2",
+		IDField: "v2",
 	})
 	ut.Assert(t, err == nil, "")
 	ut.Equal(t, c, int64(1))
 	c, _ = tx.Count("zone", nil)
 	ut.Equal(t, c, int64(2))
 	c, err = tx.Delete("view", map[string]interface{}{
-		"id": "v1",
+		IDField: "v1",
 	})
 	ut.Assert(t, err == nil, "")
 	ut.Equal(t, c, int64(1))
@@ -279,7 +288,7 @@ func TestOneToManyRelationship(t *testing.T) {
 }
 
 func TestGetWithLimitAndOffset(t *testing.T) {
-	meta, err := NewResourceMeta([]Resource{&Mother{}})
+	meta, err := NewResourceMeta([]resource.Resource{&Mother{}})
 	ut.Assert(t, err == nil, "")
 	store, err := NewRStore(dbConf, meta)
 	ut.Assert(t, err == nil, "")
@@ -304,14 +313,14 @@ func TestGetWithLimitAndOffset(t *testing.T) {
 }
 
 type Student struct {
-	Id        string
+	resource.ResourceBase
 	Name      string `db:"uk"`
 	Age       uint32
 	Classroom string `db:"-"`
 }
 
 func TestIgnField(t *testing.T) {
-	meta, err := NewResourceMeta([]Resource{&Student{}})
+	meta, err := NewResourceMeta([]resource.Resource{&Student{}})
 	ut.Assert(t, err == nil, "")
 	store, err := NewRStore(dbConf, meta)
 	ut.Assert(t, err == nil, "")
@@ -336,14 +345,14 @@ func TestIgnField(t *testing.T) {
 }
 
 type Rdata struct {
-	Id    string
+	resource.ResourceBase
 	Name  string `db:"uk"`
 	Type  string `db:"uk"`
 	Rdata string `db:"uk"`
 }
 
 func TestUniqueField(t *testing.T) {
-	meta, err := NewResourceMeta([]Resource{&Rdata{}})
+	meta, err := NewResourceMeta([]resource.Resource{&Rdata{}})
 	ut.Assert(t, err == nil, "")
 	store, err := NewRStore(dbConf, meta)
 	ut.Assert(t, err == nil, "")

@@ -3,6 +3,7 @@ package db
 import (
 	"github.com/zdnscloud/cement/reflector"
 	"github.com/zdnscloud/cement/stringtool"
+	"github.com/zdnscloud/gorest/resource"
 )
 
 const (
@@ -10,12 +11,9 @@ const (
 	CreateTimeField = "create_time"
 )
 
-type Resource interface {
-}
-
 type ResourceType string
 
-func ResourceDBType(r Resource) ResourceType {
+func ResourceDBType(r resource.Resource) ResourceType {
 	n, _ := reflector.StructName(r)
 	return ResourceType(stringtool.ToSnake(n))
 }
