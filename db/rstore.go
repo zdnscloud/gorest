@@ -48,9 +48,9 @@ func (store *RStore) Destroy() {
 }
 
 func (store *RStore) Clean() {
-	resources := store.meta.Resources()
-	for i := len(resources); i > 0; i-- {
-		store.db.DropTable(resourceTableName(resources[i-1]))
+	rs := store.meta.Resources()
+	for i := len(rs); i > 0; i-- {
+		store.db.DropTable(resourceTableName(rs[i-1]))
 	}
 }
 
@@ -79,11 +79,11 @@ func (tx *RStoreTx) Insert(r resource.Resource) (resource.Resource, error) {
 }
 
 func (tx *RStoreTx) GetOwned(owner ResourceType, ownerID string, owned ResourceType) (interface{}, error) {
-	rt, err := tx.meta.GetGoType(owned)
+	goTyp, err := tx.meta.GetGoType(owned)
 	if err != nil {
 		return nil, err
 	}
-	sp := reflector.NewSlicePointer(reflect.PtrTo(rt))
+	sp := reflector.NewSlicePointer(reflect.PtrTo(goTyp))
 	sql, args, err := joinSelectSqlAndArgs(tx.meta, owner, owned, ownerID)
 	if err != nil {
 		return nil, err
@@ -98,13 +98,12 @@ func (tx *RStoreTx) GetOwned(owner ResourceType, ownerID string, owned ResourceT
 }
 
 func (tx *RStoreTx) FillOwned(owner ResourceType, ownerID string, out interface{}) error {
-	pr, err := reflector.GetStructPointerInSlice(out)
+	r, err := reflector.GetStructPointerInSlice(out)
 	if err != nil {
 		return err
 	}
 
-	r, _ := pr.(resource.Resource)
-	sql, args, err := joinSelectSqlAndArgs(tx.meta, owner, ResourceDBType(r), ownerID)
+	sql, args, err := joinSelectSqlAndArgs(tx.meta, owner, ResourceDBType(r.(resource.Resource)), ownerID)
 	if err != nil {
 		return err
 	}
@@ -113,11 +112,11 @@ func (tx *RStoreTx) FillOwned(owner ResourceType, ownerID string, out interface{
 }
 
 func (tx *RStoreTx) Get(typ ResourceType, conds map[string]interface{}) (interface{}, error) {
-	rt, err := tx.meta.GetGoType(typ)
+	goTyp, err := tx.meta.GetGoType(typ)
 	if err != nil {
 		return nil, err
 	}
-	sp := reflector.NewSlicePointer(reflect.PtrTo(rt))
+	sp := reflector.NewSlicePointer(reflect.PtrTo(goTyp))
 	err = tx.Fill(conds, sp)
 	if err != nil {
 		return nil, err
@@ -127,13 +126,12 @@ func (tx *RStoreTx) Get(typ ResourceType, conds map[string]interface{}) (interfa
 }
 
 func (tx *RStoreTx) Fill(conds map[string]interface{}, out interface{}) error {
-	pr, err := reflector.GetStructPointerInSlice(out)
+	r, err := reflector.GetStructPointerInSlice(out)
 	if err != nil {
 		return err
 	}
 
-	r, _ := pr.(resource.Resource)
-	sql, args, err := selectSqlAndArgs(tx.meta, ResourceDBType(r), conds)
+	sql, args, err := selectSqlAndArgs(tx.meta, ResourceDBType(r.(resource.Resource)), conds)
 	if err != nil {
 		return err
 	}
@@ -146,7 +144,7 @@ func (tx *RStoreTx) getWithSql(sql string, args []interface{}, out interface{}) 
 		return err
 	}
 
-	return rowsToStructs(rows, out)
+	return rowsToResources(rows, out)
 }
 
 func (tx *RStoreTx) Exists(typ ResourceType, conds map[string]interface{}) (bool, error) {

@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"net"
 	"strconv"
 	"testing"
 	"time"
@@ -25,6 +26,8 @@ type Child struct {
 	Hobbies  []string
 	Scores   []int
 	Birthday time.Time
+	Ipaddr   net.IP
+	Subnet   net.IPNet
 	Talented bool
 }
 
@@ -50,6 +53,9 @@ func initChild(store ResourceStore) {
 		Birthday: time.Now(),
 		Talented: true,
 	}
+	ip, ipnet, _ := net.ParseCIDR("1.1.1.1/24")
+	c1.Ipaddr = ip
+	c1.Subnet = *ipnet
 	c1.SetID("c1")
 	_, err := tx.Insert(c1)
 	if err != nil {
@@ -65,6 +71,9 @@ func initChild(store ResourceStore) {
 		Talented: true,
 	}
 	c2.SetID("c2")
+	ip, ipnet, _ = net.ParseCIDR("1.2.1.1/16")
+	c2.Ipaddr = ip
+	c2.Subnet = *ipnet
 	_, err = tx.Insert(c2)
 	if err != nil {
 		fmt.Printf("insert get err:%v\n", err.Error())
@@ -351,6 +360,7 @@ type Rdata struct {
 	Name  string `db:"uk"`
 	Type  string `db:"uk"`
 	Rdata string `db:"uk"`
+	Addrs []net.IP
 }
 
 func TestUniqueField(t *testing.T) {
@@ -372,12 +382,18 @@ func TestUniqueField(t *testing.T) {
 		Rdata: "2.2.2.2",
 	})
 	ut.Assert(t, err == nil, "")
+	ips := []net.IP{
+		net.ParseIP("2.2.2.2"),
+		net.ParseIP("3.3.33.3"),
+	}
 	_, err = tx.Insert(&Rdata{
 		Name:  "n2",
 		Type:  "a",
 		Rdata: "2.2.2.2",
+		Addrs: ips,
 	})
 	ut.Assert(t, err == nil, "")
+
 	_, err = tx.Insert(&Rdata{
 		Name:  "n2",
 		Type:  "a",

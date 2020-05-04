@@ -15,8 +15,10 @@ import (
 	"github.com/zdnscloud/gorest/resource"
 )
 
+const TablePrefix = "gr_"
+
 func resourceTableName(typ ResourceType) string {
-	return "gr_" + string(typ)
+	return TablePrefix + string(typ)
 }
 
 func createTableSql(descriptor *ResourceDescriptor) string {
@@ -33,6 +35,7 @@ func createTableSql(descriptor *ResourceDescriptor) string {
 			buf.WriteString(" ")
 			buf.WriteString("unique")
 		}
+
 		if field.Check == Positive {
 			buf.WriteString(" check(")
 			buf.WriteString(field.Name)
@@ -84,11 +87,6 @@ func createTableSql(descriptor *ResourceDescriptor) string {
 }
 
 func insertSqlArgsAndID(meta *ResourceMeta, r resource.Resource) (string, []interface{}, error) {
-	rvalue, isOk := reflector.GetStructFromPointer(r)
-	if isOk == false {
-		return "", nil, fmt.Errorf("%v is not pointer to resource", reflect.TypeOf(r).Kind().String())
-	}
-
 	typ := ResourceDBType(r)
 	descriptor, err := meta.GetDescriptor(typ)
 	if err != nil {
@@ -102,12 +100,17 @@ func insertSqlArgsAndID(meta *ResourceMeta, r resource.Resource) (string, []inte
 		markers = append(markers, "$"+strconv.Itoa(i))
 	}
 	sql := strings.Join([]string{"insert into", tableName, "values(", strings.Join(markers, ","), ")"}, " ")
-	args := make([]interface{}, 0, rvalue.NumField())
+	args := make([]interface{}, 0, fieldCount)
 
 	id := r.GetID()
 	if id == "" {
 		id, _ = uuid.Gen()
 		r.SetID(id)
+	}
+
+	val, isOk := reflector.GetStructFromPointer(r)
+	if isOk == false {
+		return "", nil, fmt.Errorf("%v is not pointer to resource", reflect.TypeOf(r).Kind().String())
 	}
 
 	for _, field := range descriptor.Fields {
@@ -116,17 +119,17 @@ func insertSqlArgsAndID(meta *ResourceMeta, r resource.Resource) (string, []inte
 		} else if field.Name == CreateTimeField {
 			args = append(args, r.GetCreationTimestamp())
 		} else {
-			fieldVal := rvalue.FieldByName(stringtool.ToUpperCamel(field.Name))
+			fieldVal := val.FieldByName(stringtool.ToUpperCamel(field.Name))
 			args = append(args, fieldVal.Interface())
 		}
 	}
 
 	for _, owner := range descriptor.Owners {
-		args = append(args, rvalue.FieldByName(stringtool.ToUpperCamel(string(owner))).Interface())
+		args = append(args, val.FieldByName(stringtool.ToUpperCamel(string(owner))).Interface())
 	}
 
 	for _, refer := range descriptor.Refers {
-		args = append(args, rvalue.FieldByName(stringtool.ToUpperCamel(string(refer))).Interface())
+		args = append(args, val.FieldByName(stringtool.ToUpperCamel(string(refer))).Interface())
 	}
 
 	return sql, args, nil
@@ -285,6 +288,7 @@ func joinSelectSqlAndArgs(meta *ResourceMeta, ownerTyp ResourceType, ownedTyp Re
 		resourceTableName(relationDescriptor.Typ),
 		string(ownedTyp),
 		string(ownerTyp)}
+
 	var b bytes.Buffer
 	joinSqlTemplate.Execute(&b, params)
 	return b.String(), []interface{}{ownerID}, nil
@@ -362,8 +366,16 @@ func getSqlWhereState(conds map[string]interface{}) (string, []interface{}, erro
 	return strings.Join(whereState, " and "), args, nil
 }
 
-func rowsToStructs(rows pgx.Rows, out interface{}) error {
+func rowsToResources(rows pgx.Rows, out interface{}) error {
+	goTyp := reflect.TypeOf(out)
+	if goTyp.Kind() != reflect.Ptr || goTyp.Elem().Kind() != reflect.Slice {
+		return fmt.Errorf("output isn't a pointer to slice")
+	}
+
 	slice := reflect.Indirect(reflect.ValueOf(out))
+	if slice.Type().Elem().Kind() != reflect.Ptr {
+		return fmt.Errorf("output isn't a pointer to slice of pointer")
+	}
 	typ := slice.Type().Elem().Elem()
 
 	for rows.Next() {
@@ -386,8 +398,12 @@ func rowsToStructs(rows pgx.Rows, out interface{}) error {
 		if err != nil {
 			return err
 		}
-		elem.Interface().(resource.Resource).SetID(id)
-		elem.Interface().(resource.Resource).SetCreationTimestamp(createTime)
+		r, ok := elem.Interface().(resource.Resource)
+		if !ok {
+			return fmt.Errorf("output isn't a pointer to slice of resource")
+		}
+		r.SetID(id)
+		r.SetCreationTimestamp(createTime)
 		slice.Set(reflect.Append(slice, elem))
 	}
 	return nil

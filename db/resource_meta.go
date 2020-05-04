@@ -14,13 +14,17 @@ import (
 type Datatype int
 
 const (
-	String Datatype = iota
-	Int
-	Uint32
+	Int Datatype = iota
+	Uint
+	Bool
+	String
 	Time
+	IP
+	IPNet
 	IntArray
 	StringArray
-	Bool
+	IPSlice
+	IPNetSlice
 )
 
 const EmbedResource string = "ResourceBase"
@@ -62,14 +66,14 @@ type ResourceMeta struct {
 	goTypes     map[ResourceType]reflect.Type
 }
 
-func NewResourceMeta(resources []resource.Resource) (*ResourceMeta, error) {
+func NewResourceMeta(rs []resource.Resource) (*ResourceMeta, error) {
 	meta := &ResourceMeta{
 		resources:   []ResourceType{},
 		descriptors: make(map[ResourceType]*ResourceDescriptor),
 		goTypes:     make(map[ResourceType]reflect.Type),
 	}
 
-	for _, r := range resources {
+	for _, r := range rs {
 		if err := meta.Register(r); err != nil {
 			return nil, err
 		}
@@ -120,34 +124,50 @@ func (meta *ResourceMeta) Register(r resource.Resource) error {
 	return nil
 }
 
-func parseField(name string, typ *reflect.Type) (*ResourceField, error) {
-	kind := (*typ).Kind()
+func parseField(name string, typ reflect.Type) (*ResourceField, error) {
+	kind := typ.Kind()
 	switch kind {
-	case reflect.Int:
+	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
 		return &ResourceField{Name: name, Type: Int}, nil
-	case reflect.Uint32:
-		return &ResourceField{Name: name, Type: Uint32}, nil
+	case reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return &ResourceField{Name: name, Type: Uint}, nil
 	case reflect.String:
 		return &ResourceField{Name: name, Type: String}, nil
 	case reflect.Bool:
 		return &ResourceField{Name: name, Type: Bool}, nil
 	case reflect.Struct:
-		if (*typ).String() == "time.Time" {
+		switch typ.String() {
+		case "time.Time":
 			return &ResourceField{Name: name, Type: Time}, nil
-		} else {
-			return nil, fmt.Errorf("model field type is unsupported struct:%v", kind)
+		case "net.IPNet":
+			return &ResourceField{Name: name, Type: IPNet}, nil
+		default:
+			return nil, fmt.Errorf("type of field %s isn't supported:%v", name, typ.String())
 		}
 	case reflect.Array, reflect.Slice:
-		elemKind := (*typ).Elem().Kind()
-		if elemKind == reflect.Int {
+		if typ.String() == "net.IP" {
+			return &ResourceField{Name: name, Type: IP}, nil
+		}
+
+		elemKind := typ.Elem().Kind()
+		switch elemKind {
+		case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64,
+			reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			return &ResourceField{Name: name, Type: IntArray}, nil
-		} else if elemKind == reflect.String {
+		case reflect.String:
 			return &ResourceField{Name: name, Type: StringArray}, nil
-		} else {
-			return nil, fmt.Errorf("model field type [%v] is unsupported", elemKind.String())
+		default:
+			elemType := typ.Elem().String()
+			if elemType == "net.IP" {
+				return &ResourceField{Name: name, Type: IPSlice}, nil
+			} else if elemType == "net.IPNet" {
+				return &ResourceField{Name: name, Type: IPNetSlice}, nil
+			} else {
+				return nil, fmt.Errorf("type of field %s isn't supported:[%v]", name, elemKind.String())
+			}
 		}
 	default:
-		return nil, fmt.Errorf("model field type %v is unsupported", kind.String())
+		return nil, fmt.Errorf("type of field %s isn't supported:%v", name, typ.String())
 	}
 }
 
@@ -161,37 +181,32 @@ func genDescriptor(r resource.Resource) (*ResourceDescriptor, error) {
 	owners := []ResourceType{}
 	refers := []ResourceType{}
 
-	v, ok := reflector.GetStructFromPointer(r)
-	if ok == false {
-		return nil, fmt.Errorf("need structure pointer but get %v", v.Kind().String())
+	goTyp := reflect.TypeOf(r)
+	if goTyp.Kind() != reflect.Ptr || goTyp.Elem().Kind() != reflect.Struct {
+		return nil, fmt.Errorf("need structure pointer but get %s", goTyp.String())
 	}
-
-	rtype := v.Type()
-	typ := ResourceDBType(r)
-
-	for i := 0; i < rtype.NumField(); i++ {
-		field := rtype.Field(i)
+	goTyp = goTyp.Elem()
+	for i := 0; i < goTyp.NumField(); i++ {
+		field := goTyp.Field(i)
 		if field.Name == EmbedResource {
 			continue
 		}
 
-		oFieldName := field.Name
-		fieldName := stringtool.ToSnake(oFieldName)
-		fieldTag := field.Tag.Get(DBTag)
-		if tagContains(fieldTag, "-") {
-			continue
-		}
-
+		fieldName := stringtool.ToSnake(field.Name)
 		if fieldName == IDField || fieldName == CreateTimeField {
 			return nil, fmt.Errorf("has duplicate id or createTime field which already exists in resource base")
 		}
 
+		fieldTag := field.Tag.Get(DBTag)
+		if tagContains(fieldTag, "-") {
+			continue
+		}
 		if tagContains(fieldTag, "ownby") {
 			owners = append(owners, ResourceType(fieldName))
 		} else if tagContains(fieldTag, "referto") {
 			refers = append(refers, ResourceType(fieldName))
 		} else {
-			newfield, err := parseField(fieldName, &field.Type)
+			newfield, err := parseField(fieldName, field.Type)
 			if err == nil {
 				if tagContains(fieldTag, "suk") {
 					newfield.Unique = true
@@ -215,16 +230,14 @@ func genDescriptor(r resource.Resource) (*ResourceDescriptor, error) {
 		}
 	}
 
-	isRelationship := len(fields) == 1 && len(owners) == 1 && len(refers) == 1
-
 	return &ResourceDescriptor{
-		Typ:            typ,
+		Typ:            ResourceDBType(r),
 		Fields:         fields,
 		Pks:            pks,
 		Uks:            uks,
 		Owners:         owners,
 		Refers:         refers,
-		IsRelationship: isRelationship,
+		IsRelationship: len(fields) == 1 && len(owners) == 1 && len(refers) == 1,
 	}, nil
 }
 

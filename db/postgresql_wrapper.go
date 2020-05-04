@@ -10,13 +10,17 @@ import (
 )
 
 var postgresqlTypeMap = map[Datatype]string{
-	String:      "text",
+	Bool:        "boolean",
 	Int:         "integer",
-	Uint32:      "bigint",
+	Uint:        "integer",
+	String:      "text",
 	Time:        "timestamp with time zone",
+	IP:          "cidr",
+	IPNet:       "inet",
 	IntArray:    "integer[]",
 	StringArray: "text[]",
-	Bool:        "boolean",
+	IPSlice:     "cidr[]",
+	IPNetSlice:  "inet[]",
 }
 
 func OpenPostgresql(host, user, passwd, dbname string) (*db, error) {
