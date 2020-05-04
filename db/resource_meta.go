@@ -23,6 +23,7 @@ const (
 )
 
 const EmbedResource string = "ResourceBase"
+const DBTag string = "db"
 
 type Check string
 
@@ -95,7 +96,7 @@ func (meta *ResourceMeta) GetGoType(typ ResourceType) (reflect.Type, error) {
 }
 
 func (meta *ResourceMeta) Register(r Resource) error {
-	typ := GetResourceType(r)
+	typ := ResourceDBType(r)
 	if meta.Has(typ) {
 		return fmt.Errorf("duplicate model:%v", typ)
 	}
@@ -166,14 +167,14 @@ func genDescriptor(r Resource) (*ResourceDescriptor, error) {
 	}
 
 	rtype := v.Type()
-	typ := GetResourceType(r)
+	typ := ResourceDBType(r)
 
 	hasIDFeild := false
 	for i := 0; i < rtype.NumField(); i++ {
 		field := rtype.Field(i)
 		oFieldName := field.Name
 		fieldName := stringtool.ToSnake(oFieldName)
-		fieldTag := field.Tag.Get("sql")
+		fieldTag := field.Tag.Get(DBTag)
 		if tagContains(fieldTag, "-") {
 			continue
 		}
@@ -291,7 +292,7 @@ func ResourceToMap(r Resource) (map[string]interface{}, error) {
 			continue
 		}
 
-		if tagContains(f.Tag.Get("sql"), "-") {
+		if tagContains(f.Tag.Get(DBTag), "-") {
 			continue
 		}
 

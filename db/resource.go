@@ -1,34 +1,21 @@
 package db
 
 import (
-	"reflect"
-
 	"github.com/zdnscloud/cement/reflector"
 	"github.com/zdnscloud/cement/stringtool"
 )
 
-type ResourceType string
+const (
+	IDField         = "id"
+	CreateTimeField = "create_time"
+)
 
 type Resource interface {
 }
 
-func GetResourceType(r Resource) ResourceType {
+type ResourceType string
+
+func ResourceDBType(r Resource) ResourceType {
 	n, _ := reflector.StructName(r)
 	return ResourceType(stringtool.ToSnake(n))
-}
-
-func ResourceID(r Resource) string {
-	v := reflect.ValueOf(r).Elem().FieldByName("Id")
-	if v.IsValid() {
-		return v.String()
-	} else {
-		return ""
-	}
-}
-
-func SetResourceID(r Resource, id string) {
-	v := reflect.ValueOf(r).Elem().FieldByName("Id")
-	if v.IsValid() {
-		v.SetString(id)
-	}
 }

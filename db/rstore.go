@@ -102,7 +102,7 @@ func (tx *RStoreTx) FillOwned(owner ResourceType, ownerID string, out interface{
 	}
 
 	r, _ := pr.(Resource)
-	sql, args, err := joinSelectSqlAndArgs(tx.meta, owner, GetResourceType(r), ownerID)
+	sql, args, err := joinSelectSqlAndArgs(tx.meta, owner, ResourceDBType(r), ownerID)
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func (tx *RStoreTx) Fill(conds map[string]interface{}, out interface{}) error {
 	}
 
 	r, _ := pr.(Resource)
-	sql, args, err := selectSqlAndArgs(tx.meta, GetResourceType(r), conds)
+	sql, args, err := selectSqlAndArgs(tx.meta, ResourceDBType(r), conds)
 	if err != nil {
 		return err
 	}

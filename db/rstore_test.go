@@ -18,7 +18,7 @@ var dbConf map[string]interface{} = map[string]interface{}{
 
 type Child struct {
 	Id       string
-	Name     string `sql:"uk"`
+	Name     string `db:"uk"`
 	Age      uint32
 	Hobbies  []string
 	Scores   []int
@@ -34,8 +34,8 @@ type Mother struct {
 
 type MotherChild struct {
 	Id     string
-	Mother string `sql:"ownby"`
-	Child  string `sql:"referto"`
+	Mother string `db:"ownby"`
+	Child  string `db:"referto"`
 }
 
 func initChild(store ResourceStore) {
@@ -180,7 +180,7 @@ func TestCURDEx(t *testing.T) {
 	store.Destroy()
 }
 
-func TestOwnedAndRefer(t *testing.T) {
+func TestMultiToMultiRelationship(t *testing.T) {
 	meta, err := NewResourceMeta([]Resource{&Mother{}, &Child{}, &MotherChild{}})
 	ut.Assert(t, err == nil, "")
 	store, err := NewRStore(dbConf, meta)
@@ -217,6 +217,67 @@ func TestOwnedAndRefer(t *testing.T) {
 	store.Destroy()
 }
 
+type View struct {
+	Id   string
+	Name string `db:"uk"`
+}
+
+type Zone struct {
+	Id   string
+	Name string
+	View string `db:"ownby"`
+}
+
+func TestOneToManyRelationship(t *testing.T) {
+	meta, err := NewResourceMeta([]Resource{&View{}, &Zone{}})
+	ut.Assert(t, err == nil, "")
+	store, err := NewRStore(dbConf, meta)
+	ut.Assert(t, err == nil, "")
+
+	tx, _ := store.Begin()
+	tx.Insert(&View{Id: "v1", Name: "v1"})
+	tx.Insert(&View{Id: "v2", Name: "v2"})
+	tx.Insert(&Zone{Name: "cn", View: "v1"})
+	tx.Insert(&Zone{Name: "com", View: "v1"})
+	tx.Commit()
+
+	tx, _ = store.Begin()
+	result, err := tx.Get(ResourceType("zone"), map[string]interface{}{"view": "v1"})
+	ut.Equal(t, err, nil)
+	ut.Equal(t, len(result.([]*Zone)), 2)
+	result, err = tx.Get(ResourceType("zone"), map[string]interface{}{"view": "v2"})
+	ut.Equal(t, err, nil)
+	ut.Equal(t, len(result.([]*Zone)), 0)
+	tx.Rollback()
+
+	//view v3 doesn't exists
+	tx, _ = store.Begin()
+	_, err = tx.Insert(&Zone{Name: "cn", View: "v3"})
+	ut.Assert(t, err != nil, "")
+	tx.Rollback()
+
+	//delete mother will delete owned child
+	tx, _ = store.Begin()
+	c, err := tx.Delete("view", map[string]interface{}{
+		"id": "v2",
+	})
+	ut.Assert(t, err == nil, "")
+	ut.Equal(t, c, int64(1))
+	c, _ = tx.Count("zone", nil)
+	ut.Equal(t, c, int64(2))
+	c, err = tx.Delete("view", map[string]interface{}{
+		"id": "v1",
+	})
+	ut.Assert(t, err == nil, "")
+	ut.Equal(t, c, int64(1))
+	c, _ = tx.Count("zone", nil)
+	ut.Equal(t, c, int64(0))
+	tx.Commit()
+
+	store.Clean()
+	store.Destroy()
+}
+
 func TestGetWithLimitAndOffset(t *testing.T) {
 	meta, err := NewResourceMeta([]Resource{&Mother{}})
 	ut.Assert(t, err == nil, "")
@@ -244,9 +305,9 @@ func TestGetWithLimitAndOffset(t *testing.T) {
 
 type Student struct {
 	Id        string
-	Name      string `sql:"uk"`
+	Name      string `db:"uk"`
 	Age       uint32
-	Classroom string `sql:"-"`
+	Classroom string `db:"-"`
 }
 
 func TestIgnField(t *testing.T) {
@@ -276,9 +337,9 @@ func TestIgnField(t *testing.T) {
 
 type Rdata struct {
 	Id    string
-	Name  string `sql:"uk"`
-	Type  string `sql:"uk"`
-	Rdata string `sql:"uk"`
+	Name  string `db:"uk"`
+	Type  string `db:"uk"`
+	Rdata string `db:"uk"`
 }
 
 func TestUniqueField(t *testing.T) {

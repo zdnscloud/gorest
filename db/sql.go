@@ -87,7 +87,7 @@ func insertSqlArgsAndID(meta *ResourceMeta, r Resource) (string, []interface{}, 
 		return "", nil, fmt.Errorf("%v is not pointer to resource", reflect.TypeOf(r).Kind().String())
 	}
 
-	typ := GetResourceType(r)
+	typ := ResourceDBType(r)
 	descriptor, err := meta.GetDescriptor(typ)
 	if err != nil {
 		return "", nil, fmt.Errorf("get %v descriptor failed %v", typ, err.Error())
