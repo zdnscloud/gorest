@@ -13,20 +13,22 @@ type ResourceStore interface {
 	Begin() (Transaction, error)
 }
 
-//	a resource array like ([]zone) is different from
-//	the resource interface array ([]resource)
-//	Get will return the concreate resource array
-//	Fill will accept the pointer to the concreate resource array
-//	Delete and Update will return how many rows has been affected
 type Transaction interface {
 	Insert(r resource.Resource) (resource.Resource, error)
+	//return an slice of Resource which is a pointer to struct
 	Get(typ ResourceType, cond map[string]interface{}) (interface{}, error)
+	//this is used for many to many relationship
+	//which means there is a seperate table which owner and owned resource in it
+	//return an slice of Resource which is a pointer to struct
+	GetOwned(owner ResourceType, ownerID string, owned ResourceType) (interface{}, error)
 	Exists(typ ResourceType, cond map[string]interface{}) (bool, error)
 	Count(typ ResourceType, cond map[string]interface{}) (int64, error)
+	//out should be an slice of Resource which is a pointer to struct
 	Fill(cond map[string]interface{}, out interface{}) error
 	Delete(typ ResourceType, cond map[string]interface{}) (int64, error)
 	Update(typ ResourceType, nv map[string]interface{}, cond map[string]interface{}) (int64, error)
-	GetOwned(owner ResourceType, ownerID string, owned ResourceType) (interface{}, error)
+	//Samilar with GetOwned
+	//out should be an slice of Resource which is a pointer to struct
 	FillOwned(owner ResourceType, ownerID string, out interface{}) error
 
 	GetEx(typ ResourceType, sql string, params ...interface{}) (interface{}, error)

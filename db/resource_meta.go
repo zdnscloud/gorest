@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/zdnscloud/cement/reflector"
 	"github.com/zdnscloud/cement/stringtool"
 
 	"github.com/zdnscloud/gorest/resource"
@@ -301,32 +300,4 @@ func (descriptor *ResourceDescriptor) GetRelationship() *ResourceRelationship {
 	} else {
 		return nil
 	}
-}
-
-func ResourceToMap(r resource.Resource) (map[string]interface{}, error) {
-	v, ok := reflector.GetStructFromPointer(r)
-	if ok == false {
-		return nil, fmt.Errorf("need structure pointer but get %v", v.Kind().String())
-	}
-
-	m := make(map[string]interface{})
-	typ := v.Type()
-	for i := 0; i < v.NumField(); i++ {
-		f := typ.Field(i)
-		n := f.Name
-		if n == EmbedResource {
-			continue
-		}
-
-		if tagContains(f.Tag.Get(DBTag), "-") {
-			continue
-		}
-
-		n = stringtool.ToSnake(n)
-		if n == "id" {
-			continue
-		}
-		m[n] = v.Field(i).Interface()
-	}
-	return m, nil
 }
