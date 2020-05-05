@@ -15,6 +15,10 @@
 1. `Get` and `Fill` interface returns slice of resource pointer
 1. Resource create time is initialized during insert
 
+# Thread Safety
+1. `store.Begin` which used to get `Transaction` is thread safe
+1. All the operation on one `Transaction` isn't thread safe
+
 # Embed struct 
 Each resource has `ResourceBase` as the first embed struct, during insertion, 
 gorest DB module will automaticaly extract the `id` and `create_time` value , 

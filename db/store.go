@@ -5,8 +5,11 @@ import (
 )
 
 type ResourceStore interface {
+	//clear all the data
 	Clean()
-	Destroy()
+	//close the conn to db
+	Close()
+
 	Begin() (Transaction, error)
 }
 

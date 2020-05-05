@@ -114,6 +114,10 @@ func TestCURD(t *testing.T) {
 	children := []*Child{}
 	c, err := tx.Count("child", nil)
 	ut.Equal(t, c, int64(2))
+	exist, _ := tx.Exists("child", map[string]interface{}{"talented": true})
+	ut.Assert(t, exist, "")
+	exist, _ = tx.Exists("child", map[string]interface{}{"talented": false})
+	ut.Assert(t, !exist, "")
 	tx.Fill(map[string]interface{}{IDField: "c1"}, &children)
 	ut.Equal(t, len(children), 1)
 	ut.Equal(t, children[0].Scores, []int{1, 3, 4})
@@ -157,7 +161,7 @@ func TestCURD(t *testing.T) {
 	tx.Rollback()
 
 	store.Clean()
-	store.Destroy()
+	store.Close()
 }
 
 func TestCURDEx(t *testing.T) {
@@ -191,7 +195,7 @@ func TestCURDEx(t *testing.T) {
 	ut.Equal(t, count, int64(1))
 
 	store.Clean()
-	store.Destroy()
+	store.Close()
 }
 
 func TestMultiToMultiRelationship(t *testing.T) {
@@ -228,7 +232,7 @@ func TestMultiToMultiRelationship(t *testing.T) {
 	tx.Rollback()
 
 	store.Clean()
-	store.Destroy()
+	store.Close()
 }
 
 type View struct {
@@ -295,7 +299,7 @@ func TestOneToManyRelationship(t *testing.T) {
 	tx.Commit()
 
 	store.Clean()
-	store.Destroy()
+	store.Close()
 }
 
 func TestGetWithLimitAndOffset(t *testing.T) {
@@ -322,7 +326,7 @@ func TestGetWithLimitAndOffset(t *testing.T) {
 	tx.Commit()
 
 	store.Clean()
-	store.Destroy()
+	store.Close()
 }
 
 type Student struct {
@@ -354,7 +358,7 @@ func TestIgnField(t *testing.T) {
 	tx.Commit()
 
 	store.Clean()
-	store.Destroy()
+	store.Close()
 }
 
 type Rdata struct {
@@ -405,5 +409,5 @@ func TestUniqueField(t *testing.T) {
 	tx.Rollback()
 
 	store.Clean()
-	store.Destroy()
+	store.Close()
 }

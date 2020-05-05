@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/jackc/pgx/v4"
@@ -16,6 +17,16 @@ import (
 )
 
 const TablePrefix = "gr_"
+
+const (
+	joinSqlTemplateContent string = "select {{.OwnedTable}}.* from {{.OwnedTable}} inner join {{.RelTable}} on ({{.OwnedTable}}.id={{.RelTable}}.{{.Owned}} and {{.RelTable}}.{{.Owner}}=$1)"
+)
+
+var joinSqlTemplate *template.Template
+
+func init() {
+	joinSqlTemplate, _ = template.New("").Parse(joinSqlTemplateContent)
+}
 
 func resourceTableName(typ ResourceType) string {
 	return TablePrefix + string(typ)

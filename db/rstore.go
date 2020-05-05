@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"text/template"
 	"time"
 
 	"github.com/jackc/pgx/v4"
@@ -21,17 +20,6 @@ type RStore struct {
 type RStoreTx struct {
 	pgx.Tx
 	meta *ResourceMeta
-}
-
-const (
-	joinSqlTemplateContent string = "select {{.OwnedTable}}.* from {{.OwnedTable}} inner join {{.RelTable}} on ({{.OwnedTable}}.id={{.RelTable}}.{{.Owned}} and {{.RelTable}}.{{.Owner}}=$1)"
-	MaxConnections                = 10
-)
-
-var joinSqlTemplate *template.Template
-
-func init() {
-	joinSqlTemplate, _ = template.New("").Parse(joinSqlTemplateContent)
 }
 
 func NewRStore(connStr string, meta *ResourceMeta) (ResourceStore, error) {
@@ -51,7 +39,7 @@ func NewRStore(connStr string, meta *ResourceMeta) (ResourceStore, error) {
 	return &RStore{pool, meta}, nil
 }
 
-func (store *RStore) Destroy() {
+func (store *RStore) Close() {
 	store.pool.Close()
 }
 

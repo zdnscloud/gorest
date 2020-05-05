@@ -27,6 +27,20 @@ const (
 	IPNetSlice
 )
 
+var postgresqlTypeMap = map[Datatype]string{
+	Bool:        "boolean",
+	Int:         "integer",
+	Uint:        "integer",
+	String:      "text",
+	Time:        "timestamp with time zone",
+	IP:          "cidr",
+	IPNet:       "inet",
+	IntArray:    "integer[]",
+	StringArray: "text[]",
+	IPSlice:     "cidr[]",
+	IPNetSlice:  "inet[]",
+}
+
 const EmbedResource string = "ResourceBase"
 const DBTag string = "db"
 
