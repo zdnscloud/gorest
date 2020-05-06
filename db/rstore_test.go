@@ -11,13 +11,6 @@ import (
 	"github.com/zdnscloud/gorest/resource"
 )
 
-const (
-	Host     string = "localhost"
-	User     string = "lx"
-	Password string = "lx"
-	DBName   string = "lx"
-)
-
 const ConnStr string = "user=lx password=lx host=localhost port=5432 database=lx sslmode=disable pool_max_conns=10"
 
 type Child struct {
@@ -111,13 +104,13 @@ func TestCURD(t *testing.T) {
 	initChild(store)
 
 	tx, _ := store.Begin()
-	children := []*Child{}
 	c, err := tx.Count("child", nil)
 	ut.Equal(t, c, int64(2))
 	exist, _ := tx.Exists("child", map[string]interface{}{"talented": true})
 	ut.Assert(t, exist, "")
 	exist, _ = tx.Exists("child", map[string]interface{}{"talented": false})
 	ut.Assert(t, !exist, "")
+	children := []*Child{}
 	tx.Fill(map[string]interface{}{IDField: "c1"}, &children)
 	ut.Equal(t, len(children), 1)
 	ut.Equal(t, children[0].Scores, []int{1, 3, 4})
