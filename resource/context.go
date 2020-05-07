@@ -34,9 +34,9 @@ type Context struct {
 }
 
 type Filter struct {
-	Name string
-	Modifier
-	Values []string
+	Name     string
+	Modifier Modifier
+	Values   []string
 }
 
 type Modifier string
