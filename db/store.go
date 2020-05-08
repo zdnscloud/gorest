@@ -59,7 +59,7 @@ func WithTx(store ResourceStore, f func(Transaction) error) error {
 //out should be a slice of struct pointer
 func GetResourceWithID(store ResourceStore, id string, out interface{}) (interface{}, error) {
 	err := WithTx(store, func(tx Transaction) error {
-		return tx.Fill(map[string]interface{}{"id": id}, out)
+		return tx.Fill(map[string]interface{}{IDField: id}, out)
 	})
 	if err != nil {
 		return nil, err
