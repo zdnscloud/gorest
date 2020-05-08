@@ -153,6 +153,11 @@ func TestCURD(t *testing.T) {
 	ut.Equal(t, children_.([]*Child)[0].GetID(), "c1")
 	tx.Rollback()
 
+	children = []*Child{}
+	ci, err := GetResourceWithID(store, "c1", &children)
+	ut.Assert(t, err == nil, "")
+	ut.Equal(t, ci.(*Child).Age, uint32(20))
+
 	store.Clean()
 	store.Close()
 }

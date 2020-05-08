@@ -1,6 +1,9 @@
 package db
 
 import (
+	"fmt"
+	"reflect"
+
 	"github.com/zdnscloud/gorest/resource"
 )
 
@@ -51,4 +54,21 @@ func WithTx(store ResourceStore, f func(Transaction) error) error {
 		}
 	}
 	return err
+}
+
+//out should be a slice of struct pointer
+func GetResourceWithID(store ResourceStore, id string, out interface{}) (interface{}, error) {
+	err := WithTx(store, func(tx Transaction) error {
+		return tx.Fill(map[string]interface{}{"id": id}, out)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	sliceVal := reflect.ValueOf(out).Elem()
+	if sliceVal.Len() == 1 {
+		return sliceVal.Index(0).Interface(), nil
+	} else {
+		return nil, fmt.Errorf("not found")
+	}
 }
