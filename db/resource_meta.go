@@ -29,7 +29,7 @@ const (
 var postgresqlTypeMap = map[Datatype]string{
 	Bool:        "boolean",
 	Int:         "integer",
-	Uint:        "integer",
+	Uint:        "bigint",
 	String:      "text",
 	Time:        "timestamp with time zone",
 	IP:          "cidr",
