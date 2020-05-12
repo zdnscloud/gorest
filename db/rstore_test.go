@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"math"
 	"net"
 	"strconv"
 	"testing"
@@ -405,6 +406,102 @@ func TestUniqueField(t *testing.T) {
 	})
 	ut.Assert(t, err != nil, "")
 	tx.Rollback()
+
+	store.Clean()
+	store.Close()
+}
+
+type BigNum struct {
+	resource.ResourceBase
+
+	I16      int16
+	U16      uint16
+	I32      int32
+	U32      uint32
+	I64      int64
+	U64      uint64
+	F32      float32
+	I32Array []int32
+	U32Array []uint32
+	I64Array []int64
+	U64Array []uint64
+	F32Array []float32
+}
+
+func TestIntLimit(t *testing.T) {
+	meta, err := NewResourceMeta([]resource.Resource{&BigNum{}})
+	ut.Assert(t, err == nil, "")
+	store, err := NewRStore(ConnStr, meta)
+	ut.Assert(t, err == nil, "")
+
+	tx, _ := store.Begin()
+	n, err := tx.Insert(&BigNum{
+		I16:      math.MaxInt16,
+		U16:      math.MaxUint16,
+		I32:      math.MaxInt32,
+		U32:      math.MaxUint32,
+		I64:      math.MaxInt64,
+		U64:      math.MaxUint64,
+		F32:      math.MaxFloat32,
+		I32Array: []int32{math.MaxInt32},
+		U32Array: []uint32{math.MaxUint32},
+		I64Array: []int64{math.MaxInt64},
+		U64Array: []uint64{math.MaxUint64},
+		F32Array: []float32{math.MaxFloat32},
+	})
+	ut.Assert(t, err == nil, "insert get err:%v", err)
+	tx.Commit()
+
+	ns := []*BigNum{}
+	n_, err := GetResourceWithID(store, n.GetID(), &ns)
+	ut.Assert(t, err == nil, "get err:%v", err)
+	bn := n_.(*BigNum)
+	ut.Assert(t, bn.I16 == math.MaxInt16, "")
+	ut.Assert(t, bn.U16 == math.MaxUint16, "")
+	ut.Assert(t, bn.I32 == math.MaxInt32, "")
+	ut.Assert(t, bn.U32 == math.MaxUint32, "")
+	ut.Assert(t, bn.I64 == math.MaxInt64, "")
+	ut.Assert(t, bn.U64 == math.MaxUint64, "")
+	ut.Assert(t, bn.F32 == math.MaxFloat32, "")
+	ut.Assert(t, bn.I32Array[0] == math.MaxInt32, "")
+	ut.Assert(t, bn.U32Array[0] == math.MaxUint32, "")
+	ut.Assert(t, bn.I64Array[0] == math.MaxInt64, "")
+	ut.Assert(t, bn.U64Array[0] == math.MaxUint64, "")
+	ut.Assert(t, bn.F32Array[0] == math.MaxFloat32, "")
+
+	tx, _ = store.Begin()
+	n, err = tx.Insert(&BigNum{
+		I16:      math.MinInt16,
+		U16:      0,
+		I32:      math.MinInt32,
+		U32:      0,
+		I64:      math.MinInt64,
+		U64:      0,
+		F32:      math.SmallestNonzeroFloat32,
+		I32Array: []int32{math.MinInt32},
+		U32Array: []uint32{0},
+		I64Array: []int64{math.MinInt64},
+		U64Array: []uint64{0},
+		F32Array: []float32{math.SmallestNonzeroFloat32},
+	})
+	ut.Assert(t, err == nil, "insert get err:%v", err)
+	ns = []*BigNum{}
+	err = tx.Fill(map[string]interface{}{"id": n.GetID()}, &ns)
+	ut.Assert(t, err == nil, "fill err:%v", err)
+	bn = ns[0]
+	ut.Assert(t, bn.I16 == math.MinInt16, "")
+	ut.Assert(t, bn.U16 == 0, "")
+	ut.Assert(t, bn.I32 == math.MinInt32, "")
+	ut.Assert(t, bn.U32 == 0, "")
+	ut.Assert(t, bn.I64 == math.MinInt64, "")
+	ut.Assert(t, bn.U64 == 0, "")
+	ut.Assert(t, bn.I32Array[0] == math.MinInt32, "")
+	ut.Assert(t, bn.U32Array[0] == 0, "")
+	ut.Assert(t, bn.I64Array[0] == math.MinInt64, "")
+	ut.Assert(t, bn.U64Array[0] == 0, "")
+	ut.Assert(t, bn.F32Array[0] == math.SmallestNonzeroFloat32, "")
+
+	tx.Commit()
 
 	store.Clean()
 	store.Close()

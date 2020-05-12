@@ -13,31 +13,41 @@ import (
 type Datatype int
 
 const (
-	Int Datatype = iota
-	Uint
+	SmallInt Datatype = iota
+	BigInt
+	SuperInt
+	Float32
 	Bool
 	String
 	Time
 	IP
 	IPNet
-	IntArray
+	SmallIntArray
+	BigIntArray
+	SuperIntArray
+	Float32Array
 	StringArray
 	IPSlice
 	IPNetSlice
 )
 
 var postgresqlTypeMap = map[Datatype]string{
-	Bool:        "boolean",
-	Int:         "integer",
-	Uint:        "bigint",
-	String:      "text",
-	Time:        "timestamp with time zone",
-	IP:          "cidr",
-	IPNet:       "inet",
-	IntArray:    "integer[]",
-	StringArray: "text[]",
-	IPSlice:     "cidr[]",
-	IPNetSlice:  "inet[]",
+	Bool:          "boolean",
+	SmallInt:      "integer",
+	BigInt:        "bigint",
+	SuperInt:      "numeric",
+	Float32:       "float4",
+	String:        "text",
+	Time:          "timestamp with time zone",
+	IP:            "cidr",
+	IPNet:         "inet",
+	SmallIntArray: "integer[]",
+	BigIntArray:   "bigint[]",
+	SuperIntArray: "numeric[]",
+	Float32Array:  "float4[]",
+	StringArray:   "text[]",
+	IPSlice:       "cidr[]",
+	IPNetSlice:    "inet[]",
 }
 
 const EmbedResource string = "ResourceBase"
@@ -140,10 +150,14 @@ func (meta *ResourceMeta) Register(r resource.Resource) error {
 func parseField(name string, typ reflect.Type) (*ResourceField, error) {
 	kind := typ.Kind()
 	switch kind {
-	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
-		return &ResourceField{Name: name, Type: Int}, nil
-	case reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return &ResourceField{Name: name, Type: Uint}, nil
+	case reflect.Int8, reflect.Int16, reflect.Uint8, reflect.Uint16, reflect.Int32:
+		return &ResourceField{Name: name, Type: SmallInt}, nil
+	case reflect.Int, reflect.Uint32, reflect.Int64:
+		return &ResourceField{Name: name, Type: BigInt}, nil
+	case reflect.Uint, reflect.Uint64:
+		return &ResourceField{Name: name, Type: SuperInt}, nil
+	case reflect.Float32:
+		return &ResourceField{Name: name, Type: Float32}, nil
 	case reflect.String:
 		return &ResourceField{Name: name, Type: String}, nil
 	case reflect.Bool:
@@ -164,9 +178,14 @@ func parseField(name string, typ reflect.Type) (*ResourceField, error) {
 
 		elemKind := typ.Elem().Kind()
 		switch elemKind {
-		case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64,
-			reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return &ResourceField{Name: name, Type: IntArray}, nil
+		case reflect.Int8, reflect.Int16, reflect.Uint8, reflect.Uint16, reflect.Int32:
+			return &ResourceField{Name: name, Type: SmallIntArray}, nil
+		case reflect.Int, reflect.Uint32, reflect.Int64:
+			return &ResourceField{Name: name, Type: BigIntArray}, nil
+		case reflect.Uint, reflect.Uint64:
+			return &ResourceField{Name: name, Type: SuperIntArray}, nil
+		case reflect.Float32:
+			return &ResourceField{Name: name, Type: Float32Array}, nil
 		case reflect.String:
 			return &ResourceField{Name: name, Type: StringArray}, nil
 		default:
