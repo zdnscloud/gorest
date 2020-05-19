@@ -22,7 +22,9 @@ type RStoreTx struct {
 	meta *ResourceMeta
 }
 
-func NewRStore(connStr string, meta *ResourceMeta) (ResourceStore, error) {
+var _ ResourceStore = &RStore{}
+
+func NewRStore(connStr string, meta *ResourceMeta) (*RStore, error) {
 	pool, err := pgxpool.Connect(context.TODO(), connStr)
 	if err != nil {
 		return nil, err
@@ -39,24 +41,24 @@ func NewRStore(connStr string, meta *ResourceMeta) (ResourceStore, error) {
 	return &RStore{pool, meta}, nil
 }
 
-func (store *RStore) Close() {
-	store.pool.Close()
+func (s *RStore) Close() {
+	s.pool.Close()
 }
 
-func (store *RStore) Clean() {
-	rs := store.meta.Resources()
+func (s *RStore) Clean() {
+	rs := s.meta.Resources()
 	for i := len(rs); i > 0; i-- {
 		tableName := resourceTableName(rs[i-1])
-		store.pool.Exec(context.TODO(), "DROP TABLE IF EXISTS "+tableName+" CASCADE")
+		s.pool.Exec(context.TODO(), "DROP TABLE IF EXISTS "+tableName+" CASCADE")
 	}
 }
 
-func (store *RStore) Begin() (Transaction, error) {
-	tx, err := store.pool.Begin(context.TODO())
+func (s *RStore) Begin() (Transaction, error) {
+	tx, err := s.pool.Begin(context.TODO())
 	if err != nil {
 		return nil, err
 	} else {
-		return RStoreTx{tx, store.meta}, nil
+		return RStoreTx{tx, s.meta}, nil
 	}
 }
 

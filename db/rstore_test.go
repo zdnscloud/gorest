@@ -13,6 +13,16 @@ import (
 )
 
 const ConnStr string = "user=lx password=lx host=localhost port=5432 database=lx sslmode=disable pool_max_conns=10"
+const ConnStr2 string = "user=lx password=lx host=localhost port=5442 database=lx sslmode=disable pool_max_conns=10"
+
+func createStore(meta *ResourceMeta) ResourceStore {
+	//store, err := NewRStore(ConnStr, meta)
+	store, err := NewReplicateStore(ConnStr, ConnStr2, meta)
+	if err != nil {
+		panic("create db failed:" + err.Error())
+	}
+	return store
+}
 
 type Child struct {
 	resource.ResourceBase
@@ -99,8 +109,7 @@ func initMotherChild(store ResourceStore) {
 func TestCURD(t *testing.T) {
 	meta, err := NewResourceMeta([]resource.Resource{&Child{}})
 	ut.Assert(t, err == nil, "")
-	store, err := NewRStore(ConnStr, meta)
-	ut.Assert(t, err == nil, "err str is %v", err)
+	store := createStore(meta)
 
 	initChild(store)
 
@@ -166,8 +175,7 @@ func TestCURD(t *testing.T) {
 func TestCURDEx(t *testing.T) {
 	meta, err := NewResourceMeta([]resource.Resource{&Child{}})
 	ut.Assert(t, err == nil, "")
-	store, err := NewRStore(ConnStr, meta)
-	ut.Assert(t, err == nil, "")
+	store := createStore(meta)
 
 	initChild(store)
 
@@ -200,8 +208,7 @@ func TestCURDEx(t *testing.T) {
 func TestMultiToMultiRelationship(t *testing.T) {
 	meta, err := NewResourceMeta([]resource.Resource{&Mother{}, &Child{}, &MotherChild{}})
 	ut.Assert(t, err == nil, "")
-	store, err := NewRStore(ConnStr, meta)
-	ut.Assert(t, err == nil, "")
+	store := createStore(meta)
 
 	initChild(store)
 	initMother(store)
@@ -248,8 +255,7 @@ type Zone struct {
 func TestOneToManyRelationship(t *testing.T) {
 	meta, err := NewResourceMeta([]resource.Resource{&View{}, &Zone{}})
 	ut.Assert(t, err == nil, "")
-	store, err := NewRStore(ConnStr, meta)
-	ut.Assert(t, err == nil, "")
+	store := createStore(meta)
 
 	tx, _ := store.Begin()
 	v1 := &View{Name: "v1"}
@@ -304,8 +310,7 @@ func TestOneToManyRelationship(t *testing.T) {
 func TestGetWithLimitAndOffset(t *testing.T) {
 	meta, err := NewResourceMeta([]resource.Resource{&Mother{}})
 	ut.Assert(t, err == nil, "")
-	store, err := NewRStore(ConnStr, meta)
-	ut.Assert(t, err == nil, "")
+	store := createStore(meta)
 
 	tx, _ := store.Begin()
 	for i := 0; i < 2000; i++ {
@@ -338,8 +343,7 @@ type Student struct {
 func TestIgnField(t *testing.T) {
 	meta, err := NewResourceMeta([]resource.Resource{&Student{}})
 	ut.Assert(t, err == nil, "")
-	store, err := NewRStore(ConnStr, meta)
-	ut.Assert(t, err == nil, "")
+	store := createStore(meta)
 
 	tx, _ := store.Begin()
 	tx.Insert(&Student{
@@ -371,8 +375,7 @@ type Rdata struct {
 func TestUniqueField(t *testing.T) {
 	meta, err := NewResourceMeta([]resource.Resource{&Rdata{}})
 	ut.Assert(t, err == nil, "")
-	store, err := NewRStore(ConnStr, meta)
-	ut.Assert(t, err == nil, "")
+	store := createStore(meta)
 
 	tx, _ := store.Begin()
 	_, err = tx.Insert(&Rdata{
@@ -431,8 +434,7 @@ type BigNum struct {
 func TestIntLimit(t *testing.T) {
 	meta, err := NewResourceMeta([]resource.Resource{&BigNum{}})
 	ut.Assert(t, err == nil, "")
-	store, err := NewRStore(ConnStr, meta)
-	ut.Assert(t, err == nil, "")
+	store := createStore(meta)
 
 	tx, _ := store.Begin()
 	n, err := tx.Insert(&BigNum{
