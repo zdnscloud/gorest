@@ -10,9 +10,13 @@ import (
 type HandlerFunc func(*resource.Context) *goresterr.APIError
 type HandlersChain []HandlerFunc
 
+type EndHandlerFunc func(*resource.Context, *goresterr.APIError) *goresterr.APIError
+type EndHandlersChain []EndHandlerFunc
+
 type Server struct {
-	Schemas  resource.SchemaManager
-	handlers HandlersChain
+	Schemas     resource.SchemaManager
+	handlers    HandlersChain
+	endHandlers EndHandlersChain
 }
 
 func NewAPIServer(schemas resource.SchemaManager) *Server {
@@ -23,6 +27,10 @@ func NewAPIServer(schemas resource.SchemaManager) *Server {
 
 func (s *Server) Use(h HandlerFunc) {
 	s.handlers = append(s.handlers, h)
+}
+
+func (s *Server) EndUse(h EndHandlerFunc) {
+	s.endHandlers = append(s.endHandlers, h)
 }
 
 func (s *Server) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -39,7 +47,14 @@ func (s *Server) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	if err := restHandler(ctx); err != nil {
+	err = restHandler(ctx)
+	if err != nil {
 		WriteResponse(rw, err.Status, err)
+	}
+
+	for _, h := range s.endHandlers {
+		if err := h(ctx, err); err != nil {
+			return
+		}
 	}
 }
