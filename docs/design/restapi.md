@@ -194,6 +194,15 @@ modifier               | meaning
 `"null"`    | value is NULL
 `"notnull"` | value is not NULL
 
+* Pagination
+  * 支持对资源集合进行分页
+  * 关键字：page_size 和 page_num，其中page_size表示当前页面需要展示多少个资源，page_num表示需要展示第几个页面，比如同时存在才做分页处理
+  * 返回值：collection资源中包含一个pagination的对象，包含字段总页数page_total, 当前页面page_num，当前页面资源个数page_size, 资源总数total
+  * 业务逻辑：
+    * 如果page_size大于资源总数total，page_size置为资源总数total
+    * 如果page_num大于总页数page_total，page_num置为总页数page_total
+    * 使用(page_num-1) * page_size 求出开始索引的位置
+    * 结束索引等于开始索引+page_size, 如果结束索引超过资源总数，结束索引置为资源总数total
   
 # 未来工作
 * 添加更多的字段属性检查，如检查ipv4和ipv6有效性，域名检查，host检查等

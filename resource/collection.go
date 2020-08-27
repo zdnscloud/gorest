@@ -124,15 +124,6 @@ func applyPagination(pagination *Pagination, resources []Resource) ([]Resource, 
 	}
 
 	startIndex := (pageNum - 1) * pageSize
-	if startIndex >= resourcesLen {
-		if pageNum > 1 {
-			startIndex = (pageNum - 2) * pageSize
-		} else {
-			startIndex = 0
-			pageNum = 1
-		}
-	}
-
 	endIndex := startIndex + pageSize
 	if endIndex >= resourcesLen {
 		endIndex = resourcesLen
