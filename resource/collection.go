@@ -2,6 +2,7 @@ package resource
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 )
 
@@ -9,9 +10,17 @@ type ResourceCollection struct {
 	Type         string                            `json:"type,omitempty"`
 	ResourceType string                            `json:"resourceType,omitempty"`
 	Links        map[ResourceLinkType]ResourceLink `json:"links,omitempty"`
+	Pagination   *Pagination                       `json:"pagination,omitempty"`
 	Resources    []Resource                        `json:"data"`
 
 	collection Resource `json:"-"`
+}
+
+type Pagination struct {
+	PageTotal int `json:"pageTotal,omitempty"`
+	PageNum   int `json:"pageNum,omitempty"`
+	PageSize  int `json:"pageSize,omitempty"`
+	Total     int `json:"total,omitempty"`
 }
 
 func NewResourceCollection(collection Resource, i interface{}) (*ResourceCollection, error) {
@@ -93,4 +102,45 @@ func (rc *ResourceCollection) GetCollection() Resource {
 
 func (rc *ResourceCollection) GetResources() []Resource {
 	return rc.Resources
+}
+
+func (rc *ResourceCollection) ApplyPagination(pagination *Pagination) {
+	if pagination != nil {
+		resources, pagination_ := getCurrentPageResourcesAndPagination(pagination.PageSize, pagination.PageNum, rc.Resources)
+		rc.Resources = resources
+		rc.Pagination = pagination_
+	}
+}
+
+func getCurrentPageResourcesAndPagination(pageSize, pageNum int, resources []Resource) ([]Resource, *Pagination) {
+	resourcesLen := len(resources)
+	if resourcesLen == 0 || pageSize <= 0 || pageNum <= 0 {
+		return resources, nil
+	}
+
+	if pageSize > resourcesLen {
+		pageSize = resourcesLen
+	}
+
+	pageTotal := int(math.Ceil(float64(resourcesLen) / float64(pageSize)))
+	if pageNum > pageTotal {
+		pageNum = pageTotal
+	}
+
+	startIndex := (pageNum - 1) * pageSize
+	if startIndex >= resourcesLen {
+		if pageNum > 1 {
+			startIndex = (pageNum - 2) * pageSize
+		} else {
+			startIndex = 0
+			pageNum = 1
+		}
+	}
+
+	endIndex := startIndex + pageSize
+	if endIndex >= resourcesLen {
+		endIndex = resourcesLen
+	}
+
+	return resources[startIndex:endIndex], &Pagination{PageTotal: pageTotal, PageNum: pageNum, PageSize: pageSize, Total: resourcesLen}
 }

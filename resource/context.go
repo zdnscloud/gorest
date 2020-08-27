@@ -3,6 +3,7 @@ package resource
 import (
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/zdnscloud/gorest/error"
@@ -21,16 +22,20 @@ const (
 	NotLike Modifier = "notlike"
 	Null    Modifier = "null"
 	NotNull Modifier = "notnull"
+
+	FilterNamePageSize = "page_size"
+	FilterNamePageNum  = "page_num"
 )
 
 type Context struct {
-	Schemas  SchemaManager
-	Request  *http.Request
-	Response http.ResponseWriter
-	Resource Resource
-	Method   string
-	params   map[string]interface{}
-	filters  []Filter
+	Schemas    SchemaManager
+	Request    *http.Request
+	Response   http.ResponseWriter
+	Resource   Resource
+	Method     string
+	params     map[string]interface{}
+	filters    []Filter
+	pagination *Pagination
 }
 
 type Filter struct {
@@ -47,14 +52,16 @@ func NewContext(resp http.ResponseWriter, req *http.Request, schemas SchemaManag
 		return nil, err
 	}
 
+	filters, pagination := genFiltersAndPagination(req.URL)
 	return &Context{
-		Request:  req,
-		Response: resp,
-		Resource: r,
-		Schemas:  schemas,
-		Method:   req.Method,
-		params:   make(map[string]interface{}),
-		filters:  genFilters(req.URL),
+		Request:    req,
+		Response:   resp,
+		Resource:   r,
+		Schemas:    schemas,
+		Method:     req.Method,
+		params:     make(map[string]interface{}),
+		filters:    filters,
+		pagination: pagination,
 	}, nil
 }
 
@@ -71,8 +78,13 @@ func (ctx *Context) GetFilters() []Filter {
 	return ctx.filters
 }
 
-func genFilters(url *url.URL) []Filter {
+func (ctx *Context) GetPagination() *Pagination {
+	return ctx.pagination
+}
+
+func genFiltersAndPagination(url *url.URL) ([]Filter, *Pagination) {
 	filters := make([]Filter, 0)
+	var pagination Pagination
 	for k, v := range url.Query() {
 		filter := Filter{
 			Name:     k,
@@ -86,9 +98,28 @@ func genFilters(url *url.URL) []Filter {
 				filter.Name = k[:i]
 			}
 		}
-		filters = append(filters, filter)
+
+		switch filter.Name {
+		case FilterNamePageSize:
+			pagination.PageSize = filtersValuesToInt(filter.Values)
+		case FilterNamePageNum:
+			pagination.PageNum = filtersValuesToInt(filter.Values)
+		default:
+			filters = append(filters, filter)
+		}
 	}
-	return filters
+	return filters, &pagination
+}
+
+func filtersValuesToInt(values []string) int {
+	var i int
+	for _, value := range values {
+		if valueInt, err := strconv.Atoi(value); err != nil {
+			i = valueInt
+			break
+		}
+	}
+	return i
 }
 
 func VerifyModifier(str string) Modifier {
