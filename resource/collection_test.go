@@ -8,17 +8,19 @@ import (
 )
 
 func TestCollectionToJson(t *testing.T) {
-	r := &dumbResource{
-		Number: 10,
+	ctx := &Context{
+		Resource: &dumbResource{
+			Number: 10,
+		},
 	}
 
-	rs, err := NewResourceCollection(r, nil)
+	rs, err := NewResourceCollection(ctx, nil)
 	ut.Assert(t, err == nil, "")
 	ut.Assert(t, rs.Resources != nil, "")
 	d, _ := json.Marshal(rs)
 	ut.Equal(t, string(d), `{"type":"collection","data":[]}`)
 
-	rs2, err := NewResourceCollection(r, []*dumbResource{})
+	rs2, err := NewResourceCollection(ctx, []*dumbResource{})
 	ut.Assert(t, err == nil, "")
 	ut.Assert(t, rs2.Resources != nil, "")
 	ut.Equal(t, len(rs2.Resources), 0)
@@ -27,27 +29,24 @@ func TestCollectionToJson(t *testing.T) {
 }
 
 func TestPagination(t *testing.T) {
-	var rs []*dumbResource
+	var rs []Resource
 	for i := 0; i < 55; i++ {
 		rs = append(rs, &dumbResource{
 			Number: i,
 		})
 	}
-	r := &dumbResource{}
-	r.SetType("dumbresource")
-	rc, err := NewResourceCollection(r, rs)
-	ut.Assert(t, err == nil, "")
-	rc.ApplyPagination(&Pagination{PageSize: 10, PageNum: 5})
-	ut.Assert(t, len(rc.Resources) == 10, "")
-	ut.Assert(t, rc.Pagination.PageTotal == 6, "")
-	ut.Assert(t, rc.Pagination.PageNum == 5, "")
-	ut.Assert(t, rc.Pagination.Total == 55, "")
-	ut.Assert(t, rc.Pagination.PageSize == 10, "")
 
-	rc.ApplyPagination(&Pagination{PageSize: 20, PageNum: 5})
-	ut.Assert(t, len(rc.Resources) == 10, "")
-	ut.Assert(t, rc.Pagination.PageTotal == 1, "")
-	ut.Assert(t, rc.Pagination.PageNum == 1, "")
-	ut.Assert(t, rc.Pagination.Total == 10, "")
-	ut.Assert(t, rc.Pagination.PageSize == 10, "")
+	retrs, pagination := applyPagination(&Pagination{PageSize: 10, PageNum: 5}, rs)
+	ut.Assert(t, len(retrs) == 10, "")
+	ut.Assert(t, pagination.PageTotal == 6, "")
+	ut.Assert(t, pagination.PageNum == 5, "")
+	ut.Assert(t, pagination.Total == 55, "")
+	ut.Assert(t, pagination.PageSize == 10, "")
+
+	retrs, pagination = applyPagination(&Pagination{PageSize: 100, PageNum: 5}, rs)
+	ut.Assert(t, len(retrs) == 55, "")
+	ut.Assert(t, pagination.PageTotal == 1, "")
+	ut.Assert(t, pagination.PageNum == 1, "")
+	ut.Assert(t, pagination.Total == 55, "")
+	ut.Assert(t, pagination.PageSize == 55, "")
 }

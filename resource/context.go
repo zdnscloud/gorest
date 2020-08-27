@@ -114,7 +114,7 @@ func genFiltersAndPagination(url *url.URL) ([]Filter, *Pagination) {
 func filtersValuesToInt(values []string) int {
 	var i int
 	for _, value := range values {
-		if valueInt, err := strconv.Atoi(value); err != nil {
+		if valueInt, err := strconv.Atoi(value); err == nil {
 			i = valueInt
 			break
 		}

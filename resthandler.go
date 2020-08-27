@@ -105,12 +105,11 @@ func handleList(ctx *resource.Context) *goresterr.APIError {
 		if err_ != nil {
 			return err_
 		}
-		rc, err := resource.NewResourceCollection(ctx.Resource, data)
+		rc, err := resource.NewResourceCollection(ctx, data)
 		if err != nil {
 			return goresterr.NewAPIError(goresterr.ServerError, err.Error())
 		}
 
-		rc.ApplyPagination(ctx.GetPagination())
 		httpSchemeAndHost := path.Join(ctx.Request.URL.Scheme, ctx.Request.URL.Host)
 		if err := schema.AddLinksToResourceCollection(rc, httpSchemeAndHost); err != nil {
 			return goresterr.NewAPIError(goresterr.ServerError, fmt.Sprintf("generate links failed:%s", err.Error()))

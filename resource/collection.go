@@ -23,17 +23,19 @@ type Pagination struct {
 	Total     int `json:"total,omitempty"`
 }
 
-func NewResourceCollection(collection Resource, i interface{}) (*ResourceCollection, error) {
-	typ := collection.GetType()
+func NewResourceCollection(ctx *Context, i interface{}) (*ResourceCollection, error) {
+	typ := ctx.Resource.GetType()
 	rs, err := interfaceToResourceCollection(typ, i)
 	if err != nil {
 		return nil, err
 	} else {
+		resources, pagination := applyPagination(ctx.GetPagination(), rs)
 		return &ResourceCollection{
 			Type:         "collection",
 			ResourceType: typ,
-			Resources:    rs,
-			collection:   collection,
+			Pagination:   pagination,
+			Resources:    resources,
+			collection:   ctx.Resource,
 		}, nil
 	}
 }
@@ -104,20 +106,14 @@ func (rc *ResourceCollection) GetResources() []Resource {
 	return rc.Resources
 }
 
-func (rc *ResourceCollection) ApplyPagination(pagination *Pagination) {
-	if pagination != nil {
-		resources, pagination_ := getCurrentPageResourcesAndPagination(pagination.PageSize, pagination.PageNum, rc.Resources)
-		rc.Resources = resources
-		rc.Pagination = pagination_
-	}
-}
-
-func getCurrentPageResourcesAndPagination(pageSize, pageNum int, resources []Resource) ([]Resource, *Pagination) {
+func applyPagination(pagination *Pagination, resources []Resource) ([]Resource, *Pagination) {
 	resourcesLen := len(resources)
-	if resourcesLen == 0 || pageSize <= 0 || pageNum <= 0 {
+	if resourcesLen == 0 || pagination == nil || pagination.PageSize <= 0 || pagination.PageNum <= 0 {
 		return resources, nil
 	}
 
+	pageSize := pagination.PageSize
+	pageNum := pagination.PageNum
 	if pageSize > resourcesLen {
 		pageSize = resourcesLen
 	}
