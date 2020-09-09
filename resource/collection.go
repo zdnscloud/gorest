@@ -10,7 +10,7 @@ type ResourceCollection struct {
 	Type         string                            `json:"type,omitempty"`
 	ResourceType string                            `json:"resourceType,omitempty"`
 	Links        map[ResourceLinkType]ResourceLink `json:"links,omitempty"`
-	Pagination   *Pagination                       `json:"pagination,omitempty"`
+	Pagination   Pagination                        `json:"pagination"`
 	Resources    []Resource                        `json:"data"`
 
 	collection Resource `json:"-"`
@@ -106,10 +106,10 @@ func (rc *ResourceCollection) GetResources() []Resource {
 	return rc.Resources
 }
 
-func applyPagination(pagination *Pagination, resources []Resource) ([]Resource, *Pagination) {
+func applyPagination(pagination *Pagination, resources []Resource) ([]Resource, Pagination) {
 	resourcesLen := len(resources)
 	if resourcesLen == 0 || pagination == nil || pagination.PageSize <= 0 || pagination.PageNum <= 0 {
-		return resources, nil
+		return resources, Pagination{}
 	}
 
 	pageSize := pagination.PageSize
@@ -129,5 +129,5 @@ func applyPagination(pagination *Pagination, resources []Resource) ([]Resource, 
 		endIndex = resourcesLen
 	}
 
-	return resources[startIndex:endIndex], &Pagination{PageTotal: pageTotal, PageNum: pageNum, PageSize: pageSize, Total: resourcesLen}
+	return resources[startIndex:endIndex], Pagination{PageTotal: pageTotal, PageNum: pageNum, PageSize: pageSize, Total: resourcesLen}
 }
