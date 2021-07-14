@@ -82,6 +82,10 @@ func (ctx *Context) GetPagination() *Pagination {
 	return ctx.pagination
 }
 
+func (ctx *Context) SetPagination(pagination *Pagination) {
+	ctx.pagination = pagination
+}
+
 func genFiltersAndPagination(url *url.URL) ([]Filter, *Pagination) {
 	filters := make([]Filter, 0)
 	var pagination Pagination
